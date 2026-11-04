@@ -10,6 +10,6 @@ namespace tgm {
         auto const& c = cfg();
         return c.noclip
             || std::abs(c.speed - 1.f) > 0.001f
-            || bot::mode() == bot::Mode::Replay;
+            || bot::mode() == bot::Mode::Putar;
     }
 }
