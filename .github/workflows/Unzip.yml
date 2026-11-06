@@ -1,14 +1,12 @@
-# Ekstrak proyek yang diunggah ke repo (tanpa Termux), lalu jalankan build.
-#
-# Cara pakai: unggah SALAH SATU file ini ke root repo lewat situs GitHub (Add file -> Upload files):
-#   1. file ZIP proyek (nama bebas, bahkan tanpa akhiran .zip), atau
-#   2. TeamGdMod-bundle.txt (versi teks biasa dari ZIP, untuk HP yang gagal mengunduh ZIP)
-# Bila ada beberapa unggahan di root, yang dipakai adalah yang PALING BARU di-commit.
-# Setelah selesai, semua file unggahan dihapus dari repo.
+# Ekstrak ZIP proyek yang diunggah ke repo (tanpa Termux), lalu jalankan build.
+# Cara pakai: unggah file .zip proyek ke root repo lewat situs GitHub
+# (Add file -> Upload files). Workflow ini jalan otomatis.
 name: Ekstrak ZIP TeamGdMod
 
 on:
   push:
+    paths:
+      - '*.zip'
   workflow_dispatch:
 
 permissions:
@@ -19,80 +17,40 @@ jobs:
   ekstrak:
     runs-on: ubuntu-latest
     steps:
-      - name: Ambil repo (dengan riwayat lengkap)
+      - name: Ambil repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Ekstrak unggahan terbaru dan perbarui file proyek
-        id: ekstrak
+      - name: Ekstrak ZIP dan perbarui file proyek
         run: |
           set -euo pipefail
+
+          # ZIP terbaru di root repo (nama file bebas, mis. "TeamGdMod-source (1).zip")
+          ZIP="$(ls -t ./*.zip 2>/dev/null | head -n 1 || true)"
+          if [ -z "$ZIP" ]; then
+            echo "Tidak ada file .zip di root repo."
+            exit 1
+          fi
+          echo "Memakai: $ZIP"
+
           TMP="${RUNNER_TEMP:-/tmp}/ekstrak"
           rm -rf "$TMP"
-          mkdir -p "$TMP/isi"
-          NAMA_BUNDLE="TeamGdMod-bundle.txt"
-
-          # Kumpulkan kandidat di root repo: file yang isinya ZIP (apa pun namanya) atau bundle teks.
-          # Pilih yang waktu commit-nya paling baru (BUKAN waktu file, karena saat checkout semuanya sama).
-          TERBARU=-1
-          PILIH=""
-          JENIS=""
-          while IFS= read -r f; do
-            nama="${f#./}"
-            if unzip -tq "$f" >/dev/null 2>&1; then
-              jenis="zip"
-            elif [ "$nama" = "$NAMA_BUNDLE" ]; then
-              jenis="bundle"
-            else
-              continue
-            fi
-            waktu="$(git log -1 --format=%ct -- "$f" 2>/dev/null || true)"
-            waktu="${waktu:-0}"
-            echo "Kandidat: $nama ($jenis), waktu commit: $waktu"
-            if [ "$waktu" -gt "$TERBARU" ]; then
-              TERBARU="$waktu"
-              PILIH="$f"
-              JENIS="$jenis"
-            fi
-          done < <(find . -maxdepth 1 -type f ! -name '.*' | sort)
-
-          if [ -z "$PILIH" ]; then
-            echo "Tidak ada ZIP atau bundle di root repo: tidak ada yang dikerjakan."
-            echo "ada=false" >> "${GITHUB_OUTPUT:-/dev/null}"
-            exit 0
-          fi
-          echo ">>> Memakai: $PILIH ($JENIS)"
-
-          if [ "$JENIS" = "bundle" ]; then
-            ZIP="$TMP/dari-bundle.zip"
-            if ! tr -d '\r\n\t ' < "$PILIH" | base64 -d > "$ZIP" 2>/dev/null || ! unzip -tq "$ZIP" >/dev/null 2>&1; then
-              echo "Bundle rusak atau tidak lengkap (hasil unduhan terpotong?). Unduh ulang lalu unggah lagi."
-              exit 1
-            fi
-          else
-            ZIP="$PILIH"
-          fi
-
-          unzip -q -o "$ZIP" -d "$TMP/isi"
+          mkdir -p "$TMP"
+          unzip -q -o "$ZIP" -d "$TMP"
 
           # Cari folder proyek (yang berisi mod.json), baik di root ZIP maupun di dalam satu folder
-          MODJSON="$(find "$TMP/isi" -maxdepth 2 -name mod.json | head -n 1 || true)"
+          MODJSON="$(find "$TMP" -maxdepth 2 -name mod.json | head -n 1 || true)"
           if [ -z "$MODJSON" ]; then
-            echo "mod.json tidak ditemukan di dalam unggahan: ini bukan proyek mod Geode."
+            echo "mod.json tidak ditemukan di dalam ZIP: ini bukan proyek mod Geode."
             exit 1
           fi
           SRC="$(dirname "$MODJSON")"
 
-          # Hapus kode lama beserta semua file unggahan (kecuali .git dan .github), lalu salin yang baru.
+          # Hapus kode lama (kecuali .git, .github, dan file ZIP), lalu salin yang baru.
           # Folder .github tidak disentuh: workflow tidak boleh mengubah workflow dirinya sendiri.
-          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github -exec rm -rf {} +
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github ! -name '*.zip' -exec rm -rf {} +
           (cd "$SRC" && tar --exclude=.git --exclude=.github -cf - .) | tar -xf -
 
-          echo "ada=true" >> "${GITHUB_OUTPUT:-/dev/null}"
-
       - name: Simpan perubahan
-        if: steps.ekstrak.outputs.ada == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -101,12 +59,11 @@ jobs:
             echo "Tidak ada perubahan."
             exit 0
           fi
-          git commit -m "Perbarui TeamGdMod dari unggahan"
+          git commit -m "Perbarui TeamGdMod dari ZIP"
           git push
 
       # Commit dari workflow tidak memicu build otomatis, jadi build dijalankan manual di sini
       - name: Jalankan build
-        if: steps.ekstrak.outputs.ada == 'true'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
