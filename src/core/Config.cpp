@@ -1,11 +1,150 @@
 #include "Config.hpp"
+#include "Db.hpp"
+#include "Riwayat.hpp"
 
 #include <Geode/Geode.hpp>
+
 #include <algorithm>
+#include <cmath>
+#include <string>
+#include <vector>
 
 using namespace geode::prelude;
 
 namespace tgm {
+    namespace {
+        // Satu pengaturan: kunci di database, penunjuk ke field, rentang nilai, dan nama kunci lama
+        // (saved value Geode versi sebelumnya) untuk migrasi otomatis.
+        struct Entri {
+            char const* kunci;
+            char        tipe;      // 'b' bool, 'i' int, 'f' float
+            void*       ptr;
+            double      mn;
+            double      mx;
+            char const* lama;      // nullptr bila tidak ada di versi lama
+        };
+
+        std::vector<Entri> const& daftar() {
+            static std::vector<Entri> v = [] {
+                auto& c = cfg();
+                std::vector<Entri> r;
+                auto B = [&](char const* k, bool& f, char const* lama = nullptr) {
+                    r.push_back({k, 'b', &f, 0, 1, lama});
+                };
+                auto I = [&](char const* k, int& f, int mn, int mx, char const* lama = nullptr) {
+                    r.push_back({k, 'i', &f, static_cast<double>(mn), static_cast<double>(mx), lama});
+                };
+                auto F = [&](char const* k, float& f, float mn, float mx, char const* lama = nullptr) {
+                    r.push_back({k, 'f', &f, mn, mx, lama});
+                };
+
+                // Hack
+                B("noclip", c.noclip, "noclip");
+                B("noclip-p1", c.noclipP1, "noclip-p1");
+                B("noclip-p2", c.noclipP2, "noclip-p2");
+                I("batas-tabrakan", c.batasTabrakan, 0, 100, "batas-tabrakan");
+                I("akurasi-min", c.akurasiMin, 0, 99);
+                B("auto-safe-mode", c.autoSafeMode, "auto-safe-mode");
+                B("no-death-effect", c.noDeathEffect, "no-death-effect");
+                B("respawn-cepat", c.respawnCepat);
+                I("respawn-ms", c.respawnMs, 0, 1000);
+                B("auto-checkpoint", c.autoCheckpoint, "auto-checkpoint");
+                I("checkpoint-dtk", c.checkpointDtk, 1, 30, "checkpoint-dtk");
+                F("speed", c.speed, 0.1f, 3.f, "speed");
+                B("lompat-bebas", c.lompatBebas);
+                B("tanpa-guncang", c.tanpaGuncang);
+                B("tanpa-cermin", c.tanpaCermin);
+                B("buka-semua", c.bukaSemua);
+                B("jeda-saat-buka", c.jedaSaatBuka);
+
+                // HUD isi
+                B("show-hud", c.showHud, "show-hud");
+                B("show-fps", c.showFps, "show-fps");
+                B("show-cps", c.showCps);
+                B("show-clicks", c.showClicks, "show-clicks");
+                B("show-clock", c.showClock, "show-clock");
+                B("show-percent", c.showPercent, "show-percent");
+                B("show-attempt", c.showAttempt, "show-attempt");
+                B("show-frame", c.showFrame, "show-frame");
+                B("show-time", c.showTime, "show-time");
+                B("show-deaths", c.showDeaths, "show-deaths");
+                B("show-best", c.showBest);
+                B("show-level-name", c.showLevelName);
+                B("show-akurasi", c.showAkurasi);
+
+                // HUD gaya
+                I("hud-opacity", c.hudOpacity, 10, 100, "hud-opacity");
+                I("hud-scale", c.hudScale, 50, 150, "hud-scale");
+                I("hud-corner", c.hudCorner, 0, 5, "hud-corner");
+                I("hud-color", c.hudColor, 0, 7, "hud-color");
+                I("hud-font", c.hudFont, 0, 2);
+                B("hud-panel", c.hudPanel);
+                I("hud-off-x", c.hudOffX, -100, 100);
+                I("hud-off-y", c.hudOffY, -100, 100);
+
+                // Bot
+                I("slot", c.slot, 1, 5, "slot");
+                B("auto-save-macro", c.autoSaveMacro, "auto-save-macro");
+                B("auto-play", c.autoPlay, "auto-play");
+                B("auto-muat", c.autoMuat);
+
+                // Logo
+                B("logo-tampil", c.logoTampil);
+                B("logo-di-level", c.logoDiLevel);
+                B("logo-magnet", c.logoMagnet);
+                B("logo-redup", c.logoRedup);
+                I("logo-ukuran", c.logoUkuran, 50, 200);
+                I("logo-opasitas", c.logoOpasitas, 20, 100);
+                F("logo-x", c.logoX, 0.f, 1.f);
+                F("logo-y", c.logoY, 0.f, 1.f);
+
+                // Musik practice
+                B("musik-practice-asli", c.musikPracticeAsli);
+
+                // Input viewer
+                B("iv-tampil", c.ivTampil);
+                I("iv-posisi", c.ivPosisi, 0, 5);
+                I("iv-ukuran", c.ivUkuran, 50, 200);
+                I("iv-opasitas", c.ivOpasitas, 20, 100);
+                I("iv-warna", c.ivWarna, 0, 7);
+
+                // Presisi klik
+                I("cbf-mode", c.cbfMode, 0, 2);
+                B("turbo", c.turbo);
+                I("turbo-cps", c.turboCps, 5, 30);
+
+                // Tambahan
+                B("konfirmasi-keluar", c.konfirmasiKeluar);
+                B("tombol-restart", c.tombolRestart);
+                B("show-mati-terakhir", c.showMatiTerakhir);
+
+                // Antarmuka
+                I("tab-terakhir", c.tabTerakhir, 0, 20);
+                return r;
+            }();
+            return v;
+        }
+
+        std::string kunciDb(Entri const& e) { return std::string("cfg.") + e.kunci; }
+
+        // Tempat nilai bawaan: objek Config baru dengan offset field yang sama
+        void* ptrBawaan(Config& bawaan, Entri const& e) {
+            auto selisih = reinterpret_cast<char*>(e.ptr) - reinterpret_cast<char*>(&cfg());
+            return reinterpret_cast<char*>(&bawaan) + selisih;
+        }
+
+        void terapkanRentang(Entri const& e) {
+            if (e.tipe == 'i') {
+                auto* p = static_cast<int*>(e.ptr);
+                *p = std::clamp(*p, static_cast<int>(e.mn), static_cast<int>(e.mx));
+            } else if (e.tipe == 'f') {
+                auto* p = static_cast<float*>(e.ptr);
+                if (!std::isfinite(*p)) *p = static_cast<float>(e.mn);
+                *p = std::clamp(*p, static_cast<float>(e.mn), static_cast<float>(e.mx));
+            }
+        }
+    }
+
     Config& cfg() {
         static Config s_config;
         return s_config;
@@ -13,70 +152,63 @@ namespace tgm {
 
     void loadConfig() {
         auto* mod = Mod::get();
-        auto& c = cfg();
+        Config bawaan;
 
-        c.noclip         = mod->getSavedValue<bool>("noclip", false);
-        c.noclipP1       = mod->getSavedValue<bool>("noclip-p1", true);
-        c.noclipP2       = mod->getSavedValue<bool>("noclip-p2", true);
-        c.batasTabrakan  = std::clamp(mod->getSavedValue<int>("batas-tabrakan", 0), 0, 100);
-        c.autoSafeMode   = mod->getSavedValue<bool>("auto-safe-mode", true);
-        c.noDeathEffect  = mod->getSavedValue<bool>("no-death-effect", false);
-        c.autoCheckpoint = mod->getSavedValue<bool>("auto-checkpoint", false);
-        c.checkpointDtk  = std::clamp(mod->getSavedValue<int>("checkpoint-dtk", 5), 1, 30);
-        c.speed          = std::clamp(static_cast<float>(mod->getSavedValue<double>("speed", 1.0)), 0.1f, 3.f);
+        // Pertama kali setelah pembaruan: ambil pengaturan dari penyimpanan lama (saved value Geode)
+        bool migrasi = !db::ada("cfg.versi");
 
-        c.showHud        = mod->getSavedValue<bool>("show-hud", true);
-        c.showFps        = mod->getSavedValue<bool>("show-fps", true);
-        c.showClicks     = mod->getSavedValue<bool>("show-clicks", true);
-        c.showClock      = mod->getSavedValue<bool>("show-clock", false);
-        c.showPercent    = mod->getSavedValue<bool>("show-percent", false);
-        c.showAttempt    = mod->getSavedValue<bool>("show-attempt", false);
-        c.showFrame      = mod->getSavedValue<bool>("show-frame", false);
-        c.showTime       = mod->getSavedValue<bool>("show-time", false);
-        c.showDeaths     = mod->getSavedValue<bool>("show-deaths", false);
+        for (auto const& e : daftar()) {
+            auto kunci = kunciDb(e);
+            bool ada = db::ada(kunci);
+            auto* asal = ptrBawaan(bawaan, e);
 
-        c.hudOpacity     = std::clamp(mod->getSavedValue<int>("hud-opacity", 70), 10, 100);
-        c.hudScale       = std::clamp(mod->getSavedValue<int>("hud-scale", 100), 50, 150);
-        c.hudCorner      = std::clamp(mod->getSavedValue<int>("hud-corner", 0), 0, 3);
-        c.hudColor       = std::clamp(mod->getSavedValue<int>("hud-color", 0), 0, 4);
+            switch (e.tipe) {
+                case 'b': {
+                    bool nilai = *static_cast<bool*>(asal);
+                    if (ada) nilai = db::ambilBool(kunci, nilai);
+                    else if (migrasi && e.lama && mod->hasSavedValue(e.lama)) nilai = mod->getSavedValue<bool>(e.lama, nilai);
+                    *static_cast<bool*>(e.ptr) = nilai;
+                    break;
+                }
+                case 'i': {
+                    int nilai = *static_cast<int*>(asal);
+                    if (ada) nilai = static_cast<int>(db::ambilInt(kunci, nilai));
+                    else if (migrasi && e.lama && mod->hasSavedValue(e.lama)) nilai = mod->getSavedValue<int>(e.lama, nilai);
+                    *static_cast<int*>(e.ptr) = nilai;
+                    break;
+                }
+                case 'f': {
+                    float nilai = *static_cast<float*>(asal);
+                    if (ada) nilai = static_cast<float>(db::ambilDbl(kunci, nilai));
+                    else if (migrasi && e.lama && mod->hasSavedValue(e.lama)) {
+                        nilai = static_cast<float>(mod->getSavedValue<double>(e.lama, nilai));
+                    }
+                    *static_cast<float*>(e.ptr) = nilai;
+                    break;
+                }
+            }
+            terapkanRentang(e);
+        }
 
-        c.slot           = std::clamp(mod->getSavedValue<int>("slot", 1), 1, 5);
-        c.autoSaveMacro  = mod->getSavedValue<bool>("auto-save-macro", false);
-        c.autoPlay       = mod->getSavedValue<bool>("auto-play", false);
+        if (migrasi) {
+            db::setInt("cfg.versi", 1, false);
+            saveConfig();
+        }
     }
 
     void saveConfig() {
-        auto* mod = Mod::get();
-        auto const& c = cfg();
-
-        mod->setSavedValue<bool>("noclip", c.noclip);
-        mod->setSavedValue<bool>("noclip-p1", c.noclipP1);
-        mod->setSavedValue<bool>("noclip-p2", c.noclipP2);
-        mod->setSavedValue<int>("batas-tabrakan", c.batasTabrakan);
-        mod->setSavedValue<bool>("auto-safe-mode", c.autoSafeMode);
-        mod->setSavedValue<bool>("no-death-effect", c.noDeathEffect);
-        mod->setSavedValue<bool>("auto-checkpoint", c.autoCheckpoint);
-        mod->setSavedValue<int>("checkpoint-dtk", c.checkpointDtk);
-        mod->setSavedValue<double>("speed", static_cast<double>(c.speed));
-
-        mod->setSavedValue<bool>("show-hud", c.showHud);
-        mod->setSavedValue<bool>("show-fps", c.showFps);
-        mod->setSavedValue<bool>("show-clicks", c.showClicks);
-        mod->setSavedValue<bool>("show-clock", c.showClock);
-        mod->setSavedValue<bool>("show-percent", c.showPercent);
-        mod->setSavedValue<bool>("show-attempt", c.showAttempt);
-        mod->setSavedValue<bool>("show-frame", c.showFrame);
-        mod->setSavedValue<bool>("show-time", c.showTime);
-        mod->setSavedValue<bool>("show-deaths", c.showDeaths);
-
-        mod->setSavedValue<int>("hud-opacity", c.hudOpacity);
-        mod->setSavedValue<int>("hud-scale", c.hudScale);
-        mod->setSavedValue<int>("hud-corner", c.hudCorner);
-        mod->setSavedValue<int>("hud-color", c.hudColor);
-
-        mod->setSavedValue<int>("slot", c.slot);
-        mod->setSavedValue<bool>("auto-save-macro", c.autoSaveMacro);
-        mod->setSavedValue<bool>("auto-play", c.autoPlay);
+        db::tahan();
+        for (auto const& e : daftar()) {
+            terapkanRentang(e);
+            auto kunci = kunciDb(e);
+            switch (e.tipe) {
+                case 'b': db::setBool(kunci, *static_cast<bool*>(e.ptr)); break;
+                case 'i': db::setInt(kunci, *static_cast<int*>(e.ptr)); break;
+                case 'f': db::setDbl(kunci, static_cast<double>(*static_cast<float*>(e.ptr))); break;
+            }
+        }
+        db::setInt("cfg.versi", 1);
+        db::lepas();
     }
 
     void resetConfig() {
@@ -85,7 +217,10 @@ namespace tgm {
     }
 }
 
-// Muat pengaturan setelah data simpanan mod selesai dibaca
+// Buka database lalu muat pengaturan setelah data simpanan mod selesai dibaca
 $on_mod(DataLoaded) {
+    tgm::db::muat();
     tgm::loadConfig();
+    // Catat sesi game baru setelah database terbuka
+    queueInMainThread([] { tgm::riwayat::catatSesiBaru(); });
 }

@@ -1,4 +1,5 @@
-// Hook PlayLayer: Noclip, Mode Aman, HUD, checkpoint otomatis, dan siklus hidup Replay Bot.
+// Hook PlayLayer: Noclip, Mode Aman, HUD, checkpoint otomatis, respawn cepat, statistik permanen,
+// dan siklus hidup Replay Bot.
 
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PlayLayer.hpp>
@@ -13,7 +14,10 @@
 #include "../bot/Bot.hpp"
 #include "../core/Cheats.hpp"
 #include "../core/Config.hpp"
+#include "../core/Db.hpp"
+#include "../core/Riwayat.hpp"
 #include "../core/Stats.hpp"
+#include "../hacks/Cbf.hpp"
 
 using namespace geode::prelude;
 
@@ -32,18 +36,32 @@ namespace {
         return buf;
     }
 
+    int idLevel(PlayLayer* pl) {
+        return pl->m_level ? pl->m_level->m_levelID.value() : 0;
+    }
+
+    int persenTerbaik(PlayLayer* pl) {
+        if (!pl->m_level) return 0;
+        return pl->m_isPracticeMode ? pl->m_level->m_practicePercent : pl->m_level->m_normalPercent.value();
+    }
+
     // Menyusun teks HUD dari status saat ini. Setiap baris hanya muncul bila diaktifkan / relevan.
     std::string susunTeksHud(PlayLayer* pl, bool modeAman) {
         auto const& c = tgm::cfg();
         auto const& s = tgm::stats();
+        auto frame = pl->m_gameState.m_currentProgress;
         std::string t;
 
+        if (c.showLevelName && pl->m_level) t += fmt::format("{}\n", std::string(pl->m_level->m_levelName));
         if (c.showFps)     t += fmt::format("FPS: {:.0f}\n", s.fps);
+        if (c.showCps)     t += fmt::format("CPS: {}\n", s.cps());
         if (c.showClock)   t += fmt::format("Jam: {}\n", jamSekarang());
         if (c.showPercent) t += fmt::format("Persen: {:.1f}%\n", pl->getCurrentPercent());
+        if (c.showBest)    t += fmt::format("Terbaik: {}%\n", persenTerbaik(pl));
+        if (c.showMatiTerakhir && s.persenMatiTerakhir >= 0.f) t += fmt::format("Mati di: {:.0f}%\n", s.persenMatiTerakhir);
         if (c.showAttempt) t += fmt::format("Percobaan: {}\n", pl->m_attempts);
         if (c.showTime)    t += fmt::format("Waktu: {:.1f} dtk\n", pl->m_gameState.m_levelTime);
-        if (c.showFrame)   t += fmt::format("Frame: {}\n", pl->m_gameState.m_currentProgress);
+        if (c.showFrame)   t += fmt::format("Frame: {}\n", frame);
         if (c.showClicks)  t += fmt::format("Klik: {}\n", s.klik);
         if (c.showDeaths)  t += fmt::format("Mati (sesi): {}\n", tgm::sesi().mati);
         if (c.noclip) {
@@ -52,6 +70,7 @@ namespace {
             } else {
                 t += fmt::format("Noclip: {} tabrakan\n", s.tabrakan);
             }
+            if (c.showAkurasi) t += fmt::format("Akurasi: {:.1f}%\n", s.akurasi(frame));
         }
         if (std::abs(c.speed - 1.f) > 0.001f) {
             t += fmt::format("Kecepatan: {:.1f}x\n", c.speed);
@@ -81,24 +100,119 @@ namespace {
             {61, 220, 151},  // hijau
             {255, 209, 102}, // kuning
             {255, 99, 99},   // merah
+            {255, 150, 60},  // oranye
+            {176, 132, 255}, // ungu
+            {255, 140, 200}, // pink
         };
-        return daftar[std::clamp(indeks, 0, 4)];
+        return daftar[std::clamp(indeks, 0, 7)];
     }
 
-    // Menempatkan label HUD sesuai sudut, ukuran, warna, dan kepekatan pilihan
-    void terapkanGayaHud(CCLabelBMFont* label) {
+    char const* fileFont(int indeks) {
+        static char const* const daftar[] = {"chatFont.fnt", "bigFont.fnt", "goldFont.fnt"};
+        return daftar[std::clamp(indeks, 0, 2)];
+    }
+
+    // Menempatkan label HUD sesuai sudut, ukuran, warna, font, dan kepekatan pilihan, plus latar gelapnya
+    void terapkanGayaHud(CCLabelBMFont* label, CCLayerColor* latar, int& fontSaatIni) {
         auto const& c = tgm::cfg();
         auto win = CCDirector::get()->getWinSize();
 
-        bool kanan = (c.hudCorner == 1 || c.hudCorner == 3);
-        bool bawah = (c.hudCorner == 2 || c.hudCorner == 3);
+        if (fontSaatIni != c.hudFont) {
+            label->setFntFile(fileFont(c.hudFont));
+            fontSaatIni = c.hudFont;
+        }
 
-        label->setAnchorPoint({kanan ? 1.f : 0.f, bawah ? 0.f : 1.f});
-        label->setAlignment(kanan ? kCCTextAlignmentRight : kCCTextAlignmentLeft);
-        label->setPosition({kanan ? win.width - 8.f : 8.f, bawah ? 6.f : win.height - 6.f});
-        label->setScale(0.55f * static_cast<float>(c.hudScale) / 100.f);
+        bool kanan = (c.hudCorner == 1 || c.hudCorner == 3);
+        bool tengah = (c.hudCorner == 4 || c.hudCorner == 5);
+        bool bawah = (c.hudCorner == 2 || c.hudCorner == 3 || c.hudCorner == 5);
+
+        float ax = tengah ? 0.5f : (kanan ? 1.f : 0.f);
+        label->setAnchorPoint({ax, bawah ? 0.f : 1.f});
+        label->setAlignment(tengah ? kCCTextAlignmentCenter : (kanan ? kCCTextAlignmentRight : kCCTextAlignmentLeft));
+
+        float x = tengah ? win.width / 2.f : (kanan ? win.width - 10.f : 10.f);
+        float y = bawah ? 8.f : win.height - 8.f;
+        label->setPosition({x + static_cast<float>(c.hudOffX), y + static_cast<float>(c.hudOffY)});
+
+        // Font besar/emas lebih lebar, jadi diperkecil agar ukuran terlihat sebanding
+        float dasar = c.hudFont == 0 ? 0.55f : 0.32f;
+        label->setScale(dasar * static_cast<float>(c.hudScale) / 100.f);
         label->setColor(warnaHud(c.hudColor));
         label->setOpacity(static_cast<GLubyte>(std::clamp(c.hudOpacity, 10, 100) * 255 / 100));
+
+        if (latar) {
+            auto kotak = label->boundingBox();
+            bool ada = c.hudPanel && label->isVisible() && kotak.size.width > 1.f;
+            latar->setVisible(ada);
+            if (ada) {
+                constexpr float PAD = 4.f;
+                latar->setContentSize({kotak.size.width + PAD * 2.f, kotak.size.height + PAD * 2.f});
+                latar->setPosition({kotak.origin.x - PAD, kotak.origin.y - PAD});
+                latar->setOpacity(static_cast<GLubyte>(std::clamp(c.hudOpacity, 10, 100) * 110 / 100));
+            }
+        }
+    }
+
+    // ---------- Input Viewer ----------
+    constexpr float UKURAN_KOTAK = 26.f;
+    constexpr float JARAK_KOTAK = 4.f;
+    constexpr int   TAG_KOTAK = 100;   // tag kotak = TAG_KOTAK + indeks tombol (0..5)
+
+    CCNode* bangunInputViewer(PlayLayer* pl) {
+        auto* akar = CCNode::create();
+        akar->setID("tgm-iv"_spr);
+        akar->ignoreAnchorPointForPosition(false);
+
+        bool platformer = pl->m_isPlatformer;
+        int kolom = platformer ? 3 : 1;
+        char const* teksPlatformer[3] = {"<", "^", ">"};
+
+        for (int p = 0; p < 2; ++p) {
+            for (int k = 0; k < kolom; ++k) {
+                float x = static_cast<float>(k) * (UKURAN_KOTAK + JARAK_KOTAK);
+                float y = static_cast<float>(1 - p) * (UKURAN_KOTAK + JARAK_KOTAK);
+                auto* kotak = CCLayerColor::create(ccc4(255, 255, 255, 255), UKURAN_KOTAK, UKURAN_KOTAK);
+                kotak->setPosition({x, y});
+                kotak->setTag(TAG_KOTAK + p * 3 + (platformer ? k : 1));
+                akar->addChild(kotak);
+
+                auto* label = CCLabelBMFont::create(platformer ? teksPlatformer[k] : (p == 0 ? "P1" : "P2"), "bigFont.fnt");
+                label->setScale(0.42f);
+                label->setPosition({UKURAN_KOTAK / 2.f, UKURAN_KOTAK / 2.f});
+                kotak->addChild(label);
+            }
+        }
+        akar->setContentSize({static_cast<float>(kolom) * UKURAN_KOTAK + static_cast<float>(kolom - 1) * JARAK_KOTAK,
+                              UKURAN_KOTAK * 2.f + JARAK_KOTAK});
+        return akar;
+    }
+
+    void perbaruiInputViewer(CCNode* akar, PlayLayer* pl) {
+        auto const& c = tgm::cfg();
+        auto const& st = tgm::stats();
+        akar->setVisible(c.ivTampil);
+        if (!c.ivTampil) return;
+
+        auto win = CCDirector::get()->getWinSize();
+        bool kanan = (c.ivPosisi == 1 || c.ivPosisi == 3);
+        bool tengah = (c.ivPosisi == 4 || c.ivPosisi == 5);
+        bool bawah = (c.ivPosisi == 2 || c.ivPosisi == 3 || c.ivPosisi == 5);
+        akar->setAnchorPoint({tengah ? 0.5f : (kanan ? 1.f : 0.f), bawah ? 0.f : 1.f});
+        akar->setScale(static_cast<float>(c.ivUkuran) / 100.f);
+        akar->setPosition({tengah ? win.width / 2.f : (kanan ? win.width - 12.f : 12.f), bawah ? 12.f : win.height - 12.f});
+
+        bool dua = pl->m_gameState.m_isDualMode || (pl->m_levelSettings && pl->m_levelSettings->m_twoPlayerMode);
+        float opasitas = static_cast<float>(c.ivOpasitas) / 100.f;
+        auto warna = warnaHud(c.ivWarna);
+
+        for (int i = 0; i < 6; ++i) {
+            auto* kotak = typeinfo_cast<CCLayerColor*>(akar->getChildByTag(TAG_KOTAK + i));
+            if (!kotak) continue;
+            kotak->setVisible(i < 3 || dua);
+            bool ditekan = st.tombol[static_cast<std::size_t>(i)];
+            kotak->setColor(ditekan ? warna : ccColor3B{40, 40, 40});
+            kotak->setOpacity(static_cast<GLubyte>((ditekan ? 1.f : 0.55f) * opasitas * 255.f));
+        }
     }
 
     void kabari(std::string const& pesan, NotificationIcon ikon) {
@@ -108,8 +222,12 @@ namespace {
 
 class $modify(TgmPlayLayer, PlayLayer) {
     struct Fields {
-        std::string teksTerakhir;   // cache agar setString tidak dipanggil tiap frame
+        std::string teksTerakhir;      // cache agar setString tidak dipanggil tiap frame
         float       akumulasiHud = 0.f;
+        float       sejakFlush = 0.f;  // waktu nyata sejak database terakhir di-flush
+        int         fontSaatIni = -1;
+        bool        menungguReset = false;   // ada kematian yang belum diikuti reset level
+        CCNode*     inputViewer = nullptr;   // dimiliki m_uiLayer
     };
 
     void setupHasCompleted() {
@@ -118,28 +236,93 @@ class $modify(TgmPlayLayer, PlayLayer) {
         auto& st = tgm::stats();
         st = tgm::Stats{};
 
-        // Ikat bot ke level ini (macro level lain dibuang)
-        tgm::bot::ikatLevel(m_level->m_levelID.value());
+        int id = idLevel(this);
+        if (m_level) tgm::riwayat::catatNama(id, std::string(m_level->m_levelName));
+
+        // Ikat bot ke level ini (macro level lain dibuang), lalu muat slot terpilih bila diminta
+        tgm::bot::ikatLevel(id);
+        if (tgm::cfg().autoMuat) {
+            std::string pesan;
+            tgm::bot::muat(id, tgm::cfg().slot, pesan);
+        }
 
         // Mode Aman: cheat aktif -> progres tidak disimpan
         if (tgm::cfg().autoSafeMode && tgm::cheatsActive()) {
             m_isTestMode = true;
         }
 
-        // Label HUD di pojok kiri atas
+        // Label HUD + latar gelap
+        auto latar = CCLayerColor::create(ccc4(0, 0, 0, 90));
+        latar->setID("tgm-hud-bg"_spr);
+        latar->setVisible(false);
+        m_uiLayer->addChild(latar, 99);
+
         auto label = CCLabelBMFont::create("", "chatFont.fnt");
         label->setID("tgm-hud"_spr);
-        terapkanGayaHud(label);
+        m_fields->fontSaatIni = 0;
+        terapkanGayaHud(label, latar, m_fields->fontSaatIni);
         m_uiLayer->addChild(label, 100);
+
+        // Input Viewer
+        m_fields->inputViewer = bangunInputViewer(this);
+        m_uiLayer->addChild(m_fields->inputViewer, 98);
+        perbaruiInputViewer(m_fields->inputViewer, this);
+
+        // Tombol restart kecil di layar (opsional)
+        if (tgm::cfg().tombolRestart) {
+            if (auto* spr = CCSprite::createWithSpriteFrameName("GJ_replayBtn_001.png")) {
+                spr->setScale(0.45f);
+                spr->setOpacity(160);
+                auto* item = CCMenuItemExt::createSpriteExtra(spr, [this](auto) { this->resetLevelFromStart(); });
+                item->setPosition({24.f, 24.f});
+                auto* menu = CCMenu::create();
+                menu->setPosition({0.f, 0.f});
+                menu->addChild(item);
+                m_uiLayer->addChild(menu, 98);
+            }
+        }
+
+        // Presisi klik (CBF) dan musik practice
+        tgm::cbf::levelDimuat();
+        if (tgm::cfg().musikPracticeAsli) m_practiceMusicSync = true;
+    }
+
+    // Musik practice sama dengan mode normal: pakai fitur Practice Music Sync bawaan GD
+    // (musik level asli, sinkron dengan posisi checkpoint) alih-alih musik practice terpisah.
+    void togglePracticeMode(bool praktik) {
+        if (tgm::cfg().musikPracticeAsli) m_practiceMusicSync = true;
+        PlayLayer::togglePracticeMode(praktik);
+    }
+
+    void toggleMusicInPractice() {
+        if (tgm::cfg().musikPracticeAsli) m_practiceMusicSync = true;
+        PlayLayer::toggleMusicInPractice();
+    }
+
+    void playPracticeMusic() {
+        if (tgm::cfg().musikPracticeAsli) {
+            // Jangan putar lagu practice terpisah: putar lagu level
+            m_practiceMusicSync = true;
+            PlayLayer::startMusic();
+            return;
+        }
+        PlayLayer::playPracticeMusic();
     }
 
     void resetLevel() {
+        if (tgm::cfg().musikPracticeAsli) m_practiceMusicSync = true;
         PlayLayer::resetLevel();
 
         auto& st = tgm::stats();
         st.klik = 0;
         st.tabrakan = 0;
+        st.frameTabrak = 0;
+        st.frameTabrakAkhir = 0xFFFFFFFF;
         st.detikCp = 0.f;
+        st.tombol.fill(false);
+        m_fields->menungguReset = false;
+
+        tgm::riwayat::catatPercobaan(idLevel(this));
 
         // Setelah respawn, sinkronkan bot dengan frame checkpoint
         auto frame = m_gameState.m_currentProgress;
@@ -169,15 +352,49 @@ class $modify(TgmPlayLayer, PlayLayer) {
             bool berlaku = pemain1 ? c.noclipP1 : c.noclipP2;
             if (berlaku) {
                 auto& st = tgm::stats();
+                auto frame = m_gameState.m_currentProgress;
                 st.tabrakan++;
-                // Batas tabrakan: setelah terlampaui, pemain mati seperti biasa
+                if (frame != st.frameTabrakAkhir) {
+                    st.frameTabrak++;
+                    st.frameTabrakAkhir = frame;
+                }
+                // Mati bila melewati batas tabrakan atau akurasi turun di bawah ambang
                 bool lewatBatas = (c.batasTabrakan > 0 && st.tabrakan > static_cast<uint32_t>(c.batasTabrakan));
+                if (c.akurasiMin > 0 && frame > 120 && st.akurasi(frame) < static_cast<float>(c.akurasiMin)) {
+                    lewatBatas = true;
+                }
                 if (!lewatBatas) return;
             }
         }
 
+        int id = idLevel(this);
         tgm::sesi().mati++;
+        tgm::riwayat::catatMati(id);
+        int persenMati = static_cast<int>(this->getCurrentPercent());
+        tgm::riwayat::catatTerbaik(id, persenMati);
+        tgm::riwayat::catatZonaMati(id, persenMati);
+        tgm::stats().persenMatiTerakhir = static_cast<float>(persenMati);
+
         PlayLayer::destroyPlayer(player, object);
+
+        // Respawn cepat: jadwalkan reset lebih awal; panggilan reset yang terlambat diabaikan (lihat delayedResetLevel)
+        if (c.respawnCepat && player && player->m_isDead) {
+            m_fields->menungguReset = true;
+            this->runAction(CCSequence::create(
+                CCDelayTime::create(static_cast<float>(c.respawnMs) / 1000.f),
+                CCCallFunc::create(this, callfunc_selector(TgmPlayLayer::delayedResetLevel)),
+                nullptr
+            ));
+        }
+    }
+
+    void delayedResetLevel() {
+        if (tgm::cfg().respawnCepat) {
+            // Hanya satu reset per kematian: yang pertama (cepat atau bawaan) diproses, sisanya diabaikan
+            if (!m_fields->menungguReset) return;
+            m_fields->menungguReset = false;
+        }
+        PlayLayer::delayedResetLevel();
     }
 
     void levelComplete() {
@@ -193,12 +410,24 @@ class $modify(TgmPlayLayer, PlayLayer) {
             kabari(pesan, ok ? NotificationIcon::Success : NotificationIcon::Error);
         }
 
+        int id = idLevel(this);
+        tgm::riwayat::catatSelesai(id);
+        tgm::riwayat::catatTerbaik(id, 100);
+        tgm::db::flush();
+
         tgm::bot::berhenti();
         PlayLayer::levelComplete();
     }
 
     void onQuit() {
         tgm::bot::berhenti();
+
+        // Catat sisa waktu main lalu simpan ke disk sebelum keluar level
+        auto& st = tgm::stats();
+        tgm::riwayat::catatDetik(idLevel(this), static_cast<int64_t>(st.detikBelumDicatat));
+        st.detikBelumDicatat = 0.f;
+        tgm::db::flush();
+
         PlayLayer::onQuit();
     }
 
@@ -214,6 +443,23 @@ class $modify(TgmPlayLayer, PlayLayer) {
             st.fps = st.fps * 0.9f + (1.f / dtNyata) * 0.1f;
         }
 
+        // Jam nyata untuk CPS; buang klik yang sudah lebih dari 1,5 detik
+        st.waktuNyata += dtNyata;
+        while (!st.waktuKlik.empty() && st.waktuNyata - st.waktuKlik.front() > 1.5f) st.waktuKlik.pop_front();
+
+        // Waktu main permanen: dicatat per detik penuh; database di-flush tiap 10 detik
+        st.detikBelumDicatat += dtNyata;
+        if (st.detikBelumDicatat >= 1.f) {
+            auto utuh = static_cast<int64_t>(st.detikBelumDicatat);
+            st.detikBelumDicatat -= static_cast<float>(utuh);
+            tgm::riwayat::catatDetik(idLevel(this), utuh);
+        }
+        m_fields->sejakFlush += dtNyata;
+        if (m_fields->sejakFlush >= 10.f) {
+            m_fields->sejakFlush = 0.f;
+            tgm::db::flushJikaKotor();
+        }
+
         // Checkpoint otomatis: hanya di mode practice, saat pemain hidup dan level belum selesai
         if (c.autoCheckpoint && m_isPracticeMode && !m_levelEndAnimationStarted
             && m_player1 && !m_player1->m_isDead) {
@@ -224,25 +470,30 @@ class $modify(TgmPlayLayer, PlayLayer) {
             }
         }
 
+        if (m_fields->inputViewer) perbaruiInputViewer(m_fields->inputViewer, this);
+
         // Perbarui HUD paling banyak 10x per detik
         m_fields->akumulasiHud += dtNyata;
         if (m_fields->akumulasiHud < 0.1f) return;
         m_fields->akumulasiHud = 0.f;
 
         auto* label = typeinfo_cast<CCLabelBMFont*>(m_uiLayer->getChildByID("tgm-hud"_spr));
+        auto* latar = typeinfo_cast<CCLayerColor*>(m_uiLayer->getChildByID("tgm-hud-bg"_spr));
         if (!label) return;
 
         if (!c.showHud) {
             label->setVisible(false);
+            if (latar) latar->setVisible(false);
             return;
         }
         label->setVisible(true);
-        terapkanGayaHud(label);
 
         auto teks = susunTeksHud(this, m_isTestMode && tgm::cheatsActive());
         if (teks != m_fields->teksTerakhir) {
             m_fields->teksTerakhir = teks;
             label->setString(teks.c_str());
         }
+        label->setVisible(!teks.empty());
+        terapkanGayaHud(label, latar, m_fields->fontSaatIni);
     }
 };

@@ -8,7 +8,7 @@ else()
 endif()
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
-project(TeamGdMod VERSION 1.3.0)
+project(TeamGdMod VERSION 1.5.0)
 
 # Semua file .cpp di dalam src (rekursif) ikut dikompilasi
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)

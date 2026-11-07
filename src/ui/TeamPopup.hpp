@@ -1,57 +1,58 @@
 #pragma once
-// Menu utama TeamGdMod (popup bertab): Hack, Noclip, HUD, Gaya HUD, Replay Bot, dan Info.
+// Menu utama TeamGdMod. Tab di sisi kiri, isi berupa baris-baris pengaturan yang disusun dari data
+// (toggle, stepper, tombol, info) dan dibagi per halaman, jadi menambah fitur cukup menambah baris.
 
 #include <Geode/Geode.hpp>
 #include <Geode/ui/Popup.hpp>
 
-#include <array>
+#include <functional>
+#include <string>
+#include <utility>
 #include <vector>
 
 class TeamPopup : public geode::Popup {
+public:
+    struct Baris {
+        enum class Jenis { Judul, Toggle, Stepper, Tombol, Info };
+        Jenis jenis = Jenis::Info;
+        std::string teks;
+        std::function<bool()> ambil;                 // Toggle: nilai sekarang
+        std::function<void(bool)> setel;             // Toggle: terapkan nilai
+        std::function<std::string()> nilai;          // Stepper / Info: teks yang tampil
+        std::function<void(int)> ubah;               // Stepper: arah -1 / +1
+        std::vector<std::pair<std::string, std::function<void()>>> tombol;   // Tombol: 1 - 3 tombol
+    };
+    using Halaman = std::vector<Baris>;
+
 protected:
-    static constexpr int JUMLAH_TAB = 6;
+    static constexpr int JUMLAH_TAB = 10;
+    static constexpr int BARIS_PER_HALAMAN = 8;
 
-    // Node yang dimiliki tiap tab (ditampilkan/disembunyikan saat tab berganti)
-    std::array<std::vector<cocos2d::CCNode*>, JUMLAH_TAB> m_isiTab;
-    std::array<CCMenuItemSpriteExtra*, JUMLAH_TAB> m_tombolTab{};
-    int m_tabAktif = 0;
+    std::vector<Halaman> m_halaman;                  // halaman tab aktif
+    int m_tab = 0;
+    int m_hal = 0;
+    bool m_bangunUlang = false;
 
-    cocos2d::CCLabelBMFont* m_lblKecepatan = nullptr;
-    cocos2d::CCLabelBMFont* m_lblCheckpoint = nullptr;
-    cocos2d::CCLabelBMFont* m_lblOpasitas = nullptr;
-    cocos2d::CCLabelBMFont* m_lblUkuran = nullptr;
-    cocos2d::CCLabelBMFont* m_lblSudut = nullptr;
-    cocos2d::CCLabelBMFont* m_lblWarna = nullptr;
-    cocos2d::CCLabelBMFont* m_lblBatas = nullptr;
-    cocos2d::CCLabelBMFont* m_lblSesi = nullptr;
-    cocos2d::CCLabelBMFont* m_lblSlot = nullptr;
-    cocos2d::CCLabelBMFont* m_lblStatus = nullptr;
-    cocos2d::CCLabelBMFont* m_lblSlotTerisi = nullptr;
+    CCMenuItemSpriteExtra* m_tombolTab[JUMLAH_TAB] = {};
+    cocos2d::CCNode* m_layerIsi = nullptr;           // label baris
+    cocos2d::CCMenu* m_menuIsi = nullptr;            // tombol baris
+    cocos2d::CCLabelBMFont* m_lblHalaman = nullptr;
+    CCMenuItemSpriteExtra* m_panahKiri = nullptr;
+    CCMenuItemSpriteExtra* m_panahKanan = nullptr;
+    std::vector<std::pair<cocos2d::CCLabelBMFont*, std::function<std::string()>>> m_dinamis;
 
     bool init();
-
-    // Pembantu penyusun UI. Semua node didaftarkan ke tab yang ditentukan.
-    cocos2d::CCLabelBMFont* tambahLabel(int tab, char const* teks, float x, float y, float skala, char const* font = "bigFont.fnt", bool rataKiri = false);
-    void tambahToggle(int tab, char const* teks, int tag, bool aktif, float y, float x = -160.f);
-    CCMenuItemSpriteExtra* tambahTombol(int tab, char const* teks, cocos2d::SEL_MenuHandler aksi, float x, float y, float skala, int tag = 0);
-    void tambahStepper(int tab, int tagMin, int tagPlus, float y, cocos2d::CCLabelBMFont*& label);
-
     void pilihTab(int tab);
+    void tampilkanHalaman();
     void segarkan(float dt);
+    void gantiHalaman(int arah);
 
-    // Callback tombol
-    void onTab(cocos2d::CCObject* pengirim);
-    void onToggle(cocos2d::CCObject* pengirim);
-    void onStep(cocos2d::CCObject* pengirim);
-    void onPreset(cocos2d::CCObject* pengirim);
-    void onRekam(cocos2d::CCObject*);
-    void onPutar(cocos2d::CCObject*);
-    void onBerhenti(cocos2d::CCObject*);
-    void onSimpan(cocos2d::CCObject*);
-    void onMuat(cocos2d::CCObject*);
-    void onHapus(cocos2d::CCObject*);
-    void onReset(cocos2d::CCObject*);
+    static std::vector<Halaman> bangunTab(int tab, TeamPopup* self);
 
 public:
     static TeamPopup* create();
+    // Buka menu bila tertutup, tutup bila sudah terbuka (dipakai tombol logo mengambang)
+    static void bukaAtauTutup();
+    // Minta susun ulang halaman pada siklus berikutnya (aman dipanggil dari callback tombol)
+    void mintaBangunUlang() { m_bangunUlang = true; }
 };

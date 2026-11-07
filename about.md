@@ -4,15 +4,18 @@ Mod menu **Geometry Dash 2.2091** buatan sendiri untuk Geode 6.
 
 ## Cara pakai
 
-- Buka menu lewat tombol **TeamGd** di layar pause (saat bermain) atau di pojok kiri atas menu utama.
-- Menu punya 6 tab: **Hack**, **Noclip**, **HUD**, **Gaya**, **Bot**, dan **Info**. Semua pengaturan tersimpan otomatis.
+- Ketuk **logo TeamGd** yang mengambang di layar untuk membuka menu. Tahan lalu geser untuk memindahkannya ke mana saja.
+- Tombol logo tampil di menu, level, dan layar jeda. Ukuran, kepekatan, dan perilakunya diatur di tab **Tombol**.
+- Semua pengaturan dan statistik langsung tersimpan ke database, jadi tidak hilang saat keluar level atau menutup game.
 
 ## Fitur
 
-- **Noclip** per pemain (P1 / P2) dengan penghitung dan batas tabrakan
-- **Speedhack** 0.1x sampai 3.0x dengan preset cepat
+- **Musik Practice Sama dengan Normal**: di Practice, lagu level asli tetap diputar dan sinkron dengan checkpoint
+- **Input Viewer** dan **Presisi Klik** (Klik di Langkah / Click Between Frames), **Klik Otomatis**
+- **Noclip** per pemain, batas tabrakan, dan batas akurasi
+- **Speedhack**, **Respawn Cepat**, **Lompat Bebas** (eksperimental), **Tanpa Guncangan**, **Tanpa Portal Cermin**
+- **Buka Semua Ikon dan Warna** (lokal)
 - **Mode Aman otomatis**: bila ada cheat aktif, penyelesaian level tidak disimpan
-- **Tanpa Efek Kematian**
-- **Checkpoint Otomatis** di mode practice (jeda 1 sampai 30 detik)
-- **HUD**: FPS, klik, jam, persen, percobaan, waktu, frame, mati sesi, status cheat dan bot; kepekatan, ukuran, posisi, dan warna bisa diatur
-- **Replay Bot**: rekam, putar, simpan, muat, hapus (5 slot per level), simpan otomatis saat selesai, putar otomatis dari awal level
+- **HUD** lengkap (FPS, CPS, persen, terbaik, akurasi, dan lainnya) dengan gaya yang bisa diatur
+- **Replay Bot** dengan 5 slot per level, simpan, putar, dan muat otomatis
+- **Statistik permanen** total dan per level

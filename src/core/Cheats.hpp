@@ -9,6 +9,8 @@ namespace tgm {
     inline bool cheatsActive() {
         auto const& c = cfg();
         return c.noclip
+            || c.lompatBebas
+            || c.turbo
             || std::abs(c.speed - 1.f) > 0.001f
             || bot::mode() == bot::Mode::Putar;
     }

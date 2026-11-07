@@ -246,4 +246,30 @@ namespace tgm::bot {
         pesan = fmt::format("Slot {} dihapus", slot);
         return true;
     }
+
+    InfoSlot infoSlot(int idLevel, int slot) {
+        InfoSlot info;
+        auto path = pathMacro(idLevel, slot);
+        std::error_code ec;
+        auto ukuran = std::filesystem::file_size(path, ec);
+        if (ec) return info;
+
+        std::ifstream i(path, std::ios::binary);
+        char kode[4];
+        uint32_t jumlah = 0;
+        if (!i.read(kode, 4) || !std::equal(kode, kode + 4, KODE_FILE) || !bacaU32(i, jumlah)) return info;
+        if (static_cast<std::uintmax_t>(jumlah) * UKURAN_ENTRI > ukuran - 8) return info;
+
+        uint32_t frameMaks = 0;
+        for (uint32_t n = 0; n < jumlah; ++n) {
+            uint32_t f = 0;
+            char sisa[2];
+            if (!bacaU32(i, f) || !i.read(sisa, 2)) return info;
+            frameMaks = std::max(frameMaks, f);
+        }
+        info.ada = true;
+        info.aksi = jumlah;
+        info.detik = static_cast<double>(frameMaks) / 240.0;
+        return info;
+    }
 }

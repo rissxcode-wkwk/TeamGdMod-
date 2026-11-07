@@ -1,55 +1,81 @@
-// Tombol pembuka menu TeamGdMod di layar pause dan menu utama (cocok untuk HP).
+// Tombol pembuka menu TeamGdMod selain tombol logo mengambang:
+//  - layar jeda: selalu ada (cadangan bila tombol logo disembunyikan)
+//  - menu utama: muncul hanya bila tombol logo dimatikan
+//  - layar jeda: konfirmasi sebelum keluar level (opsional)
 
 #include <Geode/Geode.hpp>
+#include <Geode/ui/Popup.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/PauseLayer.hpp>
 
+#include "../core/Config.hpp"
 #include "../ui/TeamPopup.hpp"
 
 using namespace geode::prelude;
 
 namespace {
-    // Membuat menu kecil berisi satu tombol "TeamGd" pada posisi tertentu
-    CCMenu* buatTombolTeamGd(CCObject* target, SEL_MenuHandler aksi, CCPoint posisi) {
-        auto spr = ButtonSprite::create("TeamGd", "goldFont.fnt", "GJ_button_01.png", 0.6f);
-        spr->setScale(0.7f);
-        auto tombol = CCMenuItemSpriteExtra::create(spr, target, aksi);
-        tombol->setPosition(posisi);
-
-        auto menu = CCMenu::create();
-        menu->setID("tgm-menu"_spr);
-        menu->setPosition({0.f, 0.f});
-        menu->addChild(tombol);
-        return menu;
+    // Tombol berlogo; bila gambar gagal dimuat dipakai tombol bertulisan
+    CCMenuItemSpriteExtra* tombolLogo(float ukuran, geode::Function<void(CCMenuItemSpriteExtra*)> aksi) {
+        CCNode* spr = CCSprite::create("logo.png"_spr);
+        if (spr) {
+            spr->setScale(ukuran / std::max(1.f, spr->getContentSize().width));
+        } else {
+            auto* tulisan = ButtonSprite::create("TeamGd", "goldFont.fnt", "GJ_button_01.png", 0.6f);
+            tulisan->setScale(0.7f);
+            spr = tulisan;
+        }
+        return CCMenuItemExt::createSpriteExtra(spr, std::move(aksi));
     }
 }
 
 class $modify(TgmPauseLayer, PauseLayer) {
+    struct Fields {
+        bool sudahSetuju = false;   // pengguna sudah mengonfirmasi keluar
+    };
+
+    // Konfirmasi sebelum keluar level (mencegah salah tekan di HP)
+    void onQuit(CCObject* pengirim) {
+        if (!tgm::cfg().konfirmasiKeluar || m_fields->sudahSetuju) {
+            PauseLayer::onQuit(pengirim);
+            return;
+        }
+        Ref<TgmPauseLayer> diri = this;
+        createQuickPopup("Keluar Level", "Yakin ingin keluar dari level?", "Batal", "Keluar",
+            [diri, pengirim](auto*, bool ya) {
+                if (!ya) return;
+                diri->m_fields->sudahSetuju = true;
+                diri->onQuit(pengirim);
+            });
+    }
+
     void customSetup() {
         PauseLayer::customSetup();
         auto win = CCDirector::get()->getWinSize();
-        this->addChild(buatTombolTeamGd(
-            this, menu_selector(TgmPauseLayer::onTeamGd), {win.width - 50.f, 26.f}
-        ));
-    }
-
-    void onTeamGd(CCObject*) {
-        TeamPopup::create()->show();
+        auto* item = tombolLogo(34.f, [](auto) { TeamPopup::bukaAtauTutup(); });
+        item->setPosition({win.width - 30.f, 30.f});
+        auto* menu = CCMenu::create();
+        menu->setID("tgm-menu"_spr);
+        menu->setPosition({0.f, 0.f});
+        menu->addChild(item);
+        this->addChild(menu);
     }
 };
 
 class $modify(TgmMenuLayer, MenuLayer) {
     bool init() {
         if (!MenuLayer::init()) return false;
-        auto win = CCDirector::get()->getWinSize();
-        this->addChild(buatTombolTeamGd(
-            this, menu_selector(TgmMenuLayer::onTeamGd), {52.f, win.height - 22.f}
-        ));
+        // Tombol logo mengambang sudah ada; tombol tetap di menu utama hanya sebagai cadangan
+        if (!tgm::cfg().logoTampil) {
+            auto win = CCDirector::get()->getWinSize();
+            auto* item = tombolLogo(34.f, [](auto) { TeamPopup::bukaAtauTutup(); });
+            item->setPosition({30.f, win.height - 30.f});
+            auto* menu = CCMenu::create();
+            menu->setID("tgm-menu"_spr);
+            menu->setPosition({0.f, 0.f});
+            menu->addChild(item);
+            this->addChild(menu);
+        }
         return true;
-    }
-
-    void onTeamGd(CCObject*) {
-        TeamPopup::create()->show();
     }
 };

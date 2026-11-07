@@ -43,4 +43,12 @@ namespace tgm::bot {
     bool muat(int idLevel, int slot, std::string& pesan);
     bool hapus(int idLevel, int slot, std::string& pesan);
     bool adaFile(int idLevel, int slot);   // apakah slot sudah berisi macro
+
+    // Ringkasan isi sebuah slot (dibaca dari file tanpa memuatnya ke bot)
+    struct InfoSlot {
+        bool     ada   = false;
+        uint32_t aksi  = 0;
+        double   detik = 0.0;
+    };
+    InfoSlot infoSlot(int idLevel, int slot);
 }
