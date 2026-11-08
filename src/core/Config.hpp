@@ -89,8 +89,22 @@ namespace tgm {
         bool  hitboxMati     = false; // tampilkan hitbox saat mati
         bool  frameStepper   = false; // tombol Jeda / Langkah frame di layar
 
+        // ================= Baru di v1.6.0 =================
+        bool  modeRingan     = false; // matikan efek berat (partikel, guncangan, efek mati) untuk HP lemah
+        bool  tanpaPartikel  = false; // sembunyikan partikel di dalam level
+        bool  autoPractice   = false; // otomatis nyalakan mode practice saat level dibuka
+        bool  fpsBypass      = false; // pakai batas FPS sendiri (eksperimental)
+        int   fpsTarget      = 120;   // target FPS bila FPS Bypass aktif (30 - 1000)
+        bool  lintasan       = false; // gambar perkiraan lintasan lompatan kubus
+        int   lintasanLangkah = 60;   // panjang lintasan dalam langkah 1/60 detik (20 - 120)
+
         // ================= Antarmuka =================
-        int   tabTerakhir    = 0;     // tab menu yang terakhir dibuka
+        int   tabTerakhir    = 0;     // dipakai ulang sebagai halaman panel terakhir
+        int   tema           = 0;     // warna aksen menu (0 - 7)
+        bool  menuTerang     = false; // tema menu terang
+        int   menuSkala      = 100;   // ukuran menu dalam persen (60 - 130)
+        int   menuOpasitas   = 95;    // kepekatan latar panel dalam persen (40 - 100)
+        int   panelTutup     = 0;     // bitmask panel yang dilipat
     };
 
     // Akses tunggal ke konfigurasi

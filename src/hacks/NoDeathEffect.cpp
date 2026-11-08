@@ -9,7 +9,7 @@ using namespace geode::prelude;
 
 class $modify(TgmPlayerObject, PlayerObject) {
     void playDeathEffect() {
-        if (tgm::cfg().noDeathEffect) return;
+        if (tgm::cfg().noDeathEffect || tgm::cfg().modeRingan) return;
         PlayerObject::playDeathEffect();
     }
 };

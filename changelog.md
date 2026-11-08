@@ -1,5 +1,21 @@
 # TeamGdMod
 
+## v1.6.0
+**Tampilan**:
+* <cy>Diubah</c> menu jadi <cl>panel berkolom</c> dengan header berwarna (Global, Level, Player, Bypass, Bot, Label, Gaya Label, Input Viewer, Interface, Shortcuts, Statistik, Data). Panel yang kepanjangan bisa di-scroll, panel bisa dilipat lewat header, dan halaman panel diganti lewat tombol < >
+* <cg>Ditambah</c> <cl>Tema menu</c>: 8 warna aksen, <co>Mode Terang</c>, kepekatan panel, dan ukuran menu
+
+**Fitur baru**:
+* <cg>Ditambah</c> <cl>Mode Ringan</c>: partikel, guncangan, efek kematian dimatikan, HUD diperbarui lebih jarang, animasi menu dimatikan
+* <cg>Ditambah</c> <co>Tanpa Partikel</c>, <co>Auto Practice Mode</c>
+* <cg>Ditambah</c> <cl>Tampilkan Lintasan</c> (eksperimental): perkiraan busur lompatan kubus
+* <cg>Ditambah</c> <cl>FPS Bypass</c> (eksperimental) dengan target FPS pilihan
+* <cg>Ditambah</c> panel <cl>Shortcuts</c>: Restart Level, Toggle Practice, Pasang / Hapus Checkpoint
+
+**Catatan**:
+* Physics Bypass (TPS) belum ada: langkah fisika GD 2.2 harus diubah dari dalam game dan belum bisa diuji di sini
+* Semua kode baru belum dikompilasi atau diuji di dalam game
+
 ## v1.5.1
 **Perbaikan**:
 * <cg>Diperbaiki</c> <cl>Input Viewer P1/P2</c>: status tombol kini dibaca langsung dari objek pemain GD (`m_holdingButtons`), bukan dari parameter event, jadi P1 dan P2 tidak bisa tertukar. Pemain mati atau level dijeda otomatis dianggap dilepas (tidak ada status tersangkut)

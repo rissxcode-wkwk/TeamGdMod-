@@ -1,9 +1,11 @@
 #pragma once
-// Menu utama TeamGdMod. Tab di sisi kiri, isi berupa baris-baris pengaturan yang disusun dari data
-// (toggle, stepper, tombol, info) dan dibagi per halaman, jadi menambah fitur cukup menambah baris.
+// Menu utama TeamGdMod. Tampilan panel berkolom (header berwarna, tiap panel punya daftar sendiri yang bisa
+// di-scroll bila kepanjangan). Isi panel disusun dari data (toggle, stepper, tombol, info), jadi menambah
+// fitur cukup menambah baris di bangunPanel().
 
 #include <Geode/Geode.hpp>
 #include <Geode/ui/Popup.hpp>
+#include <Geode/ui/ScrollLayer.hpp>
 
 #include <functional>
 #include <string>
@@ -22,41 +24,54 @@ public:
         std::function<void(int)> ubah;               // Stepper: arah -1 / +1
         std::vector<std::pair<std::string, std::function<void()>>> tombol;   // Tombol: 1 - 3 tombol
     };
-    using Halaman = std::vector<Baris>;
+
+    struct Panel {
+        std::string nama;
+        std::vector<Baris> baris;
+    };
 
 protected:
-    static constexpr int JUMLAH_TAB = 10;
-    static constexpr int BARIS_PER_HALAMAN = 8;
+    struct Centang {                                 // kotak centang yang warnanya mengikuti nilai
+        cocos2d::CCLayerColor* node = nullptr;
+        std::function<bool()> ambil;
+        cocos2d::ccColor3B hidup{};
+        cocos2d::ccColor3B mati{};
+    };
+    struct Skrol {                                   // satu panel yang bisa di-scroll + penunjuk posisinya
+        geode::ScrollLayer* layer = nullptr;
+        cocos2d::CCLayerColor* bar = nullptr;
+        float tinggiIsi = 0.f;
+        float tinggiLihat = 0.f;
+        float atasY = 0.f;
+        float tinggiBar = 0.f;
+        int panel = 0;
+    };
 
-    std::vector<Halaman> m_halaman;                  // halaman tab aktif
-    int m_tab = 0;
-    int m_hal = 0;
-    bool m_bangunUlang = false;
+    std::vector<Panel> m_panel;
+    int   m_halaman = 0;
+    int   m_perHalaman = 3;
+    float m_skala = 1.f;
+    bool  m_bangunUlang = false;
+    bool  m_menutup = false;
 
-    CCMenuItemSpriteExtra* m_tombolTab[JUMLAH_TAB] = {};
-    cocos2d::CCNode* m_layerIsi = nullptr;           // label baris
-    cocos2d::CCMenu* m_menuIsi = nullptr;            // tombol baris
+    cocos2d::CCNode* m_isi = nullptr;                // wadah semua panel halaman aktif
     cocos2d::CCLabelBMFont* m_lblHalaman = nullptr;
     CCMenuItemSpriteExtra* m_panahKiri = nullptr;
     CCMenuItemSpriteExtra* m_panahKanan = nullptr;
+    cocos2d::CCLayerColor* m_bgKiri = nullptr;
+    cocos2d::CCLayerColor* m_bgKanan = nullptr;
+    std::vector<Skrol> m_skrol;
+    std::vector<Centang> m_centang;
     std::vector<std::pair<cocos2d::CCLabelBMFont*, std::function<std::string()>>> m_dinamis;
 
-    float m_skala = 1.f;                             // skala panel agar muat di layar sempit
-    float m_arah = 1.f;                              // arah geser animasi ganti isi
-    bool  m_sibuk = false;                           // animasi ganti isi sedang berjalan
-    bool  m_menutup = false;                         // animasi tutup sedang berjalan
-    std::function<void()> m_tertunda;                // pembangun isi baru yang menunggu animasi keluar
-
     bool init() override;
-    void pilihTab(int tab, bool animasi = true);
-    void tampilkanHalaman();
-    void ganti(float arah, std::function<void()> bangun);
-    void selesaiKeluar();
-    void selesaiTutup();
-    void segarkan(float dt);
+    void susun();                                    // bangun ulang semua panel halaman aktif
     void gantiHalaman(int arah);
+    void segarkan(float dt);
+    void segarkanCentang();
+    void update(float dt) override;
 
-    static std::vector<Halaman> bangunTab(int tab, TeamPopup* self);
+    static std::vector<Panel> bangunPanel(TeamPopup* self);
 
 public:
     void show() override;
@@ -64,6 +79,6 @@ public:
     static TeamPopup* create();
     // Buka menu bila tertutup, tutup bila sudah terbuka (dipakai tombol logo mengambang)
     static void bukaAtauTutup();
-    // Minta susun ulang halaman pada siklus berikutnya (aman dipanggil dari callback tombol)
+    // Minta susun ulang panel pada siklus berikutnya (aman dipanggil dari callback tombol)
     void mintaBangunUlang() { m_bangunUlang = true; }
 };

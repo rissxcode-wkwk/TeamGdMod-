@@ -46,7 +46,7 @@ namespace tgm::stepper {
 
 class $modify(TgmVisualLayer, GJBaseGameLayer) {
     void shakeCamera(float durasi, float kekuatan, float interval) {
-        if (tgm::cfg().tanpaGuncang) return;
+        if (tgm::cfg().tanpaGuncang || tgm::cfg().modeRingan) return;
         GJBaseGameLayer::shakeCamera(durasi, kekuatan, interval);
     }
 

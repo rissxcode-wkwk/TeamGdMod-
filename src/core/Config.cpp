@@ -123,8 +123,22 @@ namespace tgm {
                 B("hitbox-mati", c.hitboxMati);
                 B("frame-stepper", c.frameStepper);
 
+                // Baru di v1.6.0
+                B("mode-ringan", c.modeRingan);
+                B("tanpa-partikel", c.tanpaPartikel);
+                B("auto-practice", c.autoPractice);
+                B("fps-bypass", c.fpsBypass);
+                I("fps-target", c.fpsTarget, 30, 1000);
+                B("lintasan", c.lintasan);
+                I("lintasan-langkah", c.lintasanLangkah, 20, 120);
+
                 // Antarmuka
                 I("tab-terakhir", c.tabTerakhir, 0, 20);
+                I("tema", c.tema, 0, 7);
+                B("menu-terang", c.menuTerang);
+                I("menu-skala", c.menuSkala, 60, 130);
+                I("menu-opasitas", c.menuOpasitas, 40, 100);
+                I("panel-tutup", c.panelTutup, 0, 65535);
                 return r;
             }();
             return v;

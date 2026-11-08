@@ -365,6 +365,9 @@ class $modify(TgmPlayLayer, PlayLayer) {
         // Presisi klik (CBF) dan musik practice
         tgm::cbf::levelDimuat();
         if (tgm::cfg().musikPracticeAsli) m_practiceMusicSync = true;
+
+        // Auto Practice: nyalakan mode practice begitu level siap
+        if (tgm::cfg().autoPractice && !m_isPracticeMode) this->togglePracticeMode(true);
     }
 
     // Hitbox memakai debug draw bawaan GD
@@ -577,7 +580,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
 
         // Perbarui HUD paling banyak 10x per detik
         m_fields->akumulasiHud += dtNyata;
-        if (m_fields->akumulasiHud < 0.1f) return;
+        if (m_fields->akumulasiHud < (c.modeRingan ? 0.3f : 0.1f)) return;
         m_fields->akumulasiHud = 0.f;
 
         auto* label = typeinfo_cast<CCLabelBMFont*>(m_uiLayer->getChildByID("tgm-hud"_spr));

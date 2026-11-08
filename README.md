@@ -16,6 +16,11 @@ Target: **Geode 6.0.0-alpha.1**, **GD 2.2091**, build Android 64-bit lewat GitHu
 
 | Fitur | Keterangan |
 |---|---|
+| Menu panel | Panel berkolom dengan header berwarna, tiap panel bisa di-scroll dan dilipat, halaman diganti lewat tombol < >. Tema: 8 warna aksen, Mode Terang, kepekatan, ukuran |
+| Mode Ringan | Matikan partikel, guncangan, efek kematian, HUD lebih jarang diperbarui, animasi menu mati (untuk HP lemah) |
+| Tampilkan Lintasan | Eksperimental: perkiraan busur lompatan kubus (bukan simulasi fisika penuh) |
+| FPS Bypass | Eksperimental: target FPS sendiri 30-1000 |
+| Auto Practice, Tanpa Partikel, Shortcuts | Practice otomatis, partikel disembunyikan, tombol Restart / Practice / Checkpoint |
 | Tombol logo mengambang | Logo TeamGd bisa di-drag ke mana saja dan tampil di menu, level, dan layar jeda. Ketuk untuk buka menu. Menempel ke tepi, meredup otomatis, ukuran dan kepekatan diatur, posisi tersimpan |
 | Musik Practice Sama dengan Normal | Di mode Practice, lagu level asli tetap diputar (sinkron dengan checkpoint) alih-alih musik practice terpisah bawaan GD |
 | Input Viewer | Kotak tombol P1 dan P2 (juga kiri/kanan di platformer) yang menyala sesuai status tombol aktual di objek pemain GD. Posisi, geser X/Y, ukuran, kepekatan, dan warna diatur |
@@ -89,3 +94,7 @@ TeamGdMod/
 ## Lisensi pihak ketiga
 
 Logika Presisi Klik mengikuti pendekatan mod *Click Between Frames* (MIT). Lihat `THIRD_PARTY.md`.
+
+## Catatan v1.6.0
+
+File `hacks/Efek.cpp`, `hacks/Fps.cpp`, dan `hacks/Lintasan.cpp` berdiri sendiri. Bila build gagal karena salah satunya, hapus file itu: menu dan fitur lain tetap jalan (pengaturannya saja yang tidak berefek). Physics Bypass (TPS) belum ada.

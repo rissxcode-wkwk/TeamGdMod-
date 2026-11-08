@@ -6,10 +6,10 @@
 		"mac": "2.2091",
 		"ios": "2.2091"
 	},
-	"version": "v1.5.1",
+	"version": "v1.6.0",
 	"id": "teamgd.teamgdmod",
 	"name": "TeamGdMod",
 	"developers": ["TeamGdMod"],
-	"description": "Mod menu Geometry Dash 2.2091: tombol logo mengambang, Input Viewer, Click Between Frames, musik practice sinkron, Noclip, Speedhack, HUD lengkap, Replay Bot, dan database pengaturan.",
+	"description": "Mod menu Geometry Dash 2.2091: menu panel berkolom yang bisa di-scroll, tema, Mode Ringan, lintasan, FPS Bypass, tombol logo mengambang, Input Viewer, Click Between Frames, musik practice sinkron, Noclip, Speedhack, HUD lengkap, Replay Bot, dan database pengaturan.",
 	"tags": ["cheat", "gameplay", "utility", "interface"]
 }
