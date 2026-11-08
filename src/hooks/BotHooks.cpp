@@ -71,6 +71,11 @@ class $modify(TgmBotBaseLayer, GJBaseGameLayer) {
             g_keadaanTurbo[i] = down;
         }
         if (down) catatKlik();
+
+        // Jump Hack: pemain dianggap di tanah tepat saat tombol lompat diproses
+        if (down && button == 1 && tgm::cfg().lompatBebas) {
+            if (auto* p = isPlayer1 ? m_player1 : m_player2) p->m_isOnGround = true;
+        }
         GJBaseGameLayer::handleButton(down, button, isPlayer1);
     }
 

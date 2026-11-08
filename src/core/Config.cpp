@@ -147,13 +147,13 @@ namespace tgm {
                 B("show-testmode", c.showTestmode);
                 B("show-best-run", c.showBestRun);
                 B("show-noclip-mati", c.showNoclipMati);
+                B("auto-jeda", c.autoJeda);
+                B("konfirmasi-restart", c.konfirmasiRestart);
 
                 // Antarmuka
-                I("tab-terakhir", c.tabTerakhir, 0, 20);
                 I("tema-menu", c.temaMenu, 0, 7);
                 I("skala-ui", c.skalaUi, 50, 150);
                 I("opasitas-menu", c.opasitasMenu, 30, 100);
-                B("menu-klasik", c.menuKlasik);
                 I("mm-tutup", c.mmTutup, 0, 65535);
                 return r;
             }();

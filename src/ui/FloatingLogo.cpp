@@ -1,5 +1,5 @@
 #include "FloatingLogo.hpp"
-#include "TeamPopup.hpp"
+#include "MegaMenu.hpp"
 
 #include <Geode/ui/OverlayManager.hpp>
 
@@ -160,7 +160,7 @@ void FloatingLogo::ccTouchEnded(CCTouch*, CCEvent*) {
         c.logoY = m_ty / win.height;
         tgm::saveConfig();   // posisi langsung masuk database
     } else {
-        TeamPopup::bukaAtauTutup();
+        MegaMenu::bukaAtauTutup();
     }
 }
 

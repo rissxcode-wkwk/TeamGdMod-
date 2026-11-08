@@ -1,7 +1,6 @@
 #include "Keybinds.hpp"
 #include "Db.hpp"
 #include "../ui/MegaMenu.hpp"
-#include "../ui/TeamPopup.hpp"
 
 #include <Geode/Geode.hpp>
 #include <Geode/ui/Notification.hpp>
@@ -257,7 +256,7 @@ namespace tgm::kb {
 
         // Buka / tutup menu: berlaku di mana saja
         if (salinan.id == ID_MENU) {
-            if (down && !repeat) TeamPopup::bukaAtauTutup();
+            if (down && !repeat) MegaMenu::bukaAtauTutup();
             return true;
         }
 

@@ -10,7 +10,8 @@
 #include <Geode/modify/PauseLayer.hpp>
 
 #include "../core/Config.hpp"
-#include "../ui/TeamPopup.hpp"
+#include "../core/Stats.hpp"
+#include "../ui/MegaMenu.hpp"
 
 using namespace geode::prelude;
 
@@ -32,7 +33,23 @@ namespace {
 class $modify(TgmPauseLayer, PauseLayer) {
     struct Fields {
         bool sudahSetuju = false;   // pengguna sudah mengonfirmasi keluar
+        bool sudahSetujuRestart = false;   // pengguna sudah mengonfirmasi restart
     };
+
+    // Konfirmasi sebelum restart (opsional). Restart dari menu / keybind TeamGdMod tidak ditanya lagi.
+    void onRestart(CCObject* pengirim) {
+        if (!tgm::cfg().konfirmasiRestart || m_fields->sudahSetujuRestart || tgm::g_lewatRestart) {
+            PauseLayer::onRestart(pengirim);
+            return;
+        }
+        Ref<TgmPauseLayer> diri = this;
+        createQuickPopup("Restart Level", "Restart level dari awal?", "Batal", "Restart",
+            [diri, pengirim](auto*, bool ya) {
+                if (!ya) return;
+                diri->m_fields->sudahSetujuRestart = true;
+                diri->onRestart(pengirim);
+            });
+    }
 
     // Konfirmasi sebelum keluar level (mencegah salah tekan di HP)
     void onQuit(CCObject* pengirim) {
@@ -57,7 +74,7 @@ class $modify(TgmPauseLayer, PauseLayer) {
         if (c.logoTampil && c.logoDiLevel) return;
 
         auto win = CCDirector::get()->getWinSize();
-        auto* item = tombolLogo(34.f, [](auto) { TeamPopup::bukaAtauTutup(); });
+        auto* item = tombolLogo(34.f, [](auto) { MegaMenu::bukaAtauTutup(); });
         item->setPosition({win.width - 30.f, 30.f});
         auto* menu = CCMenu::create();
         menu->setID("tgm-menu"_spr);
@@ -73,7 +90,7 @@ class $modify(TgmMenuLayer, MenuLayer) {
         // Tombol logo mengambang sudah ada; tombol tetap di menu utama hanya sebagai cadangan
         if (!tgm::cfg().logoTampil) {
             auto win = CCDirector::get()->getWinSize();
-            auto* item = tombolLogo(34.f, [](auto) { TeamPopup::bukaAtauTutup(); });
+            auto* item = tombolLogo(34.f, [](auto) { MegaMenu::bukaAtauTutup(); });
             item->setPosition({30.f, win.height - 30.f});
             auto* menu = CCMenu::create();
             menu->setID("tgm-menu"_spr);

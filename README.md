@@ -78,7 +78,7 @@ TeamGdMod/
     ├── bot/      Replay Bot: data macro + file (.tgm), tanpa tipe GD
     ├── hacks/    Speedhack, NoDeathEffect, Unlocks, Visual, Cbf (presisi klik + Lompat Bebas)
     ├── hooks/    BotHooks, PlayLayerHooks, MenuHooks, SaveHooks
-    └── ui/       TeamPopup (menu), FloatingLogo (tombol logo)
+    └── ui/       MegaMenu (menu), FloatingLogo (tombol logo), Keybinds
 ```
 
 ## Cara build (tanpa komputer, lewat GitHub Actions)

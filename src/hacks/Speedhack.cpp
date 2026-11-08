@@ -12,7 +12,8 @@ using namespace geode::prelude;
 class $modify(TgmScheduler, CCScheduler) {
     void update(float dt) {
         tgm::cbf::awalFrame();
-        if (PlayLayer::get()) {
+        // Hanya saat level berjalan: layar jeda dan menu tetap berjalan normal
+        if (auto* pl = PlayLayer::get(); pl && !pl->m_isPaused) {
             dt *= tgm::cfg().speed;
         }
         CCScheduler::update(dt);

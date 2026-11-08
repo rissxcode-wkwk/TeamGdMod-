@@ -314,7 +314,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
     };
 
     // LDM otomatis (atau Mode Ringan) harus menyala sebelum objek level dibuat
-    bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
+    bool init(GJGameLevel* level, bool dontCreateObjects) {
         auto const& c = tgm::cfg();
         tgm::terapkanFps();
         if ((c.autoLdm || c.modeRingan) && !g_ldmDiubah) {
@@ -323,7 +323,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
             gm->setGameVariable("0042", true);
             g_ldmDiubah = true;
         }
-        return PlayLayer::init(level, useReplay, dontCreateObjects);
+        return PlayLayer::init(level, dontCreateObjects);
     }
 
     void setupHasCompleted() {
@@ -375,45 +375,9 @@ class $modify(TgmPlayLayer, PlayLayer) {
         m_uiLayer->addChild(m_fields->inputViewer, 102);   // di atas HUD agar tidak tertutup
         perbaruiInputViewer(m_fields->inputViewer, this, m_fields->ivCache);
 
-        // Tombol restart kecil di layar (opsional)
-        if (tgm::cfg().tombolRestart) {
-            if (auto* spr = CCSprite::createWithSpriteFrameName("GJ_replayBtn_001.png")) {
-                spr->setScale(0.45f);
-                spr->setOpacity(160);
-                auto* item = CCMenuItemExt::createSpriteExtra(spr, [this](auto) { this->resetLevelFromStart(); });
-                item->setPosition({24.f, 24.f});
-                auto* menu = CCMenu::create();
-                menu->setID("tgm-restart"_spr);
-                menu->setPosition({0.f, 0.f});
-                menu->addChild(item);
-                m_uiLayer->addChild(menu, 98);
-            }
-        }
-
-        // Frame Stepper: tombol Jeda / Langkah di bawah layar
+        // Tombol restart dan Frame Stepper di layar: dibuat / dihapus sesuai pengaturan
         tgm::stepper::reset();
-        if (tgm::cfg().frameStepper) {
-            auto win = CCDirector::get()->getWinSize();
-            auto* menu = CCMenu::create();
-            menu->setID("tgm-stepper"_spr);
-            menu->setPosition({0.f, 0.f});
-
-            auto* sprJeda = ButtonSprite::create("Jeda", "goldFont.fnt", "GJ_button_04.png", 0.8f);
-            sprJeda->setScale(0.5f);
-            auto* itemJeda = CCMenuItemExt::createSpriteExtra(sprJeda, [sprJeda](auto) {
-                tgm::stepper::ubahBeku();
-                sprJeda->setString(tgm::stepper::beku() ? "Lanjut" : "Jeda");
-            });
-            itemJeda->setPosition({win.width / 2.f - 42.f, 22.f});
-            menu->addChild(itemJeda);
-
-            auto* sprLangkah = ButtonSprite::create("Langkah", "goldFont.fnt", "GJ_button_04.png", 0.8f);
-            sprLangkah->setScale(0.5f);
-            auto* itemLangkah = CCMenuItemExt::createSpriteExtra(sprLangkah, [](auto) { tgm::stepper::langkah(); });
-            itemLangkah->setPosition({win.width / 2.f + 42.f, 22.f});
-            menu->addChild(itemLangkah);
-            m_uiLayer->addChild(menu, 98);
-        }
+        this->pastikanTombolLayar();
 
         // Hitbox: terapkan pengaturan debug draw GD
         m_fields->hitboxTerapkan = tgm::cfg().hitbox;
@@ -434,6 +398,55 @@ class $modify(TgmPlayLayer, PlayLayer) {
         // Auto Practice: masuk mode Practice begitu level siap
         if (tgm::cfg().autoPractice && !m_isPracticeMode) {
             this->togglePracticeMode(true);
+        }
+    }
+
+    // Tombol restart dan Frame Stepper mengikuti pengaturan, juga bila diubah lewat menu / keybind di tengah level
+    void pastikanTombolLayar() {
+        auto const& c = tgm::cfg();
+        auto win = CCDirector::get()->getWinSize();
+
+        auto* restart = m_uiLayer->getChildByID("tgm-restart"_spr);
+        if (c.tombolRestart && !restart) {
+            if (auto* spr = CCSprite::createWithSpriteFrameName("GJ_replayBtn_001.png")) {
+                spr->setScale(0.45f);
+                spr->setOpacity(160);
+                auto* item = CCMenuItemExt::createSpriteExtra(spr, [this](auto) { this->resetLevelFromStart(); });
+                item->setPosition({24.f, 24.f});
+                auto* menu = CCMenu::create();
+                menu->setID("tgm-restart"_spr);
+                menu->setPosition({0.f, 0.f});
+                menu->addChild(item);
+                m_uiLayer->addChild(menu, 98);
+            }
+        } else if (!c.tombolRestart && restart) {
+            restart->removeFromParent();
+        }
+
+        auto* stepper = m_uiLayer->getChildByID("tgm-stepper"_spr);
+        if (c.frameStepper && !stepper) {
+            auto* menu = CCMenu::create();
+            menu->setID("tgm-stepper"_spr);
+            menu->setPosition({0.f, 0.f});
+
+            auto* sprJeda = ButtonSprite::create(tgm::stepper::beku() ? "Lanjut" : "Jeda", "goldFont.fnt", "GJ_button_04.png", 0.8f);
+            sprJeda->setScale(0.5f);
+            auto* itemJeda = CCMenuItemExt::createSpriteExtra(sprJeda, [sprJeda](auto) {
+                tgm::stepper::ubahBeku();
+                sprJeda->setString(tgm::stepper::beku() ? "Lanjut" : "Jeda");
+            });
+            itemJeda->setPosition({win.width / 2.f - 42.f, 22.f});
+            menu->addChild(itemJeda);
+
+            auto* sprLangkah = ButtonSprite::create("Langkah", "goldFont.fnt", "GJ_button_04.png", 0.8f);
+            sprLangkah->setScale(0.5f);
+            auto* itemLangkah = CCMenuItemExt::createSpriteExtra(sprLangkah, [](auto) { tgm::stepper::langkah(); });
+            itemLangkah->setPosition({win.width / 2.f + 42.f, 22.f});
+            menu->addChild(itemLangkah);
+            m_uiLayer->addChild(menu, 98);
+        } else if (!c.frameStepper && stepper) {
+            stepper->removeFromParent();
+            if (tgm::stepper::beku()) tgm::stepper::ubahBeku();   // jangan tinggalkan level membeku
         }
     }
 
@@ -736,6 +749,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
         m_fields->akumulasiHud += dtNyata;
         if (m_fields->akumulasiHud < (c.modeRingan ? 0.25f : 0.1f)) return;
         m_fields->akumulasiHud = 0.f;
+        this->pastikanTombolLayar();
 
         auto* label = typeinfo_cast<CCLabelBMFont*>(m_uiLayer->getChildByID("tgm-hud"_spr));
         auto* latar = typeinfo_cast<CCLayerColor*>(m_uiLayer->getChildByID("tgm-hud-bg"_spr));

@@ -111,13 +111,13 @@ namespace tgm {
         bool  showTestmode   = false; // HUD: penanda Testmode
         bool  showBestRun    = false; // HUD: run terbaik (persen awal - persen akhir)
         bool  showNoclipMati = false; // HUD: berapa kali pemain seharusnya mati (Noclip)
+        bool  autoJeda       = false; // jeda level otomatis saat game keluar ke background (pindah aplikasi)
+        bool  konfirmasiRestart = false; // minta konfirmasi sebelum restart dari layar jeda
 
         // ================= Antarmuka =================
-        int   tabTerakhir    = 0;     // tab menu klasik yang terakhir dibuka
         int   temaMenu       = 0;     // tema warna menu (0 - 7)
         int   skalaUi        = 100;   // ukuran menu dalam persen (50 - 150)
         int   opasitasMenu   = 92;    // kepekatan latar menu dalam persen (30 - 100)
-        bool  menuKlasik     = false; // pakai menu popup lama (tab) alih-alih menu jendela
         int   mmTutup        = 0;     // bitmask jendela menu yang dilipat
     };
 

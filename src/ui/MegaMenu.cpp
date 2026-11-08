@@ -593,7 +593,9 @@ bool MegaMenu::ccTouchBegan(CCTouch* sentuh, CCEvent*) {
 
     // Tekan-tahan pada toggle / tombol = pasang keybind (padanan klik kanan di PC)
     this->unschedule(schedule_selector(MegaMenu::tahanSentuh));
-    this->scheduleOnce(schedule_selector(MegaMenu::tahanSentuh), 0.6f);
+    float tunda = 0.6f;
+    if (auto* pl = PlayLayer::get(); pl && !pl->m_isPaused) tunda *= std::max(0.1f, tgm::cfg().speed);   // Speedhack ikut menskalakan waktu
+    this->scheduleOnce(schedule_selector(MegaMenu::tahanSentuh), tunda);
     return true;   // semua sentuhan ditelan agar tidak tembus ke level
 }
 
@@ -892,9 +894,8 @@ std::vector<MegaMenu::Jendela> MegaMenu::bangunJendela() {
         std::vector<Baris> r;
         r.push_back(tog("Buka Semua Ikon & Warna", c.bukaSemua));
         r.push_back(info("Hanya tampilan lokal"));
-        r.push_back(tog("Practice Music Sync", c.musikPracticeAsli));
-        r.push_back(tog("Tanpa Portal Cermin", c.tanpaCermin));
-        r.push_back(tog("Tanpa Guncangan", c.tanpaGuncang));
+        r.push_back(tog("Auto Jeda Saat Keluar App", c.autoJeda));
+        r.push_back(tog("Konfirmasi Restart", c.konfirmasiRestart));
         tambah("Bypass", std::move(r));
     }
 
@@ -1018,7 +1019,9 @@ std::vector<MegaMenu::Jendela> MegaMenu::bangunJendela() {
             auto* scene = CCDirector::get()->getRunningScene();
             if (scene && pl->m_isPaused) {
                 if (auto* jeda = scene->getChildByType<PauseLayer>(0)) {
+                    tgm::g_lewatRestart = true;
                     jeda->onRestart(nullptr);
+                    tgm::g_lewatRestart = false;
                     return;
                 }
             }
@@ -1041,7 +1044,9 @@ std::vector<MegaMenu::Jendela> MegaMenu::bangunJendela() {
             auto* pl = levelUntukAksi();
             if (!pl) return;
             if (!pl->m_isPracticeMode) return beriTahu("Nyalakan practice mode dulu", NotificationIcon::Warning);
-            pl->removeLastCheckpoint();
+            if (pl->m_checkpointArray && pl->m_checkpointArray->count() > 0) {
+                pl->m_checkpointArray->removeLastObject();
+            }
             beriTahu("Checkpoint terakhir dihapus");
         }));
         r.push_back(tombol("Tutup Menu", [] { MegaMenu::tutupJikaAda(); }));
@@ -1083,8 +1088,6 @@ std::vector<MegaMenu::Jendela> MegaMenu::bangunJendela() {
         r.push_back(stepPilih("Tema", c.temaMenu, NAMA_TEMA));
         r.push_back(stepInt("Ukuran Menu", c.skalaUi, 50, 150, 10, [](int v) { return fmt::format("x{:.2f}", static_cast<float>(v) / 100.f); }));
         r.push_back(stepInt("Kepekatan Latar", c.opasitasMenu, 30, 100, 10, [](int v) { return fmt::format("{}%", v); }));
-        r.push_back(tog("Menu Klasik (popup tab)", c.menuKlasik));
-        r.push_back(info("Berlaku saat menu dibuka lagi"));
 
         std::vector<Baris> logo;
         logo.push_back(tog("Tampil di Level", c.logoDiLevel));

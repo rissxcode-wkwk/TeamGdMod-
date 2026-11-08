@@ -7,6 +7,9 @@
 #include <deque>
 
 namespace tgm {
+    // true selama TeamGdMod sendiri yang memicu restart (jangan tampilkan konfirmasi restart)
+    inline bool g_lewatRestart = false;
+
     // Per percobaan / per level: direset tiap level dimuat atau respawn
     struct Stats {
         uint32_t klik            = 0;    // klik pada percobaan saat ini

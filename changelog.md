@@ -6,7 +6,16 @@
 * <cg>Ditambah</c> pasang tombol keyboard ke <cl>toggle atau tombol apa pun</c> di menu: tahan barisnya 0,6 detik, lalu tekan tombol (Esc batal, Del hapus). Keybind tersimpan di database
 * Keybind butuh keyboard (komputer atau keyboard Bluetooth)
 
+**Dihapus**:
+* <cr>Dihapus</c> Menu Klasik (popup tab lama) dan jendela Bypass yang isinya duplikat
+
+**Diperbaiki**:
+* <cg>Diperbaiki</c> Tombol Restart dan Frame Stepper di layar kini muncul / hilang langsung saat diubah di tengah level (sebelumnya baru muncul setelah masuk level lagi)
+* <cg>Diperbaiki</c> Jump Hack kini dipasang tepat saat tombol lompat diproses
+* <cg>Diperbaiki</c> Speedhack tidak lagi menskalakan layar jeda dan menu
+
 **Fitur baru**:
+* <cg>Ditambah</c> <cl>Auto Jeda Saat Keluar App</c> dan <cl>Konfirmasi Restart</c>
 * <cg>Ditambah</c> <cl>Instant Mirror</c>, <cl>Auto Kill</c> (mati di persen pilihan), <cl>Mute Audio Saat Mati</c>
 * <cg>Ditambah</c> tombol <cl>Speed +0.1 / -0.1</c> dan <cl>Stepper: Jeda/Lanjut</c>, <cl>Stepper: Langkah</c> (bisa dipasangi keybind)
 * <cg>Ditambah</c> label: <cl>Testmode</c>, <cl>Best Run</c>, <cl>Noclip Mati</c>
