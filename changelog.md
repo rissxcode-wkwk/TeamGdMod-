@@ -9,6 +9,16 @@
 **Dihapus**:
 * <cr>Dihapus</c> Menu Klasik (popup tab lama) dan jendela Bypass yang isinya duplikat
 
+**Fitur baru lagi**:
+* <cg>Ditambah</c> <cl>Kebal Paku</c> (cheat: titik indikator jadi merah) dan <cl>Peringatan Cheat di Level</c>
+* <cg>Diperbaiki</c> <cl>Noclip Mati</c> kini bertambah tiap menabrak hitbox paku atau sisi balok yang baru, bukan tiap rentetan frame
+* Semua cheat (Noclip, Jump Hack, Turbo, Frame Stepper, Speedhack, Bot, Hitbox mode normal, Kebal Paku) membuat titik indikator merah
+
+**Cheat Indicator & Hitbox**:
+* <cg>Diperbaiki</c> <cl>Tampilkan Hitbox</c> kini juga muncul di mode normal (node gambar dibuat sendiri). Di mode normal hitbox dihitung <cr>cheat</c>
+* <cg>Diubah</c> <cl>Cheat Indicator</c> kini berupa titik: <cg>hijau</c> = aman, <cr>merah</c> = ada cheat. Posisinya bisa dipilih
+* <cg>Ditambah</c> daftar nama cheat aktif di menu Global, label <cl>ID Level</c> dan <cl>Rata-rata Mati</c>
+
 **Diperbaiki**:
 * <cg>Diperbaiki</c> Tombol Restart dan Frame Stepper di layar kini muncul / hilang langsung saat diubah di tengah level (sebelumnya baru muncul setelah masuk level lagi)
 * <cg>Diperbaiki</c> Jump Hack kini dipasang tepat saat tombol lompat diproses

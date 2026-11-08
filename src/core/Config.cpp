@@ -147,6 +147,11 @@ namespace tgm {
                 B("show-testmode", c.showTestmode);
                 B("show-best-run", c.showBestRun);
                 B("show-noclip-mati", c.showNoclipMati);
+                B("kebal-paku", c.kebalPaku);
+                B("toast-cheat", c.toastCheat);
+                I("cheat-pos", c.cheatPos, 0, 5);
+                B("show-level-id", c.showLevelId);
+                B("show-rata-mati", c.showRataMati);
                 B("auto-jeda", c.autoJeda);
                 B("konfirmasi-restart", c.konfirmasiRestart);
 

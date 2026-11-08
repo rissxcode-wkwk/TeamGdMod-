@@ -111,6 +111,11 @@ namespace tgm {
         bool  showTestmode   = false; // HUD: penanda Testmode
         bool  showBestRun    = false; // HUD: run terbaik (persen awal - persen akhir)
         bool  showNoclipMati = false; // HUD: berapa kali pemain seharusnya mati (Noclip)
+        bool  kebalPaku      = false; // CHEAT: tidak mati karena paku / hazard
+        bool  toastCheat     = true;  // peringatan daftar cheat aktif saat masuk level
+        int   cheatPos       = 3;     // posisi titik Cheat Indicator (sama seperti hudCorner)
+        bool  showLevelId    = false; // HUD: ID level
+        bool  showRataMati   = false; // HUD: rata-rata persen tempat mati
         bool  autoJeda       = false; // jeda level otomatis saat game keluar ke background (pindah aplikasi)
         bool  konfirmasiRestart = false; // minta konfirmasi sebelum restart dari layar jeda
 

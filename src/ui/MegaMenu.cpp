@@ -797,13 +797,17 @@ std::vector<MegaMenu::Jendela> MegaMenu::bangunJendela() {
             beriTahu(fmt::format("Speed {:.1f}x", c.speed));
         }));
         r.push_back(tog("Auto Safe Mode", c.autoSafeMode));
+        r.push_back(tog("Peringatan Cheat di Level", c.toastCheat));
         r.push_back(tog("Safe Mode", c.safeMode));
         r.push_back(tog("Jeda Saat Menu Dibuka", c.jedaSaatBuka));
         r.push_back(tog("Konfirmasi Keluar Level", c.konfirmasiKeluar));
         r.push_back(tog("Tombol Restart di Layar", c.tombolRestart));
         r.push_back(info([] {
-            return tgm::cheatsActive() ? std::string("Cheat aktif: progres tidak disimpan")
-                                       : std::string("Tidak ada cheat aktif");
+            auto d = tgm::daftarCheat();
+            if (d.empty()) return std::string("Status: aman, tidak ada cheat");
+            std::string s = "Cheat: ";
+            for (std::size_t i = 0; i < d.size(); ++i) s += (i ? ", " : "") + d[i];
+            return s;
         }));
         tambah("Global", std::move(r));
     }
@@ -826,6 +830,7 @@ std::vector<MegaMenu::Jendela> MegaMenu::bangunJendela() {
             return fmt::format("Akurasi {:.1f}%  Tabrak {}", s.akurasi(pl->m_gameState.m_currentProgress), s.tabrakan);
         }));
         r.push_back(togAnak("Noclip", c.noclip, std::move(noclip)));
+        r.push_back(tog("Kebal Paku", c.kebalPaku));
 
         r.push_back(tog("Auto Practice Mode", c.autoPractice));
         r.push_back(tog("Auto LDM", c.autoLdm));
@@ -840,6 +845,7 @@ std::vector<MegaMenu::Jendela> MegaMenu::bangunJendela() {
 
         std::vector<Baris> hb;
         hb.push_back(tog("Hitbox Saat Mati", c.hitboxMati));
+        hb.push_back(info("Di mode normal = cheat"));
         r.push_back(togAnak("Tampilkan Hitbox", c.hitbox, std::move(hb)));
 
         r.push_back(tog("Frame Stepper", c.frameStepper));
@@ -859,6 +865,7 @@ std::vector<MegaMenu::Jendela> MegaMenu::bangunJendela() {
         std::vector<Baris> ak;
         ak.push_back(stepInt("Mati di Persen", c.autoKillPersen, 1, 100, 1, [](int v) { return fmt::format("{}%", v); }));
         r.push_back(togAnak("Auto Kill", c.autoKill, std::move(ak)));
+
 
         r.push_back(tog("Musik Practice Sinkron", c.musikPracticeAsli));
         tambah("Level", std::move(r));
@@ -973,7 +980,12 @@ std::vector<MegaMenu::Jendela> MegaMenu::bangunJendela() {
         r.push_back(tog("Persen Mati Terakhir", c.showMatiTerakhir));
         r.push_back(tog("Nama Level", c.showLevelName));
         r.push_back(tog("Akurasi Noclip", c.showAkurasi));
-        r.push_back(tog("Cheat Indicator", c.showCheat));
+        std::vector<Baris> titik;
+        titik.push_back(stepPilih("Posisi", c.cheatPos, NAMA_SUDUT));
+        titik.push_back(info("Hijau = aman, merah = cheat"));
+        r.push_back(togAnak("Cheat Indicator", c.showCheat, std::move(titik)));
+        r.push_back(tog("ID Level", c.showLevelId));
+        r.push_back(tog("Rata-rata Mati", c.showRataMati));
         r.push_back(tog("Testmode", c.showTestmode));
         r.push_back(tog("Best Run", c.showBestRun));
         r.push_back(tog("Noclip Mati", c.showNoclipMati));

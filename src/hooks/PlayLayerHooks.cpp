@@ -92,11 +92,12 @@ namespace {
                 break;
         }
 
+        if (c.showLevelId && pl->m_level) t += fmt::format("ID Level: {}\n", idLevel(pl));
+        if (c.showRataMati && s.jumlahMati > 0) t += fmt::format("Rata-rata Mati: {:.0f}%\n", s.totalPersenMati / static_cast<float>(s.jumlahMati));
         if (c.showTestmode && pl->m_isTestMode) t += "Testmode\n";
         if (c.showBestRun && s.bestRunB > s.bestRunA) t += fmt::format("Best Run: {:.0f}-{:.0f}%\n", s.bestRunA, s.bestRunB);
         if (c.noclip && c.showNoclipMati) t += fmt::format("Noclip Mati: {}\n", s.matiNoclip);
 
-        if (c.showCheat && tgm::cheatsActive()) t += "CHEAT AKTIF\n";
         if (modeAman) t += "Mode Aman aktif\n";
         if (!t.empty()) t.pop_back(); // buang newline terakhir
         return t;
@@ -309,6 +310,8 @@ class $modify(TgmPlayLayer, PlayLayer) {
         std::vector<CCPoint> jejak1;         // titik jejak pemain 1
         std::vector<CCPoint> jejak2;         // titik jejak pemain 2
         int         jejakAkum = 0;           // penghitung frame untuk jarak antar titik
+        int         cheatTerakhir = -1;      // keadaan titik Cheat Indicator yang sudah digambar (-1 = belum)
+        int         cheatPosTerakhir = -1;
         bool        autoKillSudah = false;   // Auto Kill sudah dipicu pada percobaan ini
         bool        musikDijeda = false;     // musik dijeda oleh Mute Audio Saat Mati
     };
@@ -383,6 +386,16 @@ class $modify(TgmPlayLayer, PlayLayer) {
         m_fields->hitboxTerapkan = tgm::cfg().hitbox;
         if (tgm::cfg().hitbox || tgm::cfg().hitboxMati) this->updateDebugDrawSettings();
 
+        // Peringatan cheat aktif saat masuk level
+        if (tgm::cfg().toastCheat) {
+            auto daftar = tgm::daftarCheat();
+            if (!daftar.empty()) {
+                std::string teks = "Cheat aktif: ";
+                for (std::size_t i = 0; i < daftar.size(); ++i) teks += (i ? ", " : "") + daftar[i];
+                Notification::create(teks, NotificationIcon::Warning, 2.5f)->show();
+            }
+        }
+
         // Presisi klik (CBF) dan musik practice
         tgm::cbf::levelDimuat();
         if (tgm::cfg().musikPracticeAsli) m_practiceMusicSync = true;
@@ -450,6 +463,45 @@ class $modify(TgmPlayLayer, PlayLayer) {
         }
     }
 
+    // Titik Cheat Indicator: hijau bila tidak ada cheat, merah bila ada
+    void perbaruiIndikatorCheat() {
+        auto const& c = tgm::cfg();
+        auto* node = typeinfo_cast<CCDrawNode*>(m_uiLayer->getChildByID("tgm-cheat-dot"_spr));
+        if (!c.showCheat) {
+            if (node) node->removeFromParent();
+            m_fields->cheatTerakhir = -1;
+            return;
+        }
+
+        int keadaan = tgm::cheatsActive() ? 1 : 0;
+        if (!node) {
+            node = CCDrawNode::create();
+            node->setID("tgm-cheat-dot"_spr);
+            m_uiLayer->addChild(node, 99);
+            m_fields->cheatTerakhir = -1;
+        }
+
+        auto win = CCDirector::get()->getWinSize();
+        int p = std::clamp(c.cheatPos, 0, 5);
+        bool kanan = (p == 1 || p == 3);
+        bool tengah = (p == 4 || p == 5);
+        bool bawah = (p == 2 || p == 3 || p == 5);
+        constexpr float TEPI = 13.f;
+        node->setPosition({tengah ? win.width / 2.f : (kanan ? win.width - TEPI : TEPI), bawah ? TEPI : win.height - TEPI});
+
+        if (keadaan == m_fields->cheatTerakhir && p == m_fields->cheatPosTerakhir) return;
+        m_fields->cheatTerakhir = keadaan;
+        m_fields->cheatPosTerakhir = p;
+
+        float r = keadaan ? 0.95f : 0.25f;
+        float g = keadaan ? 0.25f : 0.85f;
+        float b = keadaan ? 0.25f : 0.40f;
+        node->clear();
+        node->drawDot({0.f, 0.f}, 9.f, ccc4f(0.f, 0.f, 0.f, 0.45f));   // bayangan
+        node->drawDot({0.f, 0.f}, 7.f, ccc4f(r, g, b, 1.f));           // titik utama
+        node->drawDot({-2.f, 2.f}, 2.5f, ccc4f(1.f, 1.f, 1.f, 0.35f)); // kilau
+    }
+
     // Hitbox memakai debug draw bawaan GD
     bool shouldDebugDraw() {
         if (tgm::cfg().hitbox) return true;
@@ -461,8 +513,23 @@ class $modify(TgmPlayLayer, PlayLayer) {
         auto const& c = tgm::cfg();
         if (c.hitbox) {
             m_isDebugDrawEnabled = true;
+            // Di mode normal GD tidak membuat node gambar hitbox: buat sendiri bila belum ada
+            if (m_objectLayer) {
+                if (!m_debugDrawNode) {
+                    m_debugDrawNode = CCDrawNode::create();
+                    m_objectLayer->addChild(m_debugDrawNode, 1000);
+                }
+                if (!m_debugDrawNode2) {
+                    m_debugDrawNode2 = CCDrawNode::create();
+                    m_objectLayer->addChild(m_debugDrawNode2, 1000);
+                }
+            }
             if (m_debugDrawNode) m_debugDrawNode->setVisible(true);
             if (m_debugDrawNode2) m_debugDrawNode2->setVisible(true);
+        } else if (!m_isDebugDrawEnabled) {
+            // Hitbox dimatikan: bersihkan gambar yang tertinggal
+            if (m_debugDrawNode) m_debugDrawNode->clear();
+            if (m_debugDrawNode2) m_debugDrawNode2->clear();
         }
         if (c.hitboxMati) m_hitboxesOnDeath = true;
     }
@@ -513,6 +580,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
         st.detikCp = 0.f;
         st.matiNoclip = 0;
         st.frameMatiNoclipAkhir = 0xFFFFFFFF;
+        st.objekMatiNoclipAkhir = nullptr;
         st.runMulai = this->getCurrentPercent();
         m_fields->menungguReset = false;
         m_fields->autoKillSudah = false;
@@ -545,6 +613,12 @@ class $modify(TgmPlayLayer, PlayLayer) {
     void destroyPlayer(PlayerObject* player, GameObject* object) {
         auto const& c = tgm::cfg();
 
+        // Kebal Paku (cheat): paku / hazard diabaikan, balok tetap mematikan
+        if (c.kebalPaku && object && object != m_anticheatSpike && object->m_objectType == GameObjectType::Hazard) {
+            tgm::stats().tabrakan++;
+            return;
+        }
+
         // Spike anti-cheat bawaan GD tetap harus diproses agar level tidak error
         if (c.noclip && object != m_anticheatSpike) {
             bool pemain1 = (player == m_player1);
@@ -554,8 +628,14 @@ class $modify(TgmPlayLayer, PlayLayer) {
                 auto frame = m_gameState.m_currentProgress;
                 st.tabrakan++;
                 auto frameU = static_cast<uint32_t>(frame);
-                if (st.frameMatiNoclipAkhir == 0xFFFFFFFF || frameU > st.frameMatiNoclipAkhir + 1) st.matiNoclip++;
+                // "Mati" Noclip bertambah tiap menabrak hitbox paku atau sisi balok yang baru
+                // (objek berbeda, atau tabrakan baru setelah sempat lepas), bukan tiap frame
+                if (st.frameMatiNoclipAkhir == 0xFFFFFFFF || frameU > st.frameMatiNoclipAkhir + 1
+                    || st.objekMatiNoclipAkhir != static_cast<void*>(object)) {
+                    st.matiNoclip++;
+                }
                 st.frameMatiNoclipAkhir = frameU;
+                st.objekMatiNoclipAkhir = static_cast<void*>(object);
                 if (frame != st.frameTabrakAkhir) {
                     st.frameTabrak++;
                     st.frameTabrakAkhir = frame;
@@ -585,6 +665,8 @@ class $modify(TgmPlayLayer, PlayLayer) {
                 st.bestRunA = st.runMulai;
                 st.bestRunB = akhir;
             }
+            st.jumlahMati++;
+            st.totalPersenMati += akhir;
         }
 
         PlayLayer::destroyPlayer(player, object);
@@ -743,6 +825,8 @@ class $modify(TgmPlayLayer, PlayLayer) {
         if (m_fields->hitboxTerapkan != c.hitbox) {
             m_fields->hitboxTerapkan = c.hitbox;
             this->updateDebugDrawSettings();
+        } else if (c.hitbox && (!m_isDebugDrawEnabled || !m_debugDrawNode)) {
+            this->updateDebugDrawSettings();   // GD kadang mematikan debug draw sendiri (terutama di mode normal)
         }
 
         // Perbarui HUD paling banyak 10x per detik
@@ -750,6 +834,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
         if (m_fields->akumulasiHud < (c.modeRingan ? 0.25f : 0.1f)) return;
         m_fields->akumulasiHud = 0.f;
         this->pastikanTombolLayar();
+        this->perbaruiIndikatorCheat();
 
         auto* label = typeinfo_cast<CCLabelBMFont*>(m_uiLayer->getChildByID("tgm-hud"_spr));
         auto* latar = typeinfo_cast<CCLayerColor*>(m_uiLayer->getChildByID("tgm-hud-bg"_spr));

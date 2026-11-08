@@ -24,9 +24,12 @@ namespace tgm {
         float    persenMatiTerakhir = -1.f; // persen tempat mati terakhir (-1 = belum ada)
         uint32_t matiNoclip      = 0;    // berapa kali pemain seharusnya mati (rentetan tabrakan dihitung satu)
         uint32_t frameMatiNoclipAkhir = 0xFFFFFFFF; // frame tabrakan terakhir untuk menghitung rentetan
+        void*    objekMatiNoclipAkhir = nullptr; // objek (paku / sisi balok) yang terakhir ditabrak saat Noclip
         float    runMulai        = 0.f;  // persen tempat percobaan ini dimulai
         float    bestRunA        = 0.f;  // run terbaik di level ini: dari persen ...
         float    bestRunB        = 0.f;  // ... sampai persen ini
+        uint32_t jumlahMati      = 0;    // jumlah kematian sesi level ini (untuk rata-rata)
+        float    totalPersenMati = 0.f;  // jumlah persen tempat mati (untuk rata-rata)
 
         // Persentase akurasi Noclip pada percobaan ini (100 = tidak ada tabrakan)
         float akurasi(uint32_t frameSekarang) const {
