@@ -2,6 +2,7 @@
 // dan siklus hidup Replay Bot.
 
 #include <Geode/Geode.hpp>
+#include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/ui/Notification.hpp>
 
@@ -18,6 +19,7 @@
 #include "../core/Riwayat.hpp"
 #include "../core/Stats.hpp"
 #include "../hacks/Cbf.hpp"
+#include "../hacks/Stepper.hpp"
 
 using namespace geode::prelude;
 
@@ -156,7 +158,33 @@ namespace {
     // ---------- Input Viewer ----------
     constexpr float UKURAN_KOTAK = 26.f;
     constexpr float JARAK_KOTAK = 4.f;
-    constexpr int   TAG_KOTAK = 100;   // tag kotak = TAG_KOTAK + indeks tombol (0..5)
+    constexpr int   TAG_KOTAK = 100;   // tag kotak = TAG_KOTAK + indeks tombol (0..5): P1 [kiri, lompat, kanan], P2 [kiri, lompat, kanan]
+
+    // Keadaan terakhir yang sudah diterapkan ke node. Bila tidak berubah, frame ini tidak menyentuh node sama sekali.
+    struct IvKeadaan {
+        bool tampil = false;
+        bool dua = false;
+        int pos = -1, ukuran = -1, opas = -1, warna = -1, offX = 0, offY = 0;
+        unsigned mask = 0xFFFFFFFFu;
+        float lebar = 0.f, tinggi = 0.f;
+        bool operator==(IvKeadaan const&) const = default;
+    };
+
+    // Hapus semua anak dengan ID tertentu (mencegah node ganda bila setup berjalan lebih dari sekali)
+    void bersihkan(CCNode* induk, std::string const& id) {
+        while (auto* n = induk->getChildByID(id)) n->removeFromParent();
+    }
+
+    // Status tombol AKTUAL dari objek pemain GD (bukan dari parameter event), jadi P1 dan P2 tidak bisa tertukar
+    // dan tidak ada status "tersangkut": pemain mati atau level dijeda selalu dianggap dilepas.
+    bool tombolDitekan(PlayLayer* pl, PlayerObject* p, int tombol) {
+        if (!p || p->m_isDead || pl->m_isPaused) return false;
+        auto it = p->m_holdingButtons.find(tombol);
+        if (it != p->m_holdingButtons.end() && it->second) return true;
+        if (tombol == 2) return p->m_holdingLeft;
+        if (tombol == 3) return p->m_holdingRight;
+        return false;
+    }
 
     CCNode* bangunInputViewer(PlayLayer* pl) {
         auto* akar = CCNode::create();
@@ -187,29 +215,42 @@ namespace {
         return akar;
     }
 
-    void perbaruiInputViewer(CCNode* akar, PlayLayer* pl) {
+    void perbaruiInputViewer(CCNode* akar, PlayLayer* pl, IvKeadaan& cache) {
         auto const& c = tgm::cfg();
-        auto const& st = tgm::stats();
+        auto win = CCDirector::get()->getWinSize();
+        bool dua = pl->m_gameState.m_isDualMode || (pl->m_levelSettings && pl->m_levelSettings->m_twoPlayerMode);
+
+        unsigned mask = 0;
+        if (c.ivTampil) {
+            static int const URUTAN[3] = {2, 1, 3};   // tombol GD untuk [kiri, lompat, kanan]
+            for (int i = 0; i < 3; ++i) {
+                if (tombolDitekan(pl, pl->m_player1, URUTAN[i])) mask |= 1u << i;
+                if (dua && tombolDitekan(pl, pl->m_player2, URUTAN[i])) mask |= 1u << (3 + i);
+            }
+        }
+
+        IvKeadaan baru{c.ivTampil, dua, c.ivPosisi, c.ivUkuran, c.ivOpasitas, c.ivWarna, c.ivOffX, c.ivOffY, mask, win.width, win.height};
+        if (baru == cache) return;
+        cache = baru;
+
         akar->setVisible(c.ivTampil);
         if (!c.ivTampil) return;
 
-        auto win = CCDirector::get()->getWinSize();
         bool kanan = (c.ivPosisi == 1 || c.ivPosisi == 3);
         bool tengah = (c.ivPosisi == 4 || c.ivPosisi == 5);
         bool bawah = (c.ivPosisi == 2 || c.ivPosisi == 3 || c.ivPosisi == 5);
         akar->setAnchorPoint({tengah ? 0.5f : (kanan ? 1.f : 0.f), bawah ? 0.f : 1.f});
         akar->setScale(static_cast<float>(c.ivUkuran) / 100.f);
-        akar->setPosition({tengah ? win.width / 2.f : (kanan ? win.width - 12.f : 12.f), bawah ? 12.f : win.height - 12.f});
+        akar->setPosition({(tengah ? win.width / 2.f : (kanan ? win.width - 12.f : 12.f)) + static_cast<float>(c.ivOffX),
+                           (bawah ? 12.f : win.height - 12.f) + static_cast<float>(c.ivOffY)});
 
-        bool dua = pl->m_gameState.m_isDualMode || (pl->m_levelSettings && pl->m_levelSettings->m_twoPlayerMode);
         float opasitas = static_cast<float>(c.ivOpasitas) / 100.f;
         auto warna = warnaHud(c.ivWarna);
-
         for (int i = 0; i < 6; ++i) {
             auto* kotak = typeinfo_cast<CCLayerColor*>(akar->getChildByTag(TAG_KOTAK + i));
             if (!kotak) continue;
             kotak->setVisible(i < 3 || dua);
-            bool ditekan = st.tombol[static_cast<std::size_t>(i)];
+            bool ditekan = (mask >> i) & 1u;
             kotak->setColor(ditekan ? warna : ccColor3B{40, 40, 40});
             kotak->setOpacity(static_cast<GLubyte>((ditekan ? 1.f : 0.55f) * opasitas * 255.f));
         }
@@ -228,6 +269,8 @@ class $modify(TgmPlayLayer, PlayLayer) {
         int         fontSaatIni = -1;
         bool        menungguReset = false;   // ada kematian yang belum diikuti reset level
         CCNode*     inputViewer = nullptr;   // dimiliki m_uiLayer
+        IvKeadaan   ivCache;                 // keadaan Input Viewer yang terakhir diterapkan
+        bool        hitboxTerapkan = false;  // nilai Config::hitbox yang terakhir diterapkan ke GD
     };
 
     void setupHasCompleted() {
@@ -251,6 +294,13 @@ class $modify(TgmPlayLayer, PlayLayer) {
             m_isTestMode = true;
         }
 
+        // Bersihkan sisa node TeamGdMod bila ada (mencegah node ganda)
+        bersihkan(m_uiLayer, "tgm-hud-bg"_spr);
+        bersihkan(m_uiLayer, "tgm-hud"_spr);
+        bersihkan(m_uiLayer, "tgm-iv"_spr);
+        bersihkan(m_uiLayer, "tgm-restart"_spr);
+        bersihkan(m_uiLayer, "tgm-stepper"_spr);
+
         // Label HUD + latar gelap
         auto latar = CCLayerColor::create(ccc4(0, 0, 0, 90));
         latar->setID("tgm-hud-bg"_spr);
@@ -265,8 +315,8 @@ class $modify(TgmPlayLayer, PlayLayer) {
 
         // Input Viewer
         m_fields->inputViewer = bangunInputViewer(this);
-        m_uiLayer->addChild(m_fields->inputViewer, 98);
-        perbaruiInputViewer(m_fields->inputViewer, this);
+        m_uiLayer->addChild(m_fields->inputViewer, 102);   // di atas HUD agar tidak tertutup
+        perbaruiInputViewer(m_fields->inputViewer, this, m_fields->ivCache);
 
         // Tombol restart kecil di layar (opsional)
         if (tgm::cfg().tombolRestart) {
@@ -276,15 +326,62 @@ class $modify(TgmPlayLayer, PlayLayer) {
                 auto* item = CCMenuItemExt::createSpriteExtra(spr, [this](auto) { this->resetLevelFromStart(); });
                 item->setPosition({24.f, 24.f});
                 auto* menu = CCMenu::create();
+                menu->setID("tgm-restart"_spr);
                 menu->setPosition({0.f, 0.f});
                 menu->addChild(item);
                 m_uiLayer->addChild(menu, 98);
             }
         }
 
+        // Frame Stepper: tombol Jeda / Langkah di bawah layar
+        tgm::stepper::reset();
+        if (tgm::cfg().frameStepper) {
+            auto win = CCDirector::get()->getWinSize();
+            auto* menu = CCMenu::create();
+            menu->setID("tgm-stepper"_spr);
+            menu->setPosition({0.f, 0.f});
+
+            auto* sprJeda = ButtonSprite::create("Jeda", "goldFont.fnt", "GJ_button_04.png", 0.8f);
+            sprJeda->setScale(0.5f);
+            auto* itemJeda = CCMenuItemExt::createSpriteExtra(sprJeda, [sprJeda](auto) {
+                tgm::stepper::ubahBeku();
+                sprJeda->setString(tgm::stepper::beku() ? "Lanjut" : "Jeda");
+            });
+            itemJeda->setPosition({win.width / 2.f - 42.f, 22.f});
+            menu->addChild(itemJeda);
+
+            auto* sprLangkah = ButtonSprite::create("Langkah", "goldFont.fnt", "GJ_button_04.png", 0.8f);
+            sprLangkah->setScale(0.5f);
+            auto* itemLangkah = CCMenuItemExt::createSpriteExtra(sprLangkah, [](auto) { tgm::stepper::langkah(); });
+            itemLangkah->setPosition({win.width / 2.f + 42.f, 22.f});
+            menu->addChild(itemLangkah);
+            m_uiLayer->addChild(menu, 98);
+        }
+
+        // Hitbox: terapkan pengaturan debug draw GD
+        m_fields->hitboxTerapkan = tgm::cfg().hitbox;
+        if (tgm::cfg().hitbox || tgm::cfg().hitboxMati) this->updateDebugDrawSettings();
+
         // Presisi klik (CBF) dan musik practice
         tgm::cbf::levelDimuat();
         if (tgm::cfg().musikPracticeAsli) m_practiceMusicSync = true;
+    }
+
+    // Hitbox memakai debug draw bawaan GD
+    bool shouldDebugDraw() {
+        if (tgm::cfg().hitbox) return true;
+        return PlayLayer::shouldDebugDraw();
+    }
+
+    void updateDebugDrawSettings() {
+        PlayLayer::updateDebugDrawSettings();
+        auto const& c = tgm::cfg();
+        if (c.hitbox) {
+            m_isDebugDrawEnabled = true;
+            if (m_debugDrawNode) m_debugDrawNode->setVisible(true);
+            if (m_debugDrawNode2) m_debugDrawNode2->setVisible(true);
+        }
+        if (c.hitboxMati) m_hitboxesOnDeath = true;
     }
 
     // Musik practice sama dengan mode normal: pakai fitur Practice Music Sync bawaan GD
@@ -319,7 +416,6 @@ class $modify(TgmPlayLayer, PlayLayer) {
         st.frameTabrak = 0;
         st.frameTabrakAkhir = 0xFFFFFFFF;
         st.detikCp = 0.f;
-        st.tombol.fill(false);
         m_fields->menungguReset = false;
 
         tgm::riwayat::catatPercobaan(idLevel(this));
@@ -421,6 +517,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
 
     void onQuit() {
         tgm::bot::berhenti();
+        tgm::stepper::reset();
 
         // Catat sisa waktu main lalu simpan ke disk sebelum keluar level
         auto& st = tgm::stats();
@@ -470,7 +567,13 @@ class $modify(TgmPlayLayer, PlayLayer) {
             }
         }
 
-        if (m_fields->inputViewer) perbaruiInputViewer(m_fields->inputViewer, this);
+        if (m_fields->inputViewer) perbaruiInputViewer(m_fields->inputViewer, this, m_fields->ivCache);
+
+        // Hitbox dinyalakan / dimatikan lewat menu saat level berjalan
+        if (m_fields->hitboxTerapkan != c.hitbox) {
+            m_fields->hitboxTerapkan = c.hitbox;
+            this->updateDebugDrawSettings();
+        }
 
         // Perbarui HUD paling banyak 10x per detik
         m_fields->akumulasiHud += dtNyata;

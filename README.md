@@ -9,7 +9,7 @@ Target: **Geode 6.0.0-alpha.1**, **GD 2.2091**, build Android 64-bit lewat GitHu
 > **Status pengujian:** seluruh kode dikompilasi (cek sintaks dan tipe) dengan clang terhadap header
 > Geode 6.0.0-alpha.1 dan bindings GD 2.2091 (Android64 disimulasikan), tanpa error. Yang **belum** dilakukan:
 > link penuh dengan NDK dan uji di dalam game. Jadi perilaku saat bermain belum terbukti, terutama fitur
-> **eksperimental**: Respawn Cepat, Lompat Bebas, Tanpa Portal Cermin, Presisi Klik (CBF), Musik Practice
+> **eksperimental**: Respawn Cepat, Lompat Bebas, Tanpa Portal Cermin, Presisi Klik (CBF), Hitbox, Langkah Frame, Musik Practice
 > Sama dengan Normal, serta tombol logo mengambang (sentuhan dan posisi).
 
 ## Fitur
@@ -18,8 +18,10 @@ Target: **Geode 6.0.0-alpha.1**, **GD 2.2091**, build Android 64-bit lewat GitHu
 |---|---|
 | Tombol logo mengambang | Logo TeamGd bisa di-drag ke mana saja dan tampil di menu, level, dan layar jeda. Ketuk untuk buka menu. Menempel ke tepi, meredup otomatis, ukuran dan kepekatan diatur, posisi tersimpan |
 | Musik Practice Sama dengan Normal | Di mode Practice, lagu level asli tetap diputar (sinkron dengan checkpoint) alih-alih musik practice terpisah bawaan GD |
-| Input Viewer | Kotak tombol di layar yang menyala saat ditekan (P1 dan P2, juga kiri/kanan di level platformer). Posisi, ukuran, kepekatan, dan warna diatur |
+| Input Viewer | Kotak tombol P1 dan P2 (juga kiri/kanan di platformer) yang menyala sesuai status tombol aktual di objek pemain GD. Posisi, geser X/Y, ukuran, kepekatan, dan warna diatur |
 | Presisi Klik | Klik di Langkah dan Click Between Frames (eksperimental): input diterapkan sesuai waktu sentuhan di dalam frame. Mati sendiri bila stempel waktu tidak cocok |
+| Hitbox | Tampilkan hitbox (debug draw bawaan GD) dan hitbox saat mati |
+| Langkah Frame | Tombol Jeda dan Langkah di layar: level dibekukan, maju satu langkah fisika per tekan (dihitung cheat) |
 | Klik Otomatis | Tahan tombol lompat untuk spam klik 5-30 per detik (dihitung cheat) |
 | Tambahan | Konfirmasi sebelum keluar level, tombol restart di layar, persen mati terakhir, dan sebaran tempat mati per level |
 | Database | Semua pengaturan dan statistik ditulis langsung ke disk (atomik, ada cadangan dan checksum), jadi tidak hilang walau game ditutup paksa atau keluar level |
@@ -48,6 +50,12 @@ Database tersimpan di `database/teamgd.tgdb` (dengan `.bak`); tab **Data** punya
 
 **Keterbatasan:** level lokal/editor semua ber-ID 0 sehingga slot dan statistiknya berbagi. Macro mengandalkan
 fisika yang deterministik pada tick rate yang sama. Presisi Klik bergantung pada stempel waktu input dari GD; bila tidak cocok fitur mati sendiri dan GD memakai penanganan bawaan. Presisi Klik otomatis mati saat Replay Bot merekam atau memutar.
+
+## Pengujian
+
+- Seluruh kode dikompilasi dengan clang terhadap header Geode 6.0.0-alpha.1 dan bindings GD 2.2091 (Android64 disimulasikan).
+- Modul database diuji di komputer (tulis langsung, muat ulang setelah "game ditutup paksa", file rusak, file terpotong, transaksi, cadangan manual): semua lulus.
+- Yang **belum** diuji karena butuh game berjalan: Input Viewer P1/P2, tombol logo (satu instance, drag), animasi menu, Hitbox, Langkah Frame, Presisi Klik, dan musik practice.
 
 ## Struktur proyek
 

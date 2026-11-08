@@ -1,5 +1,24 @@
 # TeamGdMod
 
+## v1.5.1
+**Perbaikan**:
+* <cg>Diperbaiki</c> <cl>Input Viewer P1/P2</c>: status tombol kini dibaca langsung dari objek pemain GD (`m_holdingButtons`), bukan dari parameter event, jadi P1 dan P2 tidak bisa tertukar. Pemain mati atau level dijeda otomatis dianggap dilepas (tidak ada status tersangkut)
+* <cg>Diperbaiki</c> logo ganda: tombol logo di layar jeda tidak lagi dibuat bila tombol mengambang sudah tampil. Tombol mengambang hanya satu instance (salinan lain dibersihkan otomatis)
+* <cg>Diperbaiki</c> node HUD / Input Viewer ganda saat level dimuat ulang
+* <cg>Diperbaiki</c> panel menu terpotong di layar sempit (diskalakan otomatis)
+
+**Fitur baru**:
+* <cg>Ditambah</c> <cl>Hitbox</c> dan <co>Hitbox Saat Mati</c> (memakai debug draw bawaan GD)
+* <cg>Ditambah</c> <cl>Langkah Frame</c>: tombol Jeda dan Langkah di layar
+* <cg>Ditambah</c> geser horizontal / vertikal untuk Input Viewer
+
+**Tampilan**:
+* <cy>Diubah</c> animasi: menu buka dan tutup dengan pudar + skala, perpindahan tab dan halaman dengan geser + pudar, tekan tombol lebih ringan
+* <cy>Diubah</c> panel latar tab dan isi, logo di sisi judul
+
+**Performa**:
+* <cy>Diubah</c> Input Viewer hanya menyentuh node bila ada yang berubah
+
 ## v1.5.0
 **Fitur baru**:
 * <cg>Ditambah</c> <cl>Musik Practice Sama dengan Normal</c>: di Practice, lagu level asli diputar dan sinkron dengan checkpoint

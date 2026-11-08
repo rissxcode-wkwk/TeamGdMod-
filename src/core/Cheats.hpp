@@ -11,6 +11,7 @@ namespace tgm {
         return c.noclip
             || c.lompatBebas
             || c.turbo
+            || c.frameStepper
             || std::abs(c.speed - 1.f) > 0.001f
             || bot::mode() == bot::Mode::Putar;
     }

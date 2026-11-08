@@ -33,6 +33,8 @@ protected:
 public:
     // Pasang ke overlay (aman dipanggil berulang)
     static void pasang();
+    // Bangun ulang gambar setelah tekstur dimuat ulang
+    static void muatUlangGambar();
     // Kembalikan ke posisi bawaan (dipakai tombol Reset Posisi)
     static void resetPosisi();
 };

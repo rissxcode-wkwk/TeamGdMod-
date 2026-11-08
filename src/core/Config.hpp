@@ -73,6 +73,8 @@ namespace tgm {
         int   ivUkuran       = 100;   // ukuran dalam persen (50 - 200)
         int   ivOpasitas     = 80;    // kepekatan dalam persen (20 - 100)
         int   ivWarna        = 1;     // indeks warna tombol yang ditekan (0 - 7)
+        int   ivOffX         = 0;     // geser horizontal (-150 .. 150)
+        int   ivOffY         = 0;     // geser vertikal (-150 .. 150)
 
         // ================= Presisi Klik =================
         int   cbfMode        = 0;     // 0 = bawaan GD, 1 = Klik di Langkah, 2 = Click Between Frames (eksperimental)
@@ -83,6 +85,9 @@ namespace tgm {
         bool  konfirmasiKeluar = false; // minta konfirmasi sebelum keluar level dari layar jeda
         bool  tombolRestart  = false; // tombol restart kecil di layar saat bermain
         bool  showMatiTerakhir = false; // HUD: persen tempat mati terakhir
+        bool  hitbox         = false; // tampilkan hitbox objek dan pemain
+        bool  hitboxMati     = false; // tampilkan hitbox saat mati
+        bool  frameStepper   = false; // tombol Jeda / Langkah frame di layar
 
         // ================= Antarmuka =================
         int   tabTerakhir    = 0;     // tab menu yang terakhir dibuka

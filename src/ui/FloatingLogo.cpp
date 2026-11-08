@@ -13,6 +13,8 @@ using namespace geode::prelude;
 
 namespace {
     FloatingLogo* g_inst = nullptr;
+    bool g_pasangDijadwalkan = false;      // mencegah antrean pasang() ganda
+    constexpr char const* ID_LOGO = "tgm-floating-logo";
     constexpr float RADIUS_DASAR = 22.f;     // jari-jari tombol pada ukuran 100%
     constexpr float AMBANG_GESER = 10.f;     // jarak minimal agar dianggap menggeser, bukan mengetuk
 }
@@ -23,6 +25,7 @@ float FloatingLogo::jari() const {
 
 bool FloatingLogo::init() {
     if (!CCLayer::init()) return false;
+    this->setID(ID_LOGO);
     this->setTouchMode(kCCTouchesOneByOne);
     this->setTouchEnabled(true);
     this->scheduleUpdate();
@@ -167,7 +170,18 @@ void FloatingLogo::ccTouchCancelled(CCTouch*, CCEvent*) {
 }
 
 void FloatingLogo::pasang() {
+    g_pasangDijadwalkan = false;
     auto* overlay = OverlayManager::get();
+
+    // Buang salinan lain bila ada (hanya g_inst yang boleh hidup)
+    if (auto* anak = overlay->getChildren()) {
+        std::vector<CCNode*> asing;
+        for (auto* n : CCArrayExt<CCNode*>(anak)) {
+            if (n != g_inst && n->getID() == ID_LOGO) asing.push_back(n);
+        }
+        for (auto* n : asing) n->removeFromParent();
+    }
+
     if (!g_inst) {
         g_inst = new FloatingLogo();
         if (!g_inst->init()) {
@@ -178,12 +192,16 @@ void FloatingLogo::pasang() {
         g_inst->autorelease();
         g_inst->retain();   // dipegang sendiri: overlay bisa mengosongkan anaknya saat tekstur dimuat ulang
     }
-    // Tekstur bisa berubah (ganti kualitas grafis): bangun ulang gambar
-    g_inst->bangunGambar();
+    // Tekstur bisa berubah (ganti kualitas grafis): bangun ulang gambar hanya bila sudah masuk overlay lagi
+    if (g_inst->getParent() != overlay || !g_inst->m_gambar) g_inst->bangunGambar();
     if (g_inst->getParent() != overlay) {
         if (g_inst->getParent()) g_inst->removeFromParent();
         overlay->addChild(g_inst, 100000);
     }
+}
+
+void FloatingLogo::muatUlangGambar() {
+    if (g_inst) g_inst->bangunGambar();
 }
 
 void FloatingLogo::resetPosisi() {
@@ -195,10 +213,19 @@ void FloatingLogo::resetPosisi() {
 }
 
 // Pasang saat mod selesai dimuat dan setiap kali tekstur dimuat ulang
-$on_mod(Loaded) {
+// Satu pintu pemasangan: antrean ganda digabung jadi satu
+static void jadwalkanPasang() {
+    if (g_pasangDijadwalkan) return;
+    g_pasangDijadwalkan = true;
     queueInMainThread([] { FloatingLogo::pasang(); });
 }
 
+$on_mod(Loaded) {
+    jadwalkanPasang();
+}
+
 $on_game(TexturesLoaded) {
-    queueInMainThread([] { FloatingLogo::pasang(); });
+    // Tekstur dimuat ulang: gambar lama tidak valid lagi
+    FloatingLogo::muatUlangGambar();
+    jadwalkanPasang();
 }

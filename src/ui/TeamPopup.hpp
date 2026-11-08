@@ -41,15 +41,26 @@ protected:
     CCMenuItemSpriteExtra* m_panahKanan = nullptr;
     std::vector<std::pair<cocos2d::CCLabelBMFont*, std::function<std::string()>>> m_dinamis;
 
-    bool init();
-    void pilihTab(int tab);
+    float m_skala = 1.f;                             // skala panel agar muat di layar sempit
+    float m_arah = 1.f;                              // arah geser animasi ganti isi
+    bool  m_sibuk = false;                           // animasi ganti isi sedang berjalan
+    bool  m_menutup = false;                         // animasi tutup sedang berjalan
+    std::function<void()> m_tertunda;                // pembangun isi baru yang menunggu animasi keluar
+
+    bool init() override;
+    void pilihTab(int tab, bool animasi = true);
     void tampilkanHalaman();
+    void ganti(float arah, std::function<void()> bangun);
+    void selesaiKeluar();
+    void selesaiTutup();
     void segarkan(float dt);
     void gantiHalaman(int arah);
 
     static std::vector<Halaman> bangunTab(int tab, TeamPopup* self);
 
 public:
+    void show() override;
+    void onClose(cocos2d::CCObject* pengirim) override;
     static TeamPopup* create();
     // Buka menu bila tertutup, tutup bila sudah terbuka (dipakai tombol logo mengambang)
     static void bukaAtauTutup();

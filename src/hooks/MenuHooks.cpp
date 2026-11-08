@@ -51,6 +51,11 @@ class $modify(TgmPauseLayer, PauseLayer) {
 
     void customSetup() {
         PauseLayer::customSetup();
+
+        // Tombol logo mengambang sudah tampil di layar jeda: jangan buat tombol kedua (penyebab logo ganda)
+        auto const& c = tgm::cfg();
+        if (c.logoTampil && c.logoDiLevel) return;
+
         auto win = CCDirector::get()->getWinSize();
         auto* item = tombolLogo(34.f, [](auto) { TeamPopup::bukaAtauTutup(); });
         item->setPosition({win.width - 30.f, 30.f});

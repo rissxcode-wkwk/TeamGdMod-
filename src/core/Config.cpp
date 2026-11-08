@@ -107,6 +107,8 @@ namespace tgm {
                 I("iv-ukuran", c.ivUkuran, 50, 200);
                 I("iv-opasitas", c.ivOpasitas, 20, 100);
                 I("iv-warna", c.ivWarna, 0, 7);
+                I("iv-off-x", c.ivOffX, -150, 150);
+                I("iv-off-y", c.ivOffY, -150, 150);
 
                 // Presisi klik
                 I("cbf-mode", c.cbfMode, 0, 2);
@@ -117,6 +119,9 @@ namespace tgm {
                 B("konfirmasi-keluar", c.konfirmasiKeluar);
                 B("tombol-restart", c.tombolRestart);
                 B("show-mati-terakhir", c.showMatiTerakhir);
+                B("hitbox", c.hitbox);
+                B("hitbox-mati", c.hitboxMati);
+                B("frame-stepper", c.frameStepper);
 
                 // Antarmuka
                 I("tab-terakhir", c.tabTerakhir, 0, 20);

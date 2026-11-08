@@ -45,6 +45,42 @@ namespace {
         return fmt::format("{} m {} d", menit, detik % 60);
     }
 
+    constexpr int TAG_GANTI = 7701;   // tag aksi penjadwal ganti isi
+
+    // Kumpulkan semua node yang punya opasitas (RGBA) beserta nilai aslinya, untuk animasi pudar
+    void kumpulRgba(CCNode* node, std::vector<std::pair<CCNode*, GLubyte>>& hasil) {
+        if (!node) return;
+        if (auto* rgba = typeinfo_cast<CCRGBAProtocol*>(node)) hasil.emplace_back(node, rgba->getOpacity());
+        if (auto* anak = node->getChildren()) {
+            for (auto* n : CCArrayExt<CCNode*>(anak)) kumpulRgba(n, hasil);
+        }
+    }
+
+    // Pudar masuk: dari 0 ke opasitas asli
+    void pudarMasuk(CCNode* akar, float durasi) {
+        std::vector<std::pair<CCNode*, GLubyte>> v;
+        kumpulRgba(akar, v);
+        for (auto& [n, asli] : v) {
+            if (auto* rgba = typeinfo_cast<CCRGBAProtocol*>(n)) rgba->setOpacity(0);
+            n->runAction(CCFadeTo::create(durasi, asli));
+        }
+    }
+
+    // Pudar keluar: ke 0
+    void pudarKeluar(CCNode* akar, float durasi) {
+        std::vector<std::pair<CCNode*, GLubyte>> v;
+        kumpulRgba(akar, v);
+        for (auto& [n, asli] : v) n->runAction(CCFadeTo::create(durasi, 0));
+    }
+
+    // Respons tekan yang ringan: tombol hanya membesar sedikit saat ditekan
+    void ringanSemua(CCNode* menu) {
+        if (!menu || !menu->getChildren()) return;
+        for (auto* n : CCArrayExt<CCNode*>(menu->getChildren())) {
+            if (auto* item = typeinfo_cast<CCMenuItemSpriteExtra*>(n)) item->m_scaleMultiplier = 1.12f;
+        }
+    }
+
     // ---- Pembuat baris ----
     using Baris = TeamPopup::Baris;
     using Jenis = TeamPopup::Baris::Jenis;
@@ -144,13 +180,31 @@ void TeamPopup::bukaAtauTutup() {
 
 bool TeamPopup::init() {
     if (!Popup::init(440.f, 280.f, "square01_001.png")) return false;
+    m_noElasticity = true;   // animasi buka diatur sendiri di show()
     this->setTitle(fmt::format("TeamGdMod  v{}", Mod::get()->getVersion().toVString(false)).c_str());
 
-    // Logo kecil di pojok kiri atas
+    // Layar sempit (mis. 4:3): kecilkan seluruh panel agar tidak terpotong
+    auto win = CCDirector::get()->getWinSize();
+    m_skala = std::min({1.f, (win.width - 16.f) / 440.f, (win.height - 8.f) / 280.f});
+    m_mainLayer->setScale(m_skala);
+
+    // Logo kecil di sisi kiri judul
     if (auto* logo = CCSprite::create("logo.png"_spr)) {
-        logo->setScale(26.f / std::max(1.f, logo->getContentSize().width));
-        m_mainLayer->addChildAtPosition(logo, Anchor::TopLeft, ccp(24.f, -22.f));
+        logo->setScale(22.f / std::max(1.f, logo->getContentSize().width));
+        m_mainLayer->addChildAtPosition(logo, Anchor::Center, ccp(-112.f, 122.f));
     }
+
+    // Panel gelap tipis di belakang tab dan isi agar tampilan lebih terstruktur
+    auto panel = [this](CCPoint pos, CCSize ukuran, int opasitas) {
+        if (auto* p = NineSlice::create("square02b_001.png")) {
+            p->setContentSize(ukuran);
+            p->setColor({0, 0, 0});
+            p->setOpacity(static_cast<GLubyte>(opasitas));
+            m_mainLayer->addChildAtPosition(p, Anchor::Center, pos);
+        }
+    };
+    panel({-172.f, -6.f}, {86.f, 252.f}, 70);
+    panel({50.f, -10.f}, {330.f, 240.f}, 55);
 
     // Wadah isi halaman
     m_layerIsi = CCNode::create();
@@ -181,30 +235,117 @@ bool TeamPopup::init() {
     m_lblHalaman->setScale(0.45f);
     m_mainLayer->addChildAtPosition(m_lblHalaman, Anchor::Center, ccp(85.f, -112.f));
 
-    this->pilihTab(std::clamp(tgm::cfg().tabTerakhir, 0, JUMLAH_TAB - 1));
+    ringanSemua(m_buttonMenu);
+    this->pilihTab(std::clamp(tgm::cfg().tabTerakhir, 0, JUMLAH_TAB - 1), false);
     this->schedule(schedule_selector(TeamPopup::segarkan), 0.2f);
     return true;
 }
 
-void TeamPopup::pilihTab(int tab) {
+void TeamPopup::pilihTab(int tab, bool animasi) {
+    if (animasi && tab == m_tab) return;
+    float arah = tab >= m_tab ? 1.f : -1.f;
+    bool berubah = tab != tgm::cfg().tabTerakhir;
     m_tab = tab;
-    m_hal = 0;
-    tgm::cfg().tabTerakhir = tab;
-    tgm::saveConfig();
+    if (berubah) {
+        tgm::cfg().tabTerakhir = tab;
+        tgm::saveConfig();
+    }
 
     for (int i = 0; i < JUMLAH_TAB; ++i) {
         auto* spr = static_cast<ButtonSprite*>(m_tombolTab[i]->getNormalImage());
         spr->updateBGImage(i == tab ? "GJ_button_01.png" : "GJ_button_04.png");
     }
-    m_halaman = bangunTab(tab, this);
-    this->tampilkanHalaman();
+
+    auto bangun = [this] {
+        m_halaman = bangunTab(m_tab, this);
+        m_hal = 0;
+        this->tampilkanHalaman();
+    };
+    if (animasi) this->ganti(arah, std::move(bangun));
+    else bangun();
 }
 
 void TeamPopup::gantiHalaman(int arah) {
     int n = static_cast<int>(m_halaman.size());
     if (n <= 1) return;
     m_hal = (m_hal + arah + n) % n;
-    this->tampilkanHalaman();
+    this->ganti(static_cast<float>(arah), [this] { this->tampilkanHalaman(); });
+}
+
+// Ganti isi dengan animasi: isi lama pudar dan bergeser keluar, lalu isi baru pudar dan bergeser masuk.
+// Konten tidak dibuat ulang sebelum animasi keluar selesai, jadi tidak ada kedipan.
+void TeamPopup::ganti(float arah, std::function<void()> bangun) {
+    if (m_menutup) return;
+    m_tertunda = std::move(bangun);
+    m_arah = arah;
+
+    // Klik beruntun saat animasi berjalan: langsung selesaikan tanpa menumpuk aksi
+    if (m_sibuk) {
+        this->stopActionByTag(TAG_GANTI);
+        this->selesaiKeluar();
+        return;
+    }
+    m_sibuk = true;
+
+    pudarKeluar(m_layerIsi, 0.07f);
+    pudarKeluar(m_menuIsi, 0.07f);
+    m_layerIsi->runAction(CCMoveBy::create(0.07f, {-8.f * arah, 0.f}));
+    m_menuIsi->runAction(CCMoveBy::create(0.07f, {-8.f * arah, 0.f}));
+
+    auto* urutan = CCSequence::create(
+        CCDelayTime::create(0.07f),
+        CCCallFunc::create(this, callfunc_selector(TeamPopup::selesaiKeluar)),
+        nullptr);
+    urutan->setTag(TAG_GANTI);
+    this->runAction(urutan);
+}
+
+void TeamPopup::selesaiKeluar() {
+    m_layerIsi->stopAllActions();
+    m_menuIsi->stopAllActions();
+
+    // Bangun isi baru, lalu masukkan dengan geser + pudar singkat
+    if (m_tertunda) {
+        auto fn = std::move(m_tertunda);
+        m_tertunda = nullptr;
+        fn();
+    }
+    m_layerIsi->setPosition({10.f * m_arah, 0.f});
+    m_menuIsi->setPosition({10.f * m_arah, 0.f});
+    m_layerIsi->runAction(CCEaseSineOut::create(CCMoveTo::create(0.12f, {0.f, 0.f})));
+    m_menuIsi->runAction(CCEaseSineOut::create(CCMoveTo::create(0.12f, {0.f, 0.f})));
+    pudarMasuk(m_layerIsi, 0.12f);
+    pudarMasuk(m_menuIsi, 0.12f);
+    m_sibuk = false;
+}
+
+// Animasi buka: pudar masuk + membesar halus
+void TeamPopup::show() {
+    Popup::show();
+    m_mainLayer->setScale(m_skala * 0.9f);
+    m_mainLayer->runAction(CCEaseSineOut::create(CCScaleTo::create(0.18f, m_skala)));
+    pudarMasuk(m_mainLayer, 0.16f);
+}
+
+// Animasi tutup: pudar keluar + mengecil halus, baru dihapus dari scene
+void TeamPopup::onClose(CCObject*) {
+    if (m_menutup) return;
+    m_menutup = true;
+    this->unschedule(schedule_selector(TeamPopup::segarkan));
+    this->stopActionByTag(TAG_GANTI);
+    m_buttonMenu->setEnabled(false);
+    m_menuIsi->setEnabled(false);
+
+    pudarKeluar(m_mainLayer, 0.12f);
+    m_mainLayer->runAction(CCEaseSineIn::create(CCScaleTo::create(0.12f, m_skala * 0.92f)));
+    this->runAction(CCSequence::create(
+        CCDelayTime::create(0.12f),
+        CCCallFunc::create(this, callfunc_selector(TeamPopup::selesaiTutup)),
+        nullptr));
+}
+
+void TeamPopup::selesaiTutup() {
+    Popup::onClose(nullptr);
 }
 
 void TeamPopup::tampilkanHalaman() {
@@ -298,9 +439,11 @@ void TeamPopup::tampilkanHalaman() {
             }
         }
     }
+    ringanSemua(m_menuIsi);
 }
 
 void TeamPopup::segarkan(float) {
+    if (m_menutup) return;
     if (m_bangunUlang) {
         m_bangunUlang = false;
         m_halaman = bangunTab(m_tab, this);
@@ -335,6 +478,9 @@ std::vector<TeamPopup::Halaman> TeamPopup::bangunTab(int tab, TeamPopup* self) {
             r.push_back(tog("Lompat Bebas (eksperimental)", c.lompatBebas));
             r.push_back(tog("Tanpa Guncangan Layar", c.tanpaGuncang));
             r.push_back(tog("Tanpa Portal Cermin", c.tanpaCermin));
+            r.push_back(tog("Tampilkan Hitbox", c.hitbox));
+            r.push_back(tog("Hitbox Saat Mati", c.hitboxMati));
+            r.push_back(tog("Langkah Frame (tombol Jeda dan Langkah di layar)", c.frameStepper));
             r.push_back(tog("Buka Semua Ikon dan Warna (lokal)", c.bukaSemua));
             r.push_back(tog("Jeda Level Otomatis Saat Menu Dibuka", c.jedaSaatBuka));
             r.push_back(tog("Konfirmasi Sebelum Keluar Level", c.konfirmasiKeluar));
@@ -396,6 +542,8 @@ std::vector<TeamPopup::Halaman> TeamPopup::bangunTab(int tab, TeamPopup* self) {
             r.push_back(stepInt("Ukuran", c.ivUkuran, 50, 200, 10, [](int v) { return fmt::format("{}%", v); }));
             r.push_back(stepInt("Kepekatan", c.ivOpasitas, 20, 100, 10, [](int v) { return fmt::format("{}%", v); }));
             r.push_back(stepPilih("Warna Tombol", c.ivWarna, NAMA_WARNA));
+            r.push_back(stepInt("Geser Horizontal", c.ivOffX, -150, 150, 5));
+            r.push_back(stepInt("Geser Vertikal", c.ivOffY, -150, 150, 5));
             r.push_back(judul("Presisi Klik"));
             r.push_back(stepPilih("Mode Klik", c.cbfMode, NAMA_MODE_KLIK));
             r.push_back(info([] { return std::string(tgm::cbf::status()); }));

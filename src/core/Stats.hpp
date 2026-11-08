@@ -18,7 +18,6 @@ namespace tgm {
         float    waktuNyata      = 0.f;  // jam internal waktu nyata (detik sejak level dibuka)
         std::deque<float> waktuKlik;     // waktu nyata tiap klik (untuk menghitung CPS)
         float    detikBelumDicatat = 0.f; // waktu main yang belum dimasukkan ke database
-        std::array<bool, 6> tombol{};     // status tombol untuk Input Viewer: P1 [kiri, lompat, kanan], P2 [kiri, lompat, kanan]
         float    persenMatiTerakhir = -1.f; // persen tempat mati terakhir (-1 = belum ada)
 
         // Persentase akurasi Noclip pada percobaan ini (100 = tidak ada tabrakan)

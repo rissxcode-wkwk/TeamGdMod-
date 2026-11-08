@@ -1,4 +1,4 @@
-// Hook input: Replay Bot (rekam / putar), statistik klik, status tombol untuk Input Viewer,
+// Hook input: Replay Bot (rekam / putar), statistik klik,
 // klik otomatis (turbo), dan penghubung ke presisi klik (CBF).
 
 #include <Geode/Geode.hpp>
@@ -35,13 +35,6 @@ namespace {
         }
     }
 
-    // Simpan status tombol untuk Input Viewer. Tombol GD: 1 = lompat, 2 = kiri, 3 = kanan.
-    void catatTombol(bool pemain1, int tombol, bool turun) {
-        static int const PETA[4] = {-1, 1, 0, 2};   // tombol GD -> posisi [kiri, lompat, kanan]
-        if (tombol < 1 || tombol > 3) return;
-        tgm::stats().tombol[(pemain1 ? 0 : 3) + PETA[tombol]] = turun;
-    }
-
     // Hanya layar bermain (PlayLayer) yang diproses, bukan editor
     bool layarBermain(GJBaseGameLayer* self) {
         auto* pl = PlayLayer::get();
@@ -56,7 +49,6 @@ class $modify(TgmBotBaseLayer, GJBaseGameLayer) {
             return;
         }
         if (g_menyuntik) {
-            catatTombol(isPlayer1, button, down);
             GJBaseGameLayer::handleButton(down, button, isPlayer1);
             return;
         }
@@ -73,7 +65,6 @@ class $modify(TgmBotBaseLayer, GJBaseGameLayer) {
                 break;
         }
 
-        catatTombol(isPlayer1, button, down);
         if (button == 1) {
             int i = isPlayer1 ? 0 : 1;
             g_tahan[i] = down;

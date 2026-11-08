@@ -11,6 +11,7 @@ Mod menu **Geometry Dash 2.2091** buatan sendiri untuk Geode 6.
 ## Fitur
 
 - **Musik Practice Sama dengan Normal**: di Practice, lagu level asli tetap diputar dan sinkron dengan checkpoint
+- **Hitbox**, **Langkah Frame**
 - **Input Viewer** dan **Presisi Klik** (Klik di Langkah / Click Between Frames), **Klik Otomatis**
 - **Noclip** per pemain, batas tabrakan, dan batas akurasi
 - **Speedhack**, **Respawn Cepat**, **Lompat Bebas** (eksperimental), **Tanpa Guncangan**, **Tanpa Portal Cermin**
