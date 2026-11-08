@@ -1,5 +1,3 @@
-# Build otomatis TeamGdMod untuk Android 64-bit memakai versi Geode SDK yang tertulis di mod.json.
-# Cara pakai: push ke GitHub -> tab Actions -> buka run terbaru -> unduh artifact "TeamGdMod-android".
 name: Build TeamGdMod
 
 on:
@@ -14,17 +12,15 @@ jobs:
       - name: Ambil kode dari repo
         uses: actions/checkout@v4
 
-      -       - name: Build mod pakai Geode SDK
+      - name: Build mod pakai Geode SDK
         uses: geode-sdk/build-geode-mod@main
         with:
           sdk: 'given'
           target: Android64
           ccache: false
-          target: Android64
 
       - name: Upload hasil .geode sebagai artifact
         uses: actions/upload-artifact@v4
         with:
           name: TeamGdMod-android
           path: build/*.geode
-          
