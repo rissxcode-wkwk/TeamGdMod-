@@ -330,8 +330,8 @@ void TeamPopup::susun() {
         auto* segitiga = CCDrawNode::create();
         float cx = x + 11.f, cy = areaAtas - HEADER / 2.f;
         CCPoint titik[3];
-        if (lipat) { titik[0] = {cx - 2.f, cy + 4.f}; titik[1] = {cx - 2.f, cy - 4.f}; titik[2] = {cx + 3.f, cy}; }
-        else       { titik[0] = {cx - 4.f, cy + 2.f}; titik[1] = {cx + 4.f, cy + 2.f}; titik[2] = {cx, cy - 3.f}; }
+        if (lipat) { titik[0] = ccp(cx - 2.f, cy + 4.f); titik[1] = ccp(cx - 2.f, cy - 4.f); titik[2] = ccp(cx + 3.f, cy); }
+        else       { titik[0] = ccp(cx - 4.f, cy + 2.f); titik[1] = ccp(cx + 4.f, cy + 2.f); titik[2] = ccp(cx, cy - 3.f); }
         segitiga->drawPolygon(titik, 3, {1.f, 1.f, 1.f, 1.f}, 0.f, {0.f, 0.f, 0.f, 0.f});
         m_isi->addChild(segitiga, 2);
         auto* lblNama = teks(panel.nama, "bigFont.fnt", 0.36f, lebar - 40.f, {255, 255, 255}, ccp(0.5f, 0.5f));
@@ -772,7 +772,7 @@ std::vector<TeamPopup::Panel> TeamPopup::bangunPanel(TeamPopup* self) {
         r.push_back(tombol({{"Hapus Checkpoint", [] {
             auto* pl = PlayLayer::get();
             if (!pl || !pl->m_isPracticeMode) return beriTahu("Hanya di mode practice", NotificationIcon::Warning);
-            pl->removeLastCheckpoint();
+            if (pl->m_uiLayer) pl->m_uiLayer->onDeleteCheck(nullptr);
         }}}));
         hasil.push_back(std::move(p));
     }
