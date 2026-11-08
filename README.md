@@ -12,15 +12,17 @@ Target: **Geode 6.0.0-alpha.1**, **GD 2.2091**, build Android 64-bit lewat GitHu
 > **eksperimental**: Respawn Cepat, Lompat Bebas, Tanpa Portal Cermin, Presisi Klik (CBF), Hitbox, Langkah Frame, Musik Practice
 > Sama dengan Normal, serta tombol logo mengambang (sentuhan dan posisi).
 
+## Keybind kustom (v1.7)
+
+- Jendela **Keybinds**: atur **Buka Menu** (bawaan `Tab`), **P1 Lompat**, **P2 Lompat**.
+- Untuk memasang tombol ke toggle / tombol apa pun: **tahan barisnya 0,6 detik** di menu, lalu tekan tombol keyboard. `Esc` = batal, `Del` = hapus. Ketuk layar juga membatalkan.
+- Keybind kustom hanya aktif saat di dalam level atau saat menu terbuka. Satu tombol hanya untuk satu aksi.
+- Butuh keyboard (komputer atau Bluetooth). Perubahan tersimpan di database.
+
 ## Fitur
 
 | Fitur | Keterangan |
 |---|---|
-| Menu panel | Panel berkolom dengan header berwarna, tiap panel bisa di-scroll dan dilipat, halaman diganti lewat tombol < >. Tema: 8 warna aksen, Mode Terang, kepekatan, ukuran |
-| Mode Ringan | Matikan partikel, guncangan, efek kematian, HUD lebih jarang diperbarui, animasi menu mati (untuk HP lemah) |
-| Tampilkan Lintasan | Eksperimental: perkiraan busur lompatan kubus (bukan simulasi fisika penuh) |
-| FPS Bypass | Eksperimental: target FPS sendiri 30-1000 |
-| Auto Practice, Tanpa Partikel, Shortcuts | Practice otomatis, partikel disembunyikan, tombol Restart / Practice / Checkpoint |
 | Tombol logo mengambang | Logo TeamGd bisa di-drag ke mana saja dan tampil di menu, level, dan layar jeda. Ketuk untuk buka menu. Menempel ke tepi, meredup otomatis, ukuran dan kepekatan diatur, posisi tersimpan |
 | Musik Practice Sama dengan Normal | Di mode Practice, lagu level asli tetap diputar (sinkron dengan checkpoint) alih-alih musik practice terpisah bawaan GD |
 | Input Viewer | Kotak tombol P1 dan P2 (juga kiri/kanan di platformer) yang menyala sesuai status tombol aktual di objek pemain GD. Posisi, geser X/Y, ukuran, kepekatan, dan warna diatur |
@@ -42,6 +44,7 @@ Target: **Geode 6.0.0-alpha.1**, **GD 2.2091**, build Android 64-bit lewat GitHu
 | Gaya HUD | Kepekatan, ukuran, 6 posisi, 8 warna, 3 huruf, latar gelap, geser X/Y |
 | Replay Bot | Rekam, putar, simpan, muat, hapus. 5 slot per level, info isi slot, simpan otomatis, putar otomatis, muat otomatis saat level dibuka |
 | Statistik permanen | Total waktu main, mati, klik, percobaan, level selesai, dan data per level |
+| Fitur v1.7 | Instant Mirror, Auto Kill, Mute Audio Saat Mati, label Testmode / Best Run / Noclip Mati, tombol Speed +/- dan Stepper |
 | Menu | Tab di kiri (Hack, Noclip, HUD, Gaya HUD, Input, Bot, Musik, Tombol, Statistik, Data), isi dibagi per halaman |
 
 ### Cara pakai Replay Bot
@@ -94,7 +97,3 @@ TeamGdMod/
 ## Lisensi pihak ketiga
 
 Logika Presisi Klik mengikuti pendekatan mod *Click Between Frames* (MIT). Lihat `THIRD_PARTY.md`.
-
-## Catatan v1.6.0
-
-File `hacks/Efek.cpp`, `hacks/Fps.cpp`, dan `hacks/Lintasan.cpp` berdiri sendiri. Bila build gagal karena salah satunya, hapus file itu: menu dan fitur lain tetap jalan (pengaturannya saja yang tidak berefek). Physics Bypass (TPS) belum ada.

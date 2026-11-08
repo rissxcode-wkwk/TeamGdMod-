@@ -15,4 +15,10 @@ namespace tgm {
             || std::abs(c.speed - 1.f) > 0.001f
             || bot::mode() == bot::Mode::Putar;
     }
+
+    // Progres level harus dicegah tersimpan: Mode Aman manual, atau otomatis saat ada cheat aktif
+    inline bool perluModeAman() {
+        auto const& c = cfg();
+        return c.safeMode || (c.autoSafeMode && cheatsActive());
+    }
 }

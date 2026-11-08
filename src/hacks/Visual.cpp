@@ -52,7 +52,7 @@ class $modify(TgmVisualLayer, GJBaseGameLayer) {
 
     void toggleFlipped(bool balik, bool tanpaEfek) {
         if (tgm::cfg().tanpaCermin) return;
-        GJBaseGameLayer::toggleFlipped(balik, tanpaEfek);
+        GJBaseGameLayer::toggleFlipped(balik, tgm::cfg().instantMirror ? true : tanpaEfek);
     }
 
     // Pengaman: debug draw (hitbox) tidak boleh berjalan tanpa node gambarnya

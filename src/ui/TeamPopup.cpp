@@ -1,15 +1,14 @@
 #include "TeamPopup.hpp"
 #include "FloatingLogo.hpp"
+#include "MegaMenu.hpp"
 
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/ui/GeodeUI.hpp>
 #include <Geode/ui/Notification.hpp>
-#include <Geode/ui/ScrollLayer.hpp>
 
 #include <algorithm>
 #include <cmath>
 #include <ctime>
-#include <map>
 #include <string>
 
 #include "../bot/Bot.hpp"
@@ -23,11 +22,11 @@
 using namespace geode::prelude;
 
 namespace {
+    char const* NAMA_TAB[] = {"Hack", "Noclip", "HUD", "Gaya HUD", "Input", "Bot", "Musik", "Tombol", "Statistik", "Data"};
     std::vector<std::string> const NAMA_SUDUT = {"Kiri Atas", "Kanan Atas", "Kiri Bawah", "Kanan Bawah", "Tengah Atas", "Tengah Bawah"};
     std::vector<std::string> const NAMA_WARNA = {"Putih", "Cyan", "Hijau", "Kuning", "Merah", "Oranye", "Ungu", "Pink"};
     std::vector<std::string> const NAMA_FONT  = {"Kecil (chat)", "Besar", "Emas"};
     std::vector<std::string> const NAMA_MODE_KLIK = {"Bawaan GD", "Klik di Langkah", "Click Between Frames"};
-    std::vector<std::string> const NAMA_TEMA = {"Ungu", "Biru", "Hijau", "Merah", "Oranye", "Cyan", "Pink", "Emas"};
 
     void beriTahu(std::string const& pesan, NotificationIcon ikon = NotificationIcon::None) {
         Notification::create(pesan, ikon, 1.8f)->show();
@@ -47,98 +46,81 @@ namespace {
         return fmt::format("{} m {} d", menit, detik % 60);
     }
 
-    // ---------------- Tema warna menu ----------------
-    struct Tema {
-        ccColor3B aksen, bg, barisAlt, kotak, dalam, teks, redup, tombol;
-    };
+    constexpr int TAG_GANTI = 7701;   // tag aksi penjadwal ganti isi
 
-    Tema ambilTema() {
-        static ccColor3B const AKSEN[8] = {
-            {168, 45, 198}, {52, 120, 246}, {46, 184, 98}, {220, 60, 60},
-            {240, 140, 40}, {40, 190, 210}, {235, 90, 160}, {225, 180, 40},
-        };
-        auto const& c = tgm::cfg();
-        Tema t{};
-        t.aksen = AKSEN[std::clamp(c.tema, 0, 7)];
-        if (c.menuTerang) {
-            t.bg = {240, 240, 245};  t.barisAlt = {226, 226, 235};
-            t.kotak = {110, 110, 125}; t.dalam = {255, 255, 255};
-            t.teks = {28, 28, 36};   t.redup = {95, 95, 110};
-            t.tombol = {212, 212, 224};
-        } else {
-            t.bg = {19, 19, 23};     t.barisAlt = {28, 28, 34};
-            t.kotak = {80, 80, 92};  t.dalam = {36, 36, 44};
-            t.teks = {236, 236, 242}; t.redup = {150, 150, 162};
-            t.tombol = {42, 42, 52};
+    // Kumpulkan semua node yang punya opasitas (RGBA) beserta nilai aslinya, untuk animasi pudar
+    void kumpulRgba(CCNode* node, std::vector<std::pair<CCNode*, GLubyte>>& hasil) {
+        if (!node) return;
+        if (auto* rgba = typeinfo_cast<CCRGBAProtocol*>(node)) hasil.emplace_back(node, rgba->getOpacity());
+        if (auto* anak = node->getChildren()) {
+            for (auto* n : CCArrayExt<CCNode*>(anak)) kumpulRgba(n, hasil);
         }
-        return t;
     }
 
-    // Kotak berwarna. tengah = true: titik tengah di posisi (dipakai untuk isi tombol), false: pojok kiri bawah.
-    CCLayerColor* kotak(float w, float h, ccColor3B c, int opas, bool tengah = false) {
-        auto* k = CCLayerColor::create(ccc4(c.r, c.g, c.b, static_cast<GLubyte>(opas)), w, h);
-        k->ignoreAnchorPointForPosition(false);
-        k->setAnchorPoint(tengah ? ccp(0.5f, 0.5f) : ccp(0.f, 0.f));
-        return k;
+    // Pudar masuk: dari 0 ke opasitas asli
+    void pudarMasuk(CCNode* akar, float durasi) {
+        std::vector<std::pair<CCNode*, GLubyte>> v;
+        kumpulRgba(akar, v);
+        for (auto& [n, asli] : v) {
+            if (auto* rgba = typeinfo_cast<CCRGBAProtocol*>(n)) rgba->setOpacity(0);
+            n->runAction(CCFadeTo::create(durasi, asli));
+        }
     }
 
-    CCLabelBMFont* teks(std::string const& s, char const* font, float skala, float lebarMaks, ccColor3B warna, CCPoint anchor) {
-        auto* l = CCLabelBMFont::create(s.c_str(), font);
-        l->setScale(skala);
-        if (lebarMaks > 0.f) l->limitLabelWidth(lebarMaks, skala, 0.1f);
-        l->setColor(warna);
-        l->setAnchorPoint(anchor);
-        return l;
+    // Pudar keluar: ke 0
+    void pudarKeluar(CCNode* akar, float durasi) {
+        std::vector<std::pair<CCNode*, GLubyte>> v;
+        kumpulRgba(akar, v);
+        for (auto& [n, asli] : v) n->runAction(CCFadeTo::create(durasi, 0));
     }
 
-    // ---------------- Pembuat baris ----------------
+    // Respons tekan yang ringan: tombol hanya membesar sedikit saat ditekan
+    void ringanSemua(CCNode* menu) {
+        if (!menu || !menu->getChildren()) return;
+        for (auto* n : CCArrayExt<CCNode*>(menu->getChildren())) {
+            if (auto* item = typeinfo_cast<CCMenuItemSpriteExtra*>(n)) item->m_scaleMultiplier = 1.12f;
+        }
+    }
+
+    // ---- Pembuat baris ----
     using Baris = TeamPopup::Baris;
     using Jenis = TeamPopup::Baris::Jenis;
 
-    Baris judul(std::string t) {
-        Baris b; b.jenis = Jenis::Judul; b.teks = std::move(t); return b;
+    Baris judul(std::string teks) {
+        Baris b; b.jenis = Jenis::Judul; b.teks = std::move(teks); return b;
     }
 
     Baris info(std::function<std::string()> fn) {
         Baris b; b.jenis = Jenis::Info; b.nilai = std::move(fn); return b;
     }
 
-    Baris info(std::string t) {
-        return info([s = std::move(t)] { return s; });
+    Baris info(std::string teks) {
+        return info([t = std::move(teks)] { return t; });
     }
 
-    // Toggle yang langsung menyimpan ke database. 'self' != nullptr: menu disusun ulang (mis. ganti tema).
-    Baris tog(std::string t, bool& ref, TeamPopup* self = nullptr) {
-        Baris b; b.jenis = Jenis::Toggle; b.teks = std::move(t);
+    // Toggle yang langsung menyimpan ke database
+    Baris tog(std::string teks, bool& ref) {
+        Baris b; b.jenis = Jenis::Toggle; b.teks = std::move(teks);
         b.ambil = [&ref] { return ref; };
-        b.setel = [&ref, self](bool v) {
-            ref = v;
-            tgm::saveConfig();
-            if (self) self->mintaBangunUlang();
-        };
+        b.setel = [&ref](bool v) { ref = v; tgm::saveConfig(); };
         return b;
     }
 
-    Baris stepInt(std::string t, int& ref, int mn, int mx, int langkah, std::function<std::string(int)> fmtNilai = nullptr, TeamPopup* self = nullptr) {
-        Baris b; b.jenis = Jenis::Stepper; b.teks = std::move(t);
+    Baris stepInt(std::string teks, int& ref, int mn, int mx, int langkah, std::function<std::string(int)> fmtNilai = nullptr) {
+        Baris b; b.jenis = Jenis::Stepper; b.teks = std::move(teks);
         b.nilai = [&ref, fmtNilai] { return fmtNilai ? fmtNilai(ref) : std::to_string(ref); };
-        b.ubah = [&ref, mn, mx, langkah, self](int arah) {
+        b.ubah = [&ref, mn, mx, langkah](int arah) {
             ref = std::clamp(ref + arah * langkah, mn, mx);
             tgm::saveConfig();
-            if (self) self->mintaBangunUlang();
         };
         return b;
     }
 
-    Baris stepPilih(std::string t, int& ref, std::vector<std::string> const& nama, TeamPopup* self = nullptr) {
-        Baris b; b.jenis = Jenis::Stepper; b.teks = std::move(t);
+    Baris stepPilih(std::string teks, int& ref, std::vector<std::string> const& nama) {
+        Baris b; b.jenis = Jenis::Stepper; b.teks = std::move(teks);
         int n = static_cast<int>(nama.size());
-        b.nilai = [&ref, &nama, n] { return nama[static_cast<std::size_t>(std::clamp(ref, 0, n - 1))]; };
-        b.ubah = [&ref, n, self](int arah) {
-            ref = (ref + arah + n) % n;
-            tgm::saveConfig();
-            if (self) self->mintaBangunUlang();
-        };
+        b.nilai = [&ref, &nama, n] { return nama[std::clamp(ref, 0, n - 1)]; };
+        b.ubah = [&ref, n](int arah) { ref = (ref + arah + n) % n; tgm::saveConfig(); };
         return b;
     }
 
@@ -157,14 +139,15 @@ namespace {
         Baris b; b.jenis = Jenis::Tombol; b.tombol = std::move(daftar); return b;
     }
 
-    float tinggiBaris(Baris const& b) {
-        switch (b.jenis) {
-            case Jenis::Judul:   return 22.f;
-            case Jenis::Toggle:  return 24.f;
-            case Jenis::Stepper: return 42.f;
-            case Jenis::Tombol:  return 30.f;
-            default:             return 17.f;
+    // Potong daftar baris menjadi halaman berisi BARIS_PER_HALAMAN baris
+    std::vector<TeamPopup::Halaman> bagi(std::vector<Baris> semua, int perHalaman) {
+        std::vector<TeamPopup::Halaman> hasil;
+        for (std::size_t i = 0; i < semua.size(); i += static_cast<std::size_t>(perHalaman)) {
+            auto akhir = std::min(semua.size(), i + static_cast<std::size_t>(perHalaman));
+            hasil.emplace_back(semua.begin() + static_cast<std::ptrdiff_t>(i), semua.begin() + static_cast<std::ptrdiff_t>(akhir));
         }
+        if (hasil.empty()) hasil.emplace_back();
+        return hasil;
     }
 }
 
@@ -182,6 +165,12 @@ void TeamPopup::bukaAtauTutup() {
     auto* scene = CCDirector::get()->getRunningScene();
     if (!scene) return;
 
+    // Menu jendela (gaya baru) menjadi bawaan; menu popup tab dipakai bila "Menu Klasik" dinyalakan
+    if (MegaMenu::terbuka() || !tgm::cfg().menuKlasik) {
+        MegaMenu::bukaAtauTutup();
+        return;
+    }
+
     // Sudah terbuka: tutup
     if (auto* ada = scene->getChildByType<TeamPopup>(0)) {
         ada->onClose(nullptr);
@@ -197,676 +186,555 @@ void TeamPopup::bukaAtauTutup() {
 }
 
 bool TeamPopup::init() {
-    auto win = CCDirector::get()->getWinSize();
-    m_skala = std::clamp(static_cast<float>(tgm::cfg().menuSkala) / 100.f, 0.6f, 1.3f);
-    float lebar = win.width / m_skala - 4.f;
-    float tinggi = win.height / m_skala - 4.f;
+    if (!Popup::init(440.f, 280.f, "square01_001.png")) return false;
+    m_noElasticity = true;   // animasi buka diatur sendiri di show()
+    this->setTitle(fmt::format("TeamGdMod  v{}", Mod::get()->getVersion().toVString(false)).c_str());
 
-    if (!Popup::init(lebar, tinggi, "square01_001.png")) return false;
-    m_noElasticity = true;
-    if (m_bgSprite) m_bgSprite->setVisible(false);   // latar diganti panel-panel
-    if (m_closeBtn) m_closeBtn->setVisible(false);   // tombol tutup sendiri di bar atas
+    // Layar sempit (mis. 4:3): kecilkan seluruh panel agar tidak terpotong
+    auto win = CCDirector::get()->getWinSize();
+    m_skala = std::min({1.f, (win.width - 16.f) / 440.f, (win.height - 8.f) / 280.f});
     m_mainLayer->setScale(m_skala);
 
-    // Bar atas: logo + judul di kiri, navigasi halaman di tengah, tutup di kanan
-    float x = 14.f;
+    // Logo kecil di sisi kiri judul
     if (auto* logo = CCSprite::create("logo.png"_spr)) {
-        logo->setScale(18.f / std::max(1.f, logo->getContentSize().width));
-        m_mainLayer->addChildAtPosition(logo, Anchor::TopLeft, ccp(x, -15.f));
-        x += 16.f;
+        logo->setScale(22.f / std::max(1.f, logo->getContentSize().width));
+        m_mainLayer->addChildAtPosition(logo, Anchor::Center, ccp(-112.f, 122.f));
     }
-    auto* lblJudul = teks(fmt::format("TeamGdMod  v{}", Mod::get()->getVersion().toVString(false)),
-                          "bigFont.fnt", 0.4f, 0.f, {255, 255, 255}, ccp(0.f, 0.5f));
-    m_mainLayer->addChildAtPosition(lblJudul, Anchor::TopLeft, ccp(x, -15.f));
 
-    auto buatPanah = [this](char const* t, float dx, int arah, CCLayerColor*& bg) {
-        auto* node = kotak(26.f, 18.f, {168, 45, 198}, 255, true);
-        bg = node;
-        auto* l = teks(t, "bigFont.fnt", 0.4f, 0.f, {255, 255, 255}, ccp(0.5f, 0.5f));
-        l->setPosition({13.f, 9.f});
-        node->addChild(l);
-        auto* item = CCMenuItemExt::createSpriteExtra(node, [this, arah](auto) { this->gantiHalaman(arah); });
-        item->m_scaleMultiplier = 1.f;
-        m_buttonMenu->addChildAtPosition(item, Anchor::Top, ccp(dx, -15.f));
-        return item;
+    // Panel gelap tipis di belakang tab dan isi agar tampilan lebih terstruktur
+    auto panel = [this](CCPoint pos, CCSize ukuran, int opasitas) {
+        if (auto* p = NineSlice::create("square02b_001.png")) {
+            p->setContentSize(ukuran);
+            p->setColor({0, 0, 0});
+            p->setOpacity(static_cast<GLubyte>(opasitas));
+            m_mainLayer->addChildAtPosition(p, Anchor::Center, pos);
+        }
     };
-    m_panahKiri = buatPanah("<", -52.f, -1, m_bgKiri);
-    m_panahKanan = buatPanah(">", 52.f, 1, m_bgKanan);
-    m_lblHalaman = teks("1/1", "bigFont.fnt", 0.36f, 0.f, {255, 255, 255}, ccp(0.5f, 0.5f));
-    m_mainLayer->addChildAtPosition(m_lblHalaman, Anchor::Top, ccp(0.f, -15.f));
+    panel({-172.f, -6.f}, {86.f, 252.f}, 70);
+    panel({50.f, -10.f}, {330.f, 240.f}, 55);
 
-    if (auto* spr = CCSprite::createWithSpriteFrameName("GJ_closeBtn_001.png")) {
-        spr->setScale(0.55f);
-        auto* tutup = CCMenuItemExt::createSpriteExtra(spr, [this](auto) { this->onClose(nullptr); });
-        m_buttonMenu->addChildAtPosition(tutup, Anchor::TopRight, ccp(-16.f, -15.f));
+    // Wadah isi halaman
+    m_layerIsi = CCNode::create();
+    m_mainLayer->addChild(m_layerIsi, 5);
+    m_menuIsi = CCMenu::create();
+    m_menuIsi->setPosition({0.f, 0.f});
+    m_menuIsi->setContentSize(m_mainLayer->getContentSize());
+    m_mainLayer->addChild(m_menuIsi, 6);
+
+    // Tab di sisi kiri (vertikal)
+    for (int i = 0; i < JUMLAH_TAB; ++i) {
+        auto* spr = ButtonSprite::create(NAMA_TAB[i], 80, true, "goldFont.fnt", "GJ_button_04.png", 22.f, 0.55f);
+        auto* item = CCMenuItemExt::createSpriteExtra(spr, [this, i](auto) { this->pilihTab(i); });
+        m_buttonMenu->addChildAtPosition(item, Anchor::Center, ccp(-172.f, 104.f - 23.f * static_cast<float>(i)));
+        m_tombolTab[i] = item;
     }
 
-    m_isi = CCNode::create();
-    m_mainLayer->addChild(m_isi, 5);
+    // Navigasi halaman
+    auto* kiri = ButtonSprite::create("<", "goldFont.fnt", "GJ_button_04.png", 0.8f);
+    kiri->setScale(0.5f);
+    m_panahKiri = CCMenuItemExt::createSpriteExtra(kiri, [this](auto) { this->gantiHalaman(-1); });
+    auto* kanan = ButtonSprite::create(">", "goldFont.fnt", "GJ_button_04.png", 0.8f);
+    kanan->setScale(0.5f);
+    m_panahKanan = CCMenuItemExt::createSpriteExtra(kanan, [this](auto) { this->gantiHalaman(1); });
+    m_buttonMenu->addChildAtPosition(m_panahKiri, Anchor::Center, ccp(35.f, -112.f));
+    m_buttonMenu->addChildAtPosition(m_panahKanan, Anchor::Center, ccp(135.f, -112.f));
+    m_lblHalaman = CCLabelBMFont::create("1/1", "goldFont.fnt");
+    m_lblHalaman->setScale(0.45f);
+    m_mainLayer->addChildAtPosition(m_lblHalaman, Anchor::Center, ccp(85.f, -112.f));
 
-    m_panel = bangunPanel(this);
-    m_halaman = tgm::cfg().tabTerakhir;
-    this->susun();
-    this->schedule(schedule_selector(TeamPopup::segarkan), 0.15f);
-    this->scheduleUpdate();
+    ringanSemua(m_buttonMenu);
+    this->pilihTab(std::clamp(tgm::cfg().tabTerakhir, 0, JUMLAH_TAB - 1), false);
+    this->schedule(schedule_selector(TeamPopup::segarkan), 0.2f);
     return true;
 }
 
-void TeamPopup::gantiHalaman(int arah) {
-    int jumlah = std::max(1, (static_cast<int>(m_panel.size()) + m_perHalaman - 1) / m_perHalaman);
-    if (jumlah <= 1) return;
-    m_halaman = (m_halaman + arah + jumlah) % jumlah;
-    tgm::cfg().tabTerakhir = m_halaman;
-    tgm::saveConfig();
-    this->susun();
-}
-
-// Bangun ulang semua panel pada halaman aktif. Posisi scroll tiap panel dipertahankan.
-void TeamPopup::susun() {
-    auto& c = tgm::cfg();
-    auto tema = ambilTema();
-
-    // Simpan posisi scroll (jarak dari atas) sebelum dibongkar
-    std::map<int, float> simpan;
-    for (auto& s : m_skrol) {
-        simpan[s.panel] = s.layer->m_contentLayer->getPositionY() - (s.tinggiLihat - s.tinggiIsi);
+void TeamPopup::pilihTab(int tab, bool animasi) {
+    if (animasi && tab == m_tab) return;
+    float arah = tab >= m_tab ? 1.f : -1.f;
+    bool berubah = tab != tgm::cfg().tabTerakhir;
+    m_tab = tab;
+    if (berubah) {
+        tgm::cfg().tabTerakhir = tab;
+        tgm::saveConfig();
     }
 
-    m_isi->removeAllChildren();
-    m_skrol.clear();
-    m_centang.clear();
+    for (int i = 0; i < JUMLAH_TAB; ++i) {
+        auto* spr = static_cast<ButtonSprite*>(m_tombolTab[i]->getNormalImage());
+        spr->updateBGImage(i == tab ? "GJ_button_01.png" : "GJ_button_04.png");
+    }
+
+    auto bangun = [this] {
+        m_halaman = bangunTab(m_tab, this);
+        m_hal = 0;
+        this->tampilkanHalaman();
+    };
+    if (animasi) this->ganti(arah, std::move(bangun));
+    else bangun();
+}
+
+void TeamPopup::gantiHalaman(int arah) {
+    int n = static_cast<int>(m_halaman.size());
+    if (n <= 1) return;
+    m_hal = (m_hal + arah + n) % n;
+    this->ganti(static_cast<float>(arah), [this] { this->tampilkanHalaman(); });
+}
+
+// Ganti isi dengan animasi: isi lama pudar dan bergeser keluar, lalu isi baru pudar dan bergeser masuk.
+// Konten tidak dibuat ulang sebelum animasi keluar selesai, jadi tidak ada kedipan.
+void TeamPopup::ganti(float arah, std::function<void()> bangun) {
+    if (m_menutup) return;
+    m_tertunda = std::move(bangun);
+    m_arah = arah;
+
+    // Klik beruntun saat animasi berjalan: langsung selesaikan tanpa menumpuk aksi
+    if (m_sibuk) {
+        this->stopActionByTag(TAG_GANTI);
+        this->selesaiKeluar();
+        return;
+    }
+    m_sibuk = true;
+
+    pudarKeluar(m_layerIsi, 0.07f);
+    pudarKeluar(m_menuIsi, 0.07f);
+    m_layerIsi->runAction(CCMoveBy::create(0.07f, {-8.f * arah, 0.f}));
+    m_menuIsi->runAction(CCMoveBy::create(0.07f, {-8.f * arah, 0.f}));
+
+    auto* urutan = CCSequence::create(
+        CCDelayTime::create(0.07f),
+        CCCallFunc::create(this, callfunc_selector(TeamPopup::selesaiKeluar)),
+        nullptr);
+    urutan->setTag(TAG_GANTI);
+    this->runAction(urutan);
+}
+
+void TeamPopup::selesaiKeluar() {
+    m_layerIsi->stopAllActions();
+    m_menuIsi->stopAllActions();
+
+    // Bangun isi baru, lalu masukkan dengan geser + pudar singkat
+    if (m_tertunda) {
+        auto fn = std::move(m_tertunda);
+        m_tertunda = nullptr;
+        fn();
+    }
+    m_layerIsi->setPosition({10.f * m_arah, 0.f});
+    m_menuIsi->setPosition({10.f * m_arah, 0.f});
+    m_layerIsi->runAction(CCEaseSineOut::create(CCMoveTo::create(0.12f, {0.f, 0.f})));
+    m_menuIsi->runAction(CCEaseSineOut::create(CCMoveTo::create(0.12f, {0.f, 0.f})));
+    pudarMasuk(m_layerIsi, 0.12f);
+    pudarMasuk(m_menuIsi, 0.12f);
+    m_sibuk = false;
+}
+
+// Animasi buka: pudar masuk + membesar halus
+void TeamPopup::show() {
+    Popup::show();
+    m_mainLayer->setScale(m_skala * 0.9f);
+    m_mainLayer->runAction(CCEaseSineOut::create(CCScaleTo::create(0.18f, m_skala)));
+    pudarMasuk(m_mainLayer, 0.16f);
+}
+
+// Animasi tutup: pudar keluar + mengecil halus, baru dihapus dari scene
+void TeamPopup::onClose(CCObject*) {
+    if (m_menutup) return;
+    m_menutup = true;
+    this->unschedule(schedule_selector(TeamPopup::segarkan));
+    this->stopActionByTag(TAG_GANTI);
+    m_buttonMenu->setEnabled(false);
+    m_menuIsi->setEnabled(false);
+
+    pudarKeluar(m_mainLayer, 0.12f);
+    m_mainLayer->runAction(CCEaseSineIn::create(CCScaleTo::create(0.12f, m_skala * 0.92f)));
+    this->runAction(CCSequence::create(
+        CCDelayTime::create(0.12f),
+        CCCallFunc::create(this, callfunc_selector(TeamPopup::selesaiTutup)),
+        nullptr));
+}
+
+void TeamPopup::selesaiTutup() {
+    Popup::onClose(nullptr);
+}
+
+void TeamPopup::tampilkanHalaman() {
+    m_layerIsi->removeAllChildren();
+    m_menuIsi->removeAllChildren();
     m_dinamis.clear();
 
-    auto ukuran = m_mainLayer->getContentSize();
-    constexpr float BAR = 30.f, TEPI = 8.f, JARAK = 6.f, HEADER = 22.f, LEBAR_MIN = 150.f;
-    float areaAtas = ukuran.height - BAR - 2.f;
-    float areaTinggi = areaAtas - TEPI;
-
-    int n = static_cast<int>(m_panel.size());
-    m_perHalaman = std::clamp(static_cast<int>((ukuran.width - 2.f * TEPI + JARAK) / (LEBAR_MIN + JARAK)), 1, std::max(1, n));
-    int jumlahHal = std::max(1, (n + m_perHalaman - 1) / m_perHalaman);
-    m_halaman = std::clamp(m_halaman, 0, jumlahHal - 1);
-    float lebar = (ukuran.width - 2.f * TEPI - JARAK * static_cast<float>(m_perHalaman - 1)) / static_cast<float>(m_perHalaman);
-
-    // Bar atas: navigasi halaman hanya muncul bila ada lebih dari satu halaman
-    bool banyak = jumlahHal > 1;
+    m_hal = std::clamp(m_hal, 0, std::max(0, static_cast<int>(m_halaman.size()) - 1));
+    bool banyak = m_halaman.size() > 1;
     m_panahKiri->setVisible(banyak);
     m_panahKanan->setVisible(banyak);
     m_lblHalaman->setVisible(banyak);
-    m_lblHalaman->setString(fmt::format("{}/{}", m_halaman + 1, jumlahHal).c_str());
-    if (m_bgKiri) m_bgKiri->setColor(tema.aksen);
-    if (m_bgKanan) m_bgKanan->setColor(tema.aksen);
+    m_lblHalaman->setString(fmt::format("{}/{}", m_hal + 1, m_halaman.size()).c_str());
 
-    auto* menuHeader = CCMenu::create();
-    menuHeader->setPosition({0.f, 0.f});
-    menuHeader->setContentSize(ukuran);
-    m_isi->addChild(menuHeader, 10);
+    auto ukuran = m_mainLayer->getContentSize();
+    CCPoint tengah = {ukuran.width / 2.f, ukuran.height / 2.f};
+    constexpr float KIRI = -112.f, KANAN = 208.f, ATAS = 98.f, JARAK = 26.f;
 
-    GLubyte opasPanel = static_cast<GLubyte>(std::clamp(c.menuOpasitas, 40, 100) * 255 / 100);
+    auto tambahLabel = [&](std::string const& teks, char const* font, float x, float y, float skala, float lebarMaks, bool kiriRata) {
+        auto* l = CCLabelBMFont::create(teks.c_str(), font);
+        l->setScale(skala);
+        if (lebarMaks > 0.f) l->limitLabelWidth(lebarMaks, skala, 0.15f);
+        l->setAnchorPoint({kiriRata ? 0.f : 0.5f, 0.5f});
+        l->setPosition(tengah + ccp(x, y));
+        m_layerIsi->addChild(l);
+        return l;
+    };
 
-    int awal = m_halaman * m_perHalaman;
-    for (int k = 0; k < m_perHalaman && awal + k < n; ++k) {
-        int idx = awal + k;
-        auto& panel = m_panel[static_cast<std::size_t>(idx)];
-        bool lipat = (c.panelTutup >> idx) & 1;
-        float x = TEPI + static_cast<float>(k) * (lebar + JARAK);
+    auto& halaman = m_halaman[static_cast<std::size_t>(m_hal)];
+    for (std::size_t i = 0; i < halaman.size(); ++i) {
+        auto& b = halaman[i];
+        float y = ATAS - JARAK * static_cast<float>(i);
 
-        // Tinggi isi seluruh baris
-        float tinggiIsi = 6.f;
-        for (auto const& b : panel.baris) tinggiIsi += tinggiBaris(b);
-        float tinggiLihat = lipat ? 0.f : std::min(tinggiIsi, areaTinggi - HEADER);
-        float tinggiPanel = HEADER + tinggiLihat;
-        float bawah = areaAtas - tinggiPanel;
+        // Garis latar tipis agar baris mudah dibaca
+        auto* latar = CCLayerColor::create(ccc4(0, 0, 0, i % 2 == 0 ? 38 : 20), KANAN - KIRI + 8.f, JARAK - 3.f);
+        latar->setPosition(tengah + ccp(KIRI - 4.f, y - (JARAK - 3.f) / 2.f));
+        if (b.jenis != Jenis::Judul) m_layerIsi->addChild(latar, -1);
 
-        // Latar panel + header
-        auto* latar = kotak(lebar, tinggiPanel, tema.bg, opasPanel);
-        latar->setPosition({x, bawah});
-        m_isi->addChild(latar, 0);
-        auto* head = kotak(lebar, HEADER, tema.aksen, 255);
-        head->setPosition({x, areaAtas - HEADER});
-        m_isi->addChild(head, 1);
+        switch (b.jenis) {
+            case Jenis::Judul:
+                tambahLabel(b.teks, "goldFont.fnt", (KIRI + KANAN) / 2.f, y, 0.5f, 0.f, false);
+                break;
 
-        // Segitiga lipat + judul panel
-        auto* segitiga = CCDrawNode::create();
-        float cx = x + 11.f, cy = areaAtas - HEADER / 2.f;
-        CCPoint titik[3];
-        if (lipat) { titik[0] = ccp(cx - 2.f, cy + 4.f); titik[1] = ccp(cx - 2.f, cy - 4.f); titik[2] = ccp(cx + 3.f, cy); }
-        else       { titik[0] = ccp(cx - 4.f, cy + 2.f); titik[1] = ccp(cx + 4.f, cy + 2.f); titik[2] = ccp(cx, cy - 3.f); }
-        segitiga->drawPolygon(titik, 3, {1.f, 1.f, 1.f, 1.f}, 0.f, {0.f, 0.f, 0.f, 0.f});
-        m_isi->addChild(segitiga, 2);
-        auto* lblNama = teks(panel.nama, "bigFont.fnt", 0.36f, lebar - 40.f, {255, 255, 255}, ccp(0.5f, 0.5f));
-        lblNama->setPosition({x + lebar / 2.f, cy});
-        m_isi->addChild(lblNama, 2);
-
-        auto* kena = kotak(lebar, HEADER, {0, 0, 0}, 0, true);
-        auto* itemHead = CCMenuItemExt::createSpriteExtra(kena, [this, idx](auto) {
-            tgm::cfg().panelTutup ^= (1 << idx);
-            tgm::saveConfig();
-            this->mintaBangunUlang();   // dibangun ulang di siklus berikutnya (aman dari callback)
-        });
-        itemHead->m_scaleMultiplier = 1.f;
-        itemHead->setPosition({x + lebar / 2.f, cy});
-        menuHeader->addChild(itemHead);
-
-        if (lipat) continue;
-
-        // Isi panel: daftar yang bisa di-scroll
-        auto* skrol = ScrollLayer::create({lebar, tinggiLihat});
-        skrol->setPosition({x, bawah});
-        auto* konten = skrol->m_contentLayer;
-        float tinggiKonten = std::max(tinggiIsi, tinggiLihat);
-        konten->setContentSize({lebar, tinggiKonten});
-
-        auto* menu = CCMenu::create();
-        menu->setPosition({0.f, 0.f});
-        menu->setContentSize({lebar, tinggiKonten});
-        konten->addChild(menu, 3);
-
-        float y = tinggiKonten - 3.f;   // tepi atas baris berikutnya
-        int urut = 0;
-        for (auto const& b : panel.baris) {
-            float h = tinggiBaris(b);
-            float tengahY = y - h / 2.f;
-
-            if (b.jenis != Jenis::Judul && urut % 2 == 1) {
-                auto* alt = kotak(lebar, h, tema.barisAlt, 255);
-                alt->setPosition({0.f, y - h});
-                konten->addChild(alt, 0);
+            case Jenis::Info: {
+                auto* l = tambahLabel(b.nilai(), "chatFont.fnt", (KIRI + KANAN) / 2.f, y, 0.62f, KANAN - KIRI - 6.f, false);
+                m_dinamis.emplace_back(l, b.nilai);
+                break;
             }
 
-            switch (b.jenis) {
-                case Jenis::Judul: {
-                    auto* l = teks(b.teks, "bigFont.fnt", 0.32f, lebar - 16.f, tema.aksen, ccp(0.f, 0.5f));
-                    l->setPosition({8.f, tengahY});
-                    konten->addChild(l, 1);
-                    auto* garis = kotak(lebar - 16.f, 1.f, tema.aksen, 150);
-                    garis->setPosition({8.f, y - h + 2.f});
-                    konten->addChild(garis, 1);
-                    break;
-                }
+            case Jenis::Toggle: {
+                auto* t = CCMenuItemExt::createTogglerWithStandardSprites(0.55f, [setel = b.setel](CCMenuItemToggler* tg) {
+                    setel(!tg->isToggled());   // callback dipanggil sebelum status berubah
+                });
+                t->toggle(b.ambil());
+                t->setPosition(tengah + ccp(KIRI + 14.f, y));
+                m_menuIsi->addChild(t);
+                tambahLabel(b.teks, "bigFont.fnt", KIRI + 34.f, y, 0.4f, KANAN - KIRI - 40.f, true);
+                break;
+            }
 
-                case Jenis::Info: {
-                    auto* l = teks(b.nilai(), "chatFont.fnt", 0.5f, lebar - 14.f, tema.redup, ccp(0.f, 0.5f));
-                    l->setPosition({8.f, tengahY});
-                    konten->addChild(l, 1);
-                    m_dinamis.emplace_back(l, b.nilai);
-                    break;
-                }
-
-                case Jenis::Toggle: {
-                    auto* luar = kotak(14.f, 14.f, tema.kotak, 255);
-                    luar->setPosition({8.f, tengahY - 7.f});
-                    konten->addChild(luar, 1);
-                    auto* dalam = kotak(10.f, 10.f, tema.dalam, 255);
-                    dalam->setPosition({10.f, tengahY - 5.f});
-                    dalam->setColor(b.ambil() ? tema.aksen : tema.dalam);
-                    konten->addChild(dalam, 2);
-                    m_centang.push_back({dalam, b.ambil, tema.aksen, tema.dalam});
-
-                    auto* l = teks(b.teks, "chatFont.fnt", 0.6f, lebar - 34.f, tema.teks, ccp(0.f, 0.5f));
-                    l->setPosition({28.f, tengahY});
-                    konten->addChild(l, 1);
-
-                    auto* hit = kotak(lebar - 2.f, h - 2.f, {0, 0, 0}, 0, true);
-                    auto* item = CCMenuItemExt::createSpriteExtra(hit, [this, ambil = b.ambil, setel = b.setel](auto) {
-                        setel(!ambil());
-                        this->segarkanCentang();
+            case Jenis::Stepper: {
+                tambahLabel(b.teks, "bigFont.fnt", KIRI + 6.f, y, 0.4f, 150.f, true);
+                auto buatPanah = [&](char const* teks, float x, int arah) {
+                    auto* spr = ButtonSprite::create(teks, "goldFont.fnt", "GJ_button_04.png", 0.8f);
+                    spr->setScale(0.45f);
+                    auto* item = CCMenuItemExt::createSpriteExtra(spr, [this, ubah = b.ubah, arah](auto) {
+                        ubah(arah);
+                        this->segarkan(0.f);
                     });
-                    item->m_scaleMultiplier = 1.f;
-                    item->setPosition({lebar / 2.f, tengahY});
-                    menu->addChild(item);
-                    break;
-                }
-
-                case Jenis::Stepper: {
-                    // Dua baris: nama di atas, kontrol [-] nilai [+] di bawah selebar panel (mudah ditekan di HP)
-                    auto* l = teks(b.teks, "chatFont.fnt", 0.6f, lebar - 14.f, tema.teks, ccp(0.f, 0.5f));
-                    l->setPosition({8.f, y - 11.f});
-                    konten->addChild(l, 1);
-
-                    float kontrolY = y - 29.f;
-                    float lebarNilai = lebar - 2.f * 8.f - 2.f * 26.f - 2.f * 4.f;
-                    auto* kotakNilai = kotak(lebarNilai, 20.f, tema.dalam, 255, true);
-                    kotakNilai->setPosition({lebar / 2.f, kontrolY});
-                    konten->addChild(kotakNilai, 1);
-                    auto* lblNilai = teks(b.nilai(), "chatFont.fnt", 0.6f, lebarNilai - 6.f, tema.teks, ccp(0.5f, 0.5f));
-                    lblNilai->setPosition({lebar / 2.f, kontrolY});
-                    konten->addChild(lblNilai, 2);
-                    m_dinamis.emplace_back(lblNilai, b.nilai);
-
-                    auto buatTombol = [&](char const* simbol, float tx, int arah) {
-                        auto* node = kotak(26.f, 20.f, tema.tombol, 255, true);
-                        auto* ls = teks(simbol, "bigFont.fnt", 0.42f, 0.f, tema.teks, ccp(0.5f, 0.5f));
-                        ls->setPosition({13.f, 10.f});
-                        node->addChild(ls);
-                        auto* item = CCMenuItemExt::createSpriteExtra(node, [this, ubah = b.ubah, arah](auto) {
-                            ubah(arah);
-                            this->segarkan(0.f);
-                        });
-                        item->m_scaleMultiplier = 1.f;
-                        item->setPosition({tx, kontrolY});
-                        menu->addChild(item);
-                    };
-                    buatTombol("-", 8.f + 13.f, -1);
-                    buatTombol("+", lebar - 8.f - 13.f, 1);
-                    break;
-                }
-
-                case Jenis::Tombol: {
-                    std::size_t jumlah = b.tombol.size();
-                    float lebarTombol = (lebar - 8.f - 4.f * static_cast<float>(jumlah - 1)) / static_cast<float>(jumlah);
-                    for (std::size_t i = 0; i < jumlah; ++i) {
-                        auto* node = kotak(lebarTombol, 22.f, tema.tombol, 255, true);
-                        auto* garis = kotak(lebarTombol, 2.f, tema.aksen, 255);
-                        garis->setPosition({0.f, 0.f});
-                        node->addChild(garis);
-                        auto* ls = teks(b.tombol[i].first, "chatFont.fnt", 0.6f, lebarTombol - 6.f, tema.teks, ccp(0.5f, 0.5f));
-                        ls->setPosition({lebarTombol / 2.f, 11.f});
-                        node->addChild(ls);
-                        auto* item = CCMenuItemExt::createSpriteExtra(node, [fn = b.tombol[i].second](auto) { fn(); });
-                        item->m_scaleMultiplier = 1.06f;
-                        item->setPosition({4.f + lebarTombol / 2.f + static_cast<float>(i) * (lebarTombol + 4.f), tengahY});
-                        menu->addChild(item);
-                    }
-                    break;
-                }
+                    item->setPosition(tengah + ccp(x, y));
+                    m_menuIsi->addChild(item);
+                };
+                buatPanah("-", KANAN - 112.f, -1);
+                auto* nilai = tambahLabel(b.nilai(), "goldFont.fnt", KANAN - 62.f, y, 0.42f, 76.f, false);
+                m_dinamis.emplace_back(nilai, b.nilai);
+                buatPanah("+", KANAN - 12.f, 1);
+                break;
             }
-            y -= h;
-            ++urut;
-        }
 
-        // Posisi scroll: mulai dari atas, atau pulihkan posisi sebelum dibangun ulang
-        skrol->scrollToTop();
-        if (auto it = simpan.find(idx); it != simpan.end() && tinggiKonten > tinggiLihat) {
-            float dari = std::clamp(it->second, 0.f, tinggiKonten - tinggiLihat);
-            skrol->m_contentLayer->setPositionY((tinggiLihat - tinggiKonten) + dari);
+            case Jenis::Tombol: {
+                std::size_t n = b.tombol.size();
+                float lebar = (KANAN - KIRI) / static_cast<float>(n);
+                for (std::size_t k = 0; k < n; ++k) {
+                    auto* spr = ButtonSprite::create(b.tombol[k].first.c_str(), static_cast<int>(lebar * 1.35f), true, "goldFont.fnt", "GJ_button_01.png", 26.f, 0.6f);
+                    spr->setScale(0.7f);
+                    auto* item = CCMenuItemExt::createSpriteExtra(spr, [fn = b.tombol[k].second](auto) { fn(); });
+                    item->setPosition(tengah + ccp(KIRI + lebar * (static_cast<float>(k) + 0.5f), y));
+                    m_menuIsi->addChild(item);
+                }
+                break;
+            }
         }
-        m_isi->addChild(skrol, 3);
-
-        // Penunjuk posisi scroll (garis tipis di tepi kanan) hanya bila isi lebih tinggi dari panel
-        Skrol info{skrol, nullptr, tinggiKonten, tinggiLihat, areaAtas - HEADER, 0.f, idx};
-        if (tinggiKonten > tinggiLihat + 1.f) {
-            info.tinggiBar = std::max(14.f, tinggiLihat * tinggiLihat / tinggiKonten);
-            info.bar = kotak(2.5f, info.tinggiBar, tema.aksen, 200);
-            info.bar->setPosition({x + lebar - 4.f, info.atasY - info.tinggiBar});
-            m_isi->addChild(info.bar, 6);
-        }
-        m_skrol.push_back(info);
     }
-
-    // Anak baru harus ikut prioritas sentuh popup supaya bisa ditekan
-    handleTouchPriority(this);
-}
-
-void TeamPopup::segarkanCentang() {
-    for (auto& cg : m_centang) cg.node->setColor(cg.ambil() ? cg.hidup : cg.mati);
+    ringanSemua(m_menuIsi);
 }
 
 void TeamPopup::segarkan(float) {
     if (m_menutup) return;
     if (m_bangunUlang) {
         m_bangunUlang = false;
-        this->susun();
+        m_halaman = bangunTab(m_tab, this);
+        this->tampilkanHalaman();
         return;
     }
     for (auto& [label, fn] : m_dinamis) label->setString(fn().c_str());
-    this->segarkanCentang();
 }
 
-void TeamPopup::update(float dt) {
-    Popup::update(dt);
-    for (auto& s : m_skrol) {
-        if (!s.bar) continue;
-        float jarak = s.tinggiIsi - s.tinggiLihat;
-        if (jarak <= 0.f) continue;
-        float jauh = s.layer->m_contentLayer->getPositionY() - (s.tinggiLihat - s.tinggiIsi);   // 0 = paling atas
-        float f = std::clamp(jauh / jarak, 0.f, 1.f);
-        s.bar->setPositionY(s.atasY - s.tinggiBar - f * (s.tinggiLihat - s.tinggiBar));
-    }
-}
-
-// Animasi buka: membesar halus (dimatikan di Mode Ringan)
-void TeamPopup::show() {
-    Popup::show();
-    if (!tgm::cfg().modeRingan) {
-        m_mainLayer->setScale(m_skala * 0.94f);
-        m_mainLayer->runAction(CCEaseSineOut::create(CCScaleTo::create(0.15f, m_skala)));
-    }
-}
-
-void TeamPopup::onClose(CCObject*) {
-    if (m_menutup) return;
-    m_menutup = true;
-    this->unschedule(schedule_selector(TeamPopup::segarkan));
-    this->unscheduleUpdate();
-    Popup::onClose(nullptr);
-}
-
-// Semua panel menu. Menambah fitur = menambah baris di sini.
-std::vector<TeamPopup::Panel> TeamPopup::bangunPanel(TeamPopup* self) {
+std::vector<TeamPopup::Halaman> TeamPopup::bangunTab(int tab, TeamPopup* self) {
     auto& c = tgm::cfg();
-    std::vector<Panel> hasil;
-    auto persen = [](int v) { return fmt::format("{}%", v); };
+    std::vector<Baris> r;
+    int perHal = BARIS_PER_HALAMAN;
 
-    // ================= GLOBAL =================
-    {
-        Panel p{"Global", {}};
-        auto& r = p.baris;
-        r.push_back(tog("Mode Ringan", c.modeRingan));
-        r.push_back(info("Matikan partikel, guncangan, efek mati"));
-        r.push_back(stepKecepatan());
-        r.push_back(tombol({
-            {"0.5x", [&c] { c.speed = 0.5f; tgm::saveConfig(); }},
-            {"1x",   [&c] { c.speed = 1.f;  tgm::saveConfig(); }},
-            {"2x",   [&c] { c.speed = 2.f;  tgm::saveConfig(); }},
-        }));
-        r.push_back(tog("Mode Aman Otomatis", c.autoSafeMode));
-        r.push_back(tog("Jeda Level Saat Menu Dibuka", c.jedaSaatBuka));
-        r.push_back(tog("Konfirmasi Keluar Level", c.konfirmasiKeluar));
-        r.push_back(tog("Tombol Restart di Layar", c.tombolRestart));
-        r.push_back(info([] { return tgm::cheatsActive() ? std::string("Cheat aktif: progres TIDAK disimpan") : std::string("Tidak ada cheat aktif"); }));
-        hasil.push_back(std::move(p));
-    }
-    // ================= LEVEL =================
-    {
-        Panel p{"Level", {}};
-        auto& r = p.baris;
-        r.push_back(tog("Auto Practice Mode", c.autoPractice));
-        r.push_back(tog("Checkpoint Otomatis", c.autoCheckpoint));
-        r.push_back(stepInt("Jeda Checkpoint", c.checkpointDtk, 1, 30, 1, [](int v) { return fmt::format("{} dtk", v); }));
-        r.push_back(tog("Musik Practice = Normal", c.musikPracticeAsli));
-        r.push_back(tog("Tampilkan Hitbox", c.hitbox));
-        r.push_back(tog("Hitbox Saat Mati", c.hitboxMati));
-        r.push_back(tog("Tanpa Guncangan Layar", c.tanpaGuncang));
-        r.push_back(tog("Tanpa Portal Cermin", c.tanpaCermin));
-        r.push_back(tog("Tanpa Partikel", c.tanpaPartikel));
-        hasil.push_back(std::move(p));
-    }
-    // ================= PLAYER =================
-    {
-        Panel p{"Player", {}};
-        auto& r = p.baris;
-        r.push_back(tog("Noclip", c.noclip));
-        r.push_back(tog("Noclip Pemain 1", c.noclipP1));
-        r.push_back(tog("Noclip Pemain 2", c.noclipP2));
-        r.push_back(stepInt("Batas Tabrakan", c.batasTabrakan, 0, 100, 1, [](int v) { return v > 0 ? std::to_string(v) : std::string("Bebas"); }));
-        r.push_back(stepInt("Mati Bila Akurasi <", c.akurasiMin, 0, 99, 5, [](int v) { return v > 0 ? fmt::format("{}%", v) : std::string("Mati"); }));
-        r.push_back(info([] {
-            auto* pl = PlayLayer::get();
-            if (!pl) return std::string("Akurasi tampil di dalam level");
-            auto const& s = tgm::stats();
-            return fmt::format("Akurasi {:.1f}%  |  Tabrakan {}", s.akurasi(pl->m_gameState.m_currentProgress), s.tabrakan);
-        }));
-        r.push_back(tog("Lompat Bebas (eksperimental)", c.lompatBebas));
-        r.push_back(tog("Tanpa Efek Kematian", c.noDeathEffect));
-        r.push_back(tog("Respawn Cepat", c.respawnCepat));
-        r.push_back(stepInt("Jeda Respawn", c.respawnMs, 0, 1000, 50, [](int v) { return fmt::format("{} ms", v); }));
-        r.push_back(tog("Klik Otomatis (tahan untuk spam)", c.turbo));
-        r.push_back(stepInt("Kecepatan Klik Otomatis", c.turboCps, 5, 30, 1, [](int v) { return fmt::format("{} /dtk", v); }));
-        r.push_back(stepPilih("Mode Klik", c.cbfMode, NAMA_MODE_KLIK));
-        r.push_back(info([] { return std::string(tgm::cbf::status()); }));
-        r.push_back(tog("Frame Stepper", c.frameStepper));
-        r.push_back(tog("Tampilkan Lintasan (perkiraan)", c.lintasan));
-        r.push_back(stepInt("Panjang Lintasan", c.lintasanLangkah, 20, 120, 10, [](int v) { return fmt::format("{} langkah", v); }));
-        r.push_back(info("Lintasan: busur lompat kubus saja, perkiraan."));
-        hasil.push_back(std::move(p));
-    }
-    // ================= BYPASS =================
-    {
-        Panel p{"Bypass", {}};
-        auto& r = p.baris;
-        r.push_back(tog("FPS Bypass (eksperimental)", c.fpsBypass));
-        r.push_back(stepInt("Target FPS", c.fpsTarget, 30, 1000, 30, [](int v) { return fmt::format("{} FPS", v); }));
-        r.push_back(tog("Buka Semua Ikon dan Warna", c.bukaSemua));
-        r.push_back(info("Hanya tampilan lokal, akun tidak berubah."));
-        r.push_back(info("Physics Bypass (TPS): belum tersedia."));
-        hasil.push_back(std::move(p));
-    }
-    // ================= BOT =================
-    {
-        Panel p{"Bot", {}};
-        auto& r = p.baris;
-        r.push_back(info([] {
-            char const* s = "Siaga";
-            if (tgm::bot::mode() == tgm::bot::Mode::Rekam) s = "Merekam";
-            if (tgm::bot::mode() == tgm::bot::Mode::Putar) s = "Memutar";
-            return fmt::format("{} | {} aksi | {:.1f} dtk", s, tgm::bot::jumlahAksi(), tgm::bot::durasiDetik());
-        }));
-        r.push_back(tombol({
-            {"Rekam", [] {
-                if (idLevelSaatIni() < 0) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
-                tgm::bot::mulaiRekam();
-                beriTahu("Merekam: restart level lalu main", NotificationIcon::Success);
-            }},
-            {"Putar", [] {
-                if (idLevelSaatIni() < 0) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
-                if (tgm::bot::jumlahAksi() == 0) return beriTahu("Belum ada macro: rekam atau muat dulu", NotificationIcon::Warning);
-                tgm::bot::mulaiPutar();
-                beriTahu("Memutar: restart level untuk mulai dari awal", NotificationIcon::Success);
-            }},
-            {"Stop", [] { tgm::bot::berhenti(); beriTahu("Bot dihentikan"); }},
-        }));
-        r.push_back(stepInt("Slot Macro", c.slot, 1, 5, 1, [](int v) { return fmt::format("Slot {}", v); }));
-        r.push_back(info([&c] {
-            int id = idLevelSaatIni();
-            if (id < 0) return std::string("Buka dari dalam level untuk memakai slot");
-            auto i = tgm::bot::infoSlot(id, c.slot);
-            if (!i.ada) return fmt::format("Slot {} kosong", c.slot);
-            return fmt::format("Slot {}: {} aksi, {:.1f} dtk", c.slot, i.aksi, i.detik);
-        }));
-        r.push_back(tombol({
-            {"Simpan", [&c] {
+    switch (tab) {
+        // ================= HACK =================
+        case 0: {
+            r.push_back(tog("Noclip", c.noclip));
+            r.push_back(tog("Mode Aman Otomatis (cheat = progres tidak tersimpan)", c.autoSafeMode));
+            r.push_back(tog("Tanpa Efek Kematian", c.noDeathEffect));
+            r.push_back(stepKecepatan());
+            r.push_back(tombol({
+                {"0.5x", [&c] { c.speed = 0.5f; tgm::saveConfig(); }},
+                {"1x",   [&c] { c.speed = 1.f;  tgm::saveConfig(); }},
+                {"2x",   [&c] { c.speed = 2.f;  tgm::saveConfig(); }},
+            }));
+            r.push_back(tog("Respawn Cepat", c.respawnCepat));
+            r.push_back(stepInt("Jeda Respawn", c.respawnMs, 0, 1000, 50, [](int v) { return fmt::format("{} ms", v); }));
+            r.push_back(tog("Checkpoint Otomatis (mode practice)", c.autoCheckpoint));
+            // halaman 2
+            r.push_back(stepInt("Jeda Checkpoint", c.checkpointDtk, 1, 30, 1, [](int v) { return fmt::format("{} dtk", v); }));
+            r.push_back(tog("Lompat Bebas (eksperimental)", c.lompatBebas));
+            r.push_back(tog("Tanpa Guncangan Layar", c.tanpaGuncang));
+            r.push_back(tog("Tanpa Portal Cermin", c.tanpaCermin));
+            r.push_back(tog("Tampilkan Hitbox", c.hitbox));
+            r.push_back(tog("Hitbox Saat Mati", c.hitboxMati));
+            r.push_back(tog("Langkah Frame (tombol Jeda dan Langkah di layar)", c.frameStepper));
+            r.push_back(tog("Buka Semua Ikon dan Warna (lokal)", c.bukaSemua));
+            r.push_back(tog("Jeda Level Otomatis Saat Menu Dibuka", c.jedaSaatBuka));
+            r.push_back(tog("Konfirmasi Sebelum Keluar Level", c.konfirmasiKeluar));
+            r.push_back(tog("Tombol Restart di Layar (level berikutnya)", c.tombolRestart));
+            r.push_back(info([] { return tgm::cheatsActive() ? std::string("Cheat aktif: progres level TIDAK disimpan") : std::string("Tidak ada cheat aktif"); }));
+            break;
+        }
+        // ================= NOCLIP =================
+        case 1: {
+            r.push_back(tog("Noclip", c.noclip));
+            r.push_back(tog("Berlaku untuk Pemain 1", c.noclipP1));
+            r.push_back(tog("Berlaku untuk Pemain 2", c.noclipP2));
+            r.push_back(stepInt("Batas Tabrakan", c.batasTabrakan, 0, 100, 1, [](int v) { return v > 0 ? std::to_string(v) : std::string("Bebas"); }));
+            r.push_back(stepInt("Mati Bila Akurasi <", c.akurasiMin, 0, 99, 5, [](int v) { return v > 0 ? fmt::format("{}%", v) : std::string("Mati"); }));
+            r.push_back(info([] {
+                auto* pl = PlayLayer::get();
+                if (!pl) return std::string("Akurasi dan tabrakan tampil di dalam level");
+                auto const& s = tgm::stats();
+                return fmt::format("Akurasi {:.1f}%  |  Tabrakan {}", s.akurasi(pl->m_gameState.m_currentProgress), s.tabrakan);
+            }));
+            r.push_back(info("Bila batas terlampaui, pemain mati seperti biasa."));
+            break;
+        }
+        // ================= HUD =================
+        case 2: {
+            r.push_back(tog("Tampilkan HUD", c.showHud));
+            r.push_back(tog("FPS", c.showFps));
+            r.push_back(tog("CPS (klik per detik)", c.showCps));
+            r.push_back(tog("Jumlah Klik", c.showClicks));
+            r.push_back(tog("Jam", c.showClock));
+            r.push_back(tog("Persentase", c.showPercent));
+            r.push_back(tog("Nomor Percobaan", c.showAttempt));
+            r.push_back(tog("Frame", c.showFrame));
+            r.push_back(tog("Waktu Level", c.showTime));
+            r.push_back(tog("Mati Selama Sesi", c.showDeaths));
+            r.push_back(tog("Persen Terbaik", c.showBest));
+            r.push_back(tog("Persen Mati Terakhir", c.showMatiTerakhir));
+            r.push_back(tog("Nama Level", c.showLevelName));
+            r.push_back(tog("Akurasi Noclip", c.showAkurasi));
+            break;
+        }
+        // ================= GAYA HUD =================
+        case 3: {
+            r.push_back(stepInt("Kepekatan", c.hudOpacity, 10, 100, 10, [](int v) { return fmt::format("{}%", v); }));
+            r.push_back(stepInt("Ukuran", c.hudScale, 50, 150, 10, [](int v) { return fmt::format("{}%", v); }));
+            r.push_back(stepPilih("Posisi", c.hudCorner, NAMA_SUDUT));
+            r.push_back(stepPilih("Warna", c.hudColor, NAMA_WARNA));
+            r.push_back(stepPilih("Huruf", c.hudFont, NAMA_FONT));
+            r.push_back(tog("Latar Gelap di Belakang Teks", c.hudPanel));
+            r.push_back(stepInt("Geser Horizontal", c.hudOffX, -100, 100, 5));
+            r.push_back(stepInt("Geser Vertikal", c.hudOffY, -100, 100, 5));
+            break;
+        }
+        // ================= INPUT & KLIK =================
+        case 4: {
+            r.push_back(judul("Input Viewer"));
+            r.push_back(tog("Tampilkan Input Viewer", c.ivTampil));
+            r.push_back(stepPilih("Posisi", c.ivPosisi, NAMA_SUDUT));
+            r.push_back(stepInt("Ukuran", c.ivUkuran, 50, 200, 10, [](int v) { return fmt::format("{}%", v); }));
+            r.push_back(stepInt("Kepekatan", c.ivOpasitas, 20, 100, 10, [](int v) { return fmt::format("{}%", v); }));
+            r.push_back(stepPilih("Warna Tombol", c.ivWarna, NAMA_WARNA));
+            r.push_back(stepInt("Geser Horizontal", c.ivOffX, -150, 150, 5));
+            r.push_back(stepInt("Geser Vertikal", c.ivOffY, -150, 150, 5));
+            r.push_back(judul("Presisi Klik"));
+            r.push_back(stepPilih("Mode Klik", c.cbfMode, NAMA_MODE_KLIK));
+            r.push_back(info([] { return std::string(tgm::cbf::status()); }));
+            r.push_back(tog("Klik Otomatis (tahan untuk spam)", c.turbo));
+            r.push_back(stepInt("Kecepatan Klik Otomatis", c.turboCps, 5, 30, 1, [](int v) { return fmt::format("{} /dtk", v); }));
+            r.push_back(info("Mode Klik aktif saat level dibuka ulang. Mati saat bot aktif."));
+            break;
+        }
+        // ================= BOT =================
+        case 5: {
+            r.push_back(info([] {
+                char const* s = "Siaga";
+                if (tgm::bot::mode() == tgm::bot::Mode::Rekam) s = "Merekam";
+                if (tgm::bot::mode() == tgm::bot::Mode::Putar) s = "Memutar";
+                return fmt::format("{}  |  {} aksi  |  {:.1f} dtk", s, tgm::bot::jumlahAksi(), tgm::bot::durasiDetik());
+            }));
+            r.push_back(tombol({
+                {"Rekam", [] {
+                    if (idLevelSaatIni() < 0) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
+                    tgm::bot::mulaiRekam();
+                    beriTahu("Merekam: restart level lalu main", NotificationIcon::Success);
+                }},
+                {"Putar", [] {
+                    if (idLevelSaatIni() < 0) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
+                    if (tgm::bot::jumlahAksi() == 0) return beriTahu("Belum ada macro: rekam atau muat dulu", NotificationIcon::Warning);
+                    tgm::bot::mulaiPutar();
+                    beriTahu("Memutar: restart level untuk mulai dari awal", NotificationIcon::Success);
+                }},
+                {"Stop", [] { tgm::bot::berhenti(); beriTahu("Bot dihentikan"); }},
+            }));
+            r.push_back(stepInt("Slot Macro", c.slot, 1, 5, 1, [](int v) { return fmt::format("Slot {}", v); }));
+            r.push_back(info([&c] {
                 int id = idLevelSaatIni();
-                if (id < 0) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
-                std::string pesan;
-                bool ok = tgm::bot::simpan(id, c.slot, pesan);
-                beriTahu(pesan, ok ? NotificationIcon::Success : NotificationIcon::Error);
-            }},
-            {"Muat", [&c] {
+                if (id < 0) return std::string("Buka dari dalam level untuk memakai slot");
+                auto i = tgm::bot::infoSlot(id, c.slot);
+                if (!i.ada) return fmt::format("Slot {} kosong", c.slot);
+                return fmt::format("Slot {}: {} aksi, {:.1f} dtk", c.slot, i.aksi, i.detik);
+            }));
+            r.push_back(tombol({
+                {"Simpan", [&c] {
+                    int id = idLevelSaatIni();
+                    if (id < 0) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
+                    std::string pesan;
+                    bool ok = tgm::bot::simpan(id, c.slot, pesan);
+                    beriTahu(pesan, ok ? NotificationIcon::Success : NotificationIcon::Error);
+                }},
+                {"Muat", [&c] {
+                    int id = idLevelSaatIni();
+                    if (id < 0) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
+                    std::string pesan;
+                    bool ok = tgm::bot::muat(id, c.slot, pesan);
+                    beriTahu(pesan, ok ? NotificationIcon::Success : NotificationIcon::Error);
+                }},
+                {"Hapus", [&c] {
+                    int id = idLevelSaatIni();
+                    if (id < 0) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
+                    std::string pesan;
+                    bool ok = tgm::bot::hapus(id, c.slot, pesan);
+                    beriTahu(pesan, ok ? NotificationIcon::Success : NotificationIcon::Error);
+                }},
+            }));
+            r.push_back(tog("Simpan Otomatis Saat Level Selesai", c.autoSaveMacro));
+            r.push_back(tog("Putar Otomatis dari Awal Level", c.autoPlay));
+            r.push_back(tog("Muat Macro Otomatis Saat Level Dibuka", c.autoMuat));
+            break;
+        }
+        // ================= MUSIK =================
+        case 6: {
+            r.push_back(judul("Musik Practice"));
+            r.push_back(tog("Musik Practice Sama dengan Mode Normal", c.musikPracticeAsli));
+            r.push_back(info([&c] {
+                return c.musikPracticeAsli ? std::string("Practice memutar lagu level asli, sinkron dengan checkpoint")
+                                           : std::string("Practice memakai musik practice bawaan GD");
+            }));
+            r.push_back(info("Biasanya GD memutar musik practice terpisah."));
+            r.push_back(info("Dengan opsi ini lagu level tetap diputar seperti biasa,"));
+            r.push_back(info("dan lanjut dari posisi checkpoint saat respawn."));
+            r.push_back(info("Berlaku saat level dibuka atau practice dinyalakan."));
+            break;
+        }
+        // ================= TOMBOL LOGO =================
+        case 7: {
+            r.push_back(tog("Tampilkan Tombol Logo", c.logoTampil));
+            r.push_back(tog("Tampil Saat Bermain di Level", c.logoDiLevel));
+            r.push_back(tog("Menempel ke Tepi Layar", c.logoMagnet));
+            r.push_back(tog("Meredup Otomatis", c.logoRedup));
+            r.push_back(stepInt("Ukuran", c.logoUkuran, 50, 200, 10, [](int v) { return fmt::format("{}%", v); }));
+            r.push_back(stepInt("Kepekatan", c.logoOpasitas, 20, 100, 10, [](int v) { return fmt::format("{}%", v); }));
+            r.push_back(tombol({{"Reset Posisi Tombol", [] { FloatingLogo::resetPosisi(); beriTahu("Posisi tombol dikembalikan"); }}}));
+            r.push_back(info("Ketuk = buka menu. Tahan lalu geser = pindahkan."));
+            break;
+        }
+        // ================= STATISTIK =================
+        case 8: {
+            r.push_back(judul("Keseluruhan"));
+            r.push_back(info([] {
+                auto t = tgm::riwayat::total();
+                return fmt::format("Waktu main {}  |  Sesi {}", formatDurasi(t.detik), t.sesi);
+            }));
+            r.push_back(info([] {
+                auto t = tgm::riwayat::total();
+                return fmt::format("Mati {}  |  Klik {}", t.mati, t.klik);
+            }));
+            r.push_back(info([] {
+                auto t = tgm::riwayat::total();
+                return fmt::format("Percobaan {}  |  Selesai {}", t.percobaan, t.selesai);
+            }));
+            r.push_back(judul("Level Ini"));
+            r.push_back(info([] {
                 int id = idLevelSaatIni();
-                if (id < 0) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
-                std::string pesan;
-                bool ok = tgm::bot::muat(id, c.slot, pesan);
-                beriTahu(pesan, ok ? NotificationIcon::Success : NotificationIcon::Error);
-            }},
-            {"Hapus", [&c] {
+                if (id < 0) return std::string("Buka dari dalam level");
+                auto l = tgm::riwayat::level(id);
+                if (!l.ada) return std::string("Belum ada data");
+                return fmt::format("Percobaan {}  |  Mati {}  |  Terbaik {}%", l.percobaan, l.mati, l.terbaik);
+            }));
+            r.push_back(info([] {
                 int id = idLevelSaatIni();
-                if (id < 0) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
-                std::string pesan;
-                bool ok = tgm::bot::hapus(id, c.slot, pesan);
-                beriTahu(pesan, ok ? NotificationIcon::Success : NotificationIcon::Error);
-            }},
-        }));
-        r.push_back(tog("Simpan Otomatis Saat Selesai", c.autoSaveMacro));
-        r.push_back(tog("Putar Otomatis dari Awal", c.autoPlay));
-        r.push_back(tog("Muat Macro Otomatis", c.autoMuat));
-        hasil.push_back(std::move(p));
-    }
-    // ================= LABEL (HUD) =================
-    {
-        Panel p{"Label", {}};
-        auto& r = p.baris;
-        r.push_back(tog("Tampilkan Label", c.showHud));
-        r.push_back(tog("FPS", c.showFps));
-        r.push_back(tog("CPS (klik per detik)", c.showCps));
-        r.push_back(tog("Jumlah Klik", c.showClicks));
-        r.push_back(tog("Jam", c.showClock));
-        r.push_back(tog("Persentase", c.showPercent));
-        r.push_back(tog("Nomor Percobaan", c.showAttempt));
-        r.push_back(tog("Frame", c.showFrame));
-        r.push_back(tog("Waktu Level", c.showTime));
-        r.push_back(tog("Mati Selama Sesi", c.showDeaths));
-        r.push_back(tog("Persen Terbaik", c.showBest));
-        r.push_back(tog("Persen Mati Terakhir", c.showMatiTerakhir));
-        r.push_back(tog("Nama Level", c.showLevelName));
-        r.push_back(tog("Akurasi Noclip", c.showAkurasi));
-        hasil.push_back(std::move(p));
-    }
-    // ================= GAYA LABEL =================
-    {
-        Panel p{"Gaya Label", {}};
-        auto& r = p.baris;
-        r.push_back(stepInt("Kepekatan", c.hudOpacity, 10, 100, 10, persen));
-        r.push_back(stepInt("Ukuran", c.hudScale, 50, 150, 10, persen));
-        r.push_back(stepPilih("Posisi", c.hudCorner, NAMA_SUDUT));
-        r.push_back(stepPilih("Warna", c.hudColor, NAMA_WARNA));
-        r.push_back(stepPilih("Huruf", c.hudFont, NAMA_FONT));
-        r.push_back(tog("Latar Gelap di Belakang Teks", c.hudPanel));
-        r.push_back(stepInt("Geser Horizontal", c.hudOffX, -100, 100, 5));
-        r.push_back(stepInt("Geser Vertikal", c.hudOffY, -100, 100, 5));
-        hasil.push_back(std::move(p));
-    }
-    // ================= INPUT =================
-    {
-        Panel p{"Input Viewer", {}};
-        auto& r = p.baris;
-        r.push_back(tog("Tampilkan Input Viewer", c.ivTampil));
-        r.push_back(stepPilih("Posisi", c.ivPosisi, NAMA_SUDUT));
-        r.push_back(stepInt("Ukuran", c.ivUkuran, 50, 200, 10, persen));
-        r.push_back(stepInt("Kepekatan", c.ivOpasitas, 20, 100, 10, persen));
-        r.push_back(stepPilih("Warna Tombol", c.ivWarna, NAMA_WARNA));
-        r.push_back(stepInt("Geser Horizontal", c.ivOffX, -150, 150, 5));
-        r.push_back(stepInt("Geser Vertikal", c.ivOffY, -150, 150, 5));
-        hasil.push_back(std::move(p));
-    }
-    // ================= INTERFACE =================
-    {
-        Panel p{"Interface", {}};
-        auto& r = p.baris;
-        r.push_back(judul("Menu"));
-        r.push_back(stepPilih("Tema (warna aksen)", c.tema, NAMA_TEMA, self));
-        r.push_back(tog("Mode Terang", c.menuTerang, self));
-        r.push_back(stepInt("Kepekatan Panel", c.menuOpasitas, 40, 100, 10, persen, self));
-        r.push_back(stepInt("Ukuran Menu", c.menuSkala, 60, 130, 10, persen));
-        r.push_back(info("Ukuran berlaku saat menu dibuka ulang."));
-        r.push_back(judul("Tombol Logo"));
-        r.push_back(tog("Tampilkan Tombol Logo", c.logoTampil));
-        r.push_back(tog("Tampil Saat di Level", c.logoDiLevel));
-        r.push_back(tog("Menempel ke Tepi Layar", c.logoMagnet));
-        r.push_back(tog("Meredup Otomatis", c.logoRedup));
-        r.push_back(stepInt("Ukuran Logo", c.logoUkuran, 50, 200, 10, persen));
-        r.push_back(stepInt("Kepekatan Logo", c.logoOpasitas, 20, 100, 10, persen));
-        r.push_back(tombol({{"Reset Posisi Logo", [] { FloatingLogo::resetPosisi(); beriTahu("Posisi tombol dikembalikan"); }}}));
-        hasil.push_back(std::move(p));
-    }
-    // ================= SHORTCUTS =================
-    {
-        Panel p{"Shortcuts", {}};
-        auto& r = p.baris;
-        r.push_back(info("Aksi cepat untuk level yang sedang dibuka."));
-        r.push_back(tombol({{"Restart Level", [] {
-            auto* pl = PlayLayer::get();
-            if (!pl) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
-            pl->resetLevelFromStart();
-        }}}));
-        r.push_back(tombol({{"Toggle Practice Mode", [] {
-            auto* pl = PlayLayer::get();
-            if (!pl) return beriTahu("Buka dari dalam level", NotificationIcon::Warning);
-            pl->togglePracticeMode(!pl->m_isPracticeMode);
-        }}}));
-        r.push_back(tombol({{"Pasang Checkpoint", [] {
-            auto* pl = PlayLayer::get();
-            if (!pl || !pl->m_isPracticeMode) return beriTahu("Hanya di mode practice", NotificationIcon::Warning);
-            pl->markCheckpoint();
-        }}}));
-        r.push_back(tombol({{"Hapus Checkpoint", [] {
-            auto* pl = PlayLayer::get();
-            if (!pl || !pl->m_isPracticeMode) return beriTahu("Hanya di mode practice", NotificationIcon::Warning);
-            if (pl->m_uiLayer) pl->m_uiLayer->onDeleteCheck(nullptr);
-        }}}));
-        hasil.push_back(std::move(p));
-    }
-    // ================= STATISTIK =================
-    {
-        Panel p{"Statistik", {}};
-        auto& r = p.baris;
-        r.push_back(judul("Keseluruhan"));
-        r.push_back(info([] {
-            auto t = tgm::riwayat::total();
-            return fmt::format("Main {} | Sesi {}", formatDurasi(t.detik), t.sesi);
-        }));
-        r.push_back(info([] {
-            auto t = tgm::riwayat::total();
-            return fmt::format("Mati {} | Klik {}", t.mati, t.klik);
-        }));
-        r.push_back(info([] {
-            auto t = tgm::riwayat::total();
-            return fmt::format("Percobaan {} | Selesai {}", t.percobaan, t.selesai);
-        }));
-        r.push_back(judul("Level Ini"));
-        r.push_back(info([] {
-            int id = idLevelSaatIni();
-            if (id < 0) return std::string("Buka dari dalam level");
-            auto l = tgm::riwayat::level(id);
-            if (!l.ada) return std::string("Belum ada data");
-            return fmt::format("Percobaan {} | Mati {} | Terbaik {}%", l.percobaan, l.mati, l.terbaik);
-        }));
-        r.push_back(info([] {
-            int id = idLevelSaatIni();
-            if (id < 0) return std::string("");
-            auto l = tgm::riwayat::level(id);
-            return fmt::format("Klik {} | Selesai {}x", l.klik, l.selesai);
-        }));
-        r.push_back(info([] {
-            int id = idLevelSaatIni();
-            if (id < 0) return std::string("");
-            auto z = tgm::riwayat::zonaTerbanyak(id);
-            if (z.kotak < 0) return std::string("Belum ada data tempat mati");
-            return fmt::format("Sering mati di {}-{}% ({}x)", z.kotak * 5, z.kotak * 5 + 5, z.jumlah);
-        }));
-        r.push_back(info([] {
-            auto const& s = tgm::sesi();
-            auto menit = static_cast<long long>(std::difftime(std::time(nullptr), s.mulai) / 60.0);
-            return fmt::format("Sesi: {} mnt | Mati {} | Klik {}", menit, s.mati, s.klik);
-        }));
-        hasil.push_back(std::move(p));
-    }
-    // ================= DATA =================
-    {
-        Panel p{"Data", {}};
-        auto& r = p.baris;
-        r.push_back(info([] { return "Status: " + tgm::db::status(); }));
-        r.push_back(tombol({
-            {"Cadangkan", [] {
-                bool ok = tgm::db::cadangkan();
-                beriTahu(ok ? "Cadangan dibuat" : "Gagal membuat cadangan", ok ? NotificationIcon::Success : NotificationIcon::Error);
-            }},
-            {"Pulihkan", [self] {
-                createQuickPopup("Pulihkan", "Ganti data sekarang dengan cadangan manual terakhir?", "Batal", "Pulihkan",
-                    [self](auto*, bool ya) {
-                        if (!ya) return;
-                        if (tgm::db::pulihkanDariCadangan()) {
-                            tgm::loadConfig();
-                            beriTahu("Data dipulihkan", NotificationIcon::Success);
+                if (id < 0) return std::string("");
+                auto l = tgm::riwayat::level(id);
+                return fmt::format("Klik {}  |  Waktu {}  |  Selesai {}x", l.klik, formatDurasi(l.detik), l.selesai);
+            }));
+            r.push_back(info([] {
+                int id = idLevelSaatIni();
+                if (id < 0) return std::string("");
+                auto z = tgm::riwayat::zonaTerbanyak(id);
+                if (z.kotak < 0) return std::string("Belum ada data tempat mati");
+                return fmt::format("Paling sering mati di {}-{}% ({}x)", z.kotak * 5, z.kotak * 5 + 5, z.jumlah);
+            }));
+            r.push_back(info([] {
+                auto const& s = tgm::sesi();
+                auto menit = static_cast<long long>(std::difftime(std::time(nullptr), s.mulai) / 60.0);
+                return fmt::format("Sesi ini: {} menit  |  Mati {}  |  Klik {}", menit, s.mati, s.klik);
+            }));
+            r.push_back(info([] { return fmt::format("Level tercatat: {}", tgm::riwayat::jumlahLevelTercatat()); }));
+            break;
+        }
+        // ================= DATA =================
+        default: {
+            r.push_back(judul("Database"));
+            r.push_back(info([] { return "Status: " + tgm::db::status(); }));
+            r.push_back(info("Disimpan setiap ada perubahan, aman walau game ditutup."));
+            r.push_back(tombol({
+                {"Cadangkan", [] {
+                    bool ok = tgm::db::cadangkan();
+                    beriTahu(ok ? "Cadangan dibuat" : "Gagal membuat cadangan", ok ? NotificationIcon::Success : NotificationIcon::Error);
+                }},
+                {"Pulihkan", [self] {
+                    createQuickPopup("Pulihkan", "Ganti data sekarang dengan cadangan manual terakhir?", "Batal", "Pulihkan",
+                        [self](auto*, bool ya) {
+                            if (!ya) return;
+                            if (tgm::db::pulihkanDariCadangan()) {
+                                tgm::loadConfig();
+                                beriTahu("Data dipulihkan", NotificationIcon::Success);
+                                self->mintaBangunUlang();
+                            } else {
+                                beriTahu("Tidak ada cadangan manual", NotificationIcon::Warning);
+                            }
+                        });
+                }},
+            }));
+            r.push_back(tombol({
+                {"Hapus Statistik", [] {
+                    createQuickPopup("Hapus Statistik", "Hapus semua statistik permanen? Pengaturan tidak ikut terhapus.", "Batal", "Hapus",
+                        [](auto*, bool ya) {
+                            if (!ya) return;
+                            tgm::riwayat::hapusSemua();
+                            beriTahu("Statistik dihapus");
+                        });
+                }},
+                {"Reset Pengaturan", [self] {
+                    createQuickPopup("Reset Pengaturan", "Kembalikan semua pengaturan ke bawaan?", "Batal", "Reset",
+                        [self](auto*, bool ya) {
+                            if (!ya) return;
+                            tgm::resetConfig();
+                            beriTahu("Pengaturan direset", NotificationIcon::Success);
                             self->mintaBangunUlang();
-                        } else {
-                            beriTahu("Tidak ada cadangan manual", NotificationIcon::Warning);
-                        }
-                    });
-            }},
-        }));
-        r.push_back(tombol({
-            {"Hapus Statistik", [] {
-                createQuickPopup("Hapus Statistik", "Hapus semua statistik permanen? Pengaturan tidak ikut terhapus.", "Batal", "Hapus",
-                    [](auto*, bool ya) {
-                        if (!ya) return;
-                        tgm::riwayat::hapusSemua();
-                        beriTahu("Statistik dihapus");
-                    });
-            }},
-            {"Reset Pengaturan", [self] {
-                createQuickPopup("Reset Pengaturan", "Kembalikan semua pengaturan ke bawaan?", "Batal", "Reset",
-                    [self](auto*, bool ya) {
-                        if (!ya) return;
-                        tgm::resetConfig();
-                        beriTahu("Pengaturan direset", NotificationIcon::Success);
-                        self->mintaBangunUlang();
-                    });
-            }},
-        }));
-        r.push_back(info("Mode Aman mencegah progres tersimpan saat cheat aktif."));
-        r.push_back(info("Jangan kirim rekor ke leaderboard memakai cheat."));
-        hasil.push_back(std::move(p));
+                        });
+                }},
+            }));
+            r.push_back(judul("Peringatan"));
+            r.push_back(info("Mode Aman mencegah progres tersimpan saat cheat aktif."));
+            r.push_back(info("Jangan kirim rekor ke leaderboard memakai cheat."));
+            break;
+        }
     }
-    return hasil;
+    return bagi(std::move(r), perHal);
 }

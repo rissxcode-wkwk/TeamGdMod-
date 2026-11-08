@@ -19,6 +19,11 @@ namespace tgm {
         std::deque<float> waktuKlik;     // waktu nyata tiap klik (untuk menghitung CPS)
         float    detikBelumDicatat = 0.f; // waktu main yang belum dimasukkan ke database
         float    persenMatiTerakhir = -1.f; // persen tempat mati terakhir (-1 = belum ada)
+        uint32_t matiNoclip      = 0;    // berapa kali pemain seharusnya mati (rentetan tabrakan dihitung satu)
+        uint32_t frameMatiNoclipAkhir = 0xFFFFFFFF; // frame tabrakan terakhir untuk menghitung rentetan
+        float    runMulai        = 0.f;  // persen tempat percobaan ini dimulai
+        float    bestRunA        = 0.f;  // run terbaik di level ini: dari persen ...
+        float    bestRunB        = 0.f;  // ... sampai persen ini
 
         // Persentase akurasi Noclip pada percobaan ini (100 = tidak ada tabrakan)
         float akurasi(uint32_t frameSekarang) const {

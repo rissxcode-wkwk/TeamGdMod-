@@ -3,6 +3,7 @@
 
 #include <Geode/Geode.hpp>
 #include <Geode/binding/ButtonSprite.hpp>
+#include <Geode/binding/FMODAudioEngine.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/ui/Notification.hpp>
 
@@ -19,7 +20,9 @@
 #include "../core/Riwayat.hpp"
 #include "../core/Stats.hpp"
 #include "../hacks/Cbf.hpp"
+#include "../hacks/Extra.hpp"
 #include "../hacks/Stepper.hpp"
+#include <vector>
 
 using namespace geode::prelude;
 
@@ -58,7 +61,7 @@ namespace {
         if (c.showFps)     t += fmt::format("FPS: {:.0f}\n", s.fps);
         if (c.showCps)     t += fmt::format("CPS: {}\n", s.cps());
         if (c.showClock)   t += fmt::format("Jam: {}\n", jamSekarang());
-        if (c.showPercent) t += fmt::format("Persen: {:.1f}%\n", pl->getCurrentPercent());
+        if (c.showPercent) t += c.persenAkurat ? fmt::format("Persen: {:.2f}%\n", pl->getCurrentPercent()) : fmt::format("Persen: {:.1f}%\n", pl->getCurrentPercent());
         if (c.showBest)    t += fmt::format("Terbaik: {}%\n", persenTerbaik(pl));
         if (c.showMatiTerakhir && s.persenMatiTerakhir >= 0.f) t += fmt::format("Mati di: {:.0f}%\n", s.persenMatiTerakhir);
         if (c.showAttempt) t += fmt::format("Percobaan: {}\n", pl->m_attempts);
@@ -89,6 +92,11 @@ namespace {
                 break;
         }
 
+        if (c.showTestmode && pl->m_isTestMode) t += "Testmode\n";
+        if (c.showBestRun && s.bestRunB > s.bestRunA) t += fmt::format("Best Run: {:.0f}-{:.0f}%\n", s.bestRunA, s.bestRunB);
+        if (c.noclip && c.showNoclipMati) t += fmt::format("Noclip Mati: {}\n", s.matiNoclip);
+
+        if (c.showCheat && tgm::cheatsActive()) t += "CHEAT AKTIF\n";
         if (modeAman) t += "Mode Aman aktif\n";
         if (!t.empty()) t.pop_back(); // buang newline terakhir
         return t;
@@ -259,6 +267,32 @@ namespace {
     void kabari(std::string const& pesan, NotificationIcon ikon) {
         Notification::create(pesan, ikon, 1.8f)->show();
     }
+
+    // ---------- Jejak lintasan ----------
+    // Menggambar ulang seluruh jejak (dipanggil hanya saat ada titik baru)
+    void gambarJejak(CCDrawNode* node, std::vector<CCPoint> const& a, std::vector<CCPoint> const& b) {
+        if (!node) return;
+        node->clear();
+        auto w = warnaHud(tgm::cfg().jejakWarna);
+        ccColor4F warna{static_cast<float>(w.r) / 255.f, static_cast<float>(w.g) / 255.f, static_cast<float>(w.b) / 255.f, 0.9f};
+        for (auto const* daftar : {&a, &b}) {
+            for (std::size_t i = 1; i < daftar->size(); ++i) {
+                auto const& p = (*daftar)[i - 1];
+                auto const& q = (*daftar)[i];
+                // Lompatan jauh (portal teleport, mulai dari checkpoint) tidak digambar sebagai garis
+                if (std::abs(p.x - q.x) > 150.f || std::abs(p.y - q.y) > 150.f) continue;
+                node->drawSegment(p, q, 0.9f, warna);
+            }
+        }
+    }
+
+    void potongJejak(std::vector<CCPoint>& v, std::size_t maks) {
+        if (v.size() > maks) v.erase(v.begin(), v.begin() + static_cast<std::ptrdiff_t>(v.size() - maks));
+    }
+
+    // LDM otomatis: nilai asli pengaturan GD disimpan lalu dikembalikan saat keluar level
+    bool g_ldmDiubah = false;
+    bool g_ldmAsli = false;
 }
 
 class $modify(TgmPlayLayer, PlayLayer) {
@@ -271,7 +305,26 @@ class $modify(TgmPlayLayer, PlayLayer) {
         CCNode*     inputViewer = nullptr;   // dimiliki m_uiLayer
         IvKeadaan   ivCache;                 // keadaan Input Viewer yang terakhir diterapkan
         bool        hitboxTerapkan = false;  // nilai Config::hitbox yang terakhir diterapkan ke GD
+        CCDrawNode* jejakNode = nullptr;     // dimiliki m_objectLayer
+        std::vector<CCPoint> jejak1;         // titik jejak pemain 1
+        std::vector<CCPoint> jejak2;         // titik jejak pemain 2
+        int         jejakAkum = 0;           // penghitung frame untuk jarak antar titik
+        bool        autoKillSudah = false;   // Auto Kill sudah dipicu pada percobaan ini
+        bool        musikDijeda = false;     // musik dijeda oleh Mute Audio Saat Mati
     };
+
+    // LDM otomatis (atau Mode Ringan) harus menyala sebelum objek level dibuat
+    bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
+        auto const& c = tgm::cfg();
+        tgm::terapkanFps();
+        if ((c.autoLdm || c.modeRingan) && !g_ldmDiubah) {
+            auto* gm = GameManager::get();
+            g_ldmAsli = gm->getGameVariable("0042");
+            gm->setGameVariable("0042", true);
+            g_ldmDiubah = true;
+        }
+        return PlayLayer::init(level, useReplay, dontCreateObjects);
+    }
 
     void setupHasCompleted() {
         PlayLayer::setupHasCompleted();
@@ -289,8 +342,8 @@ class $modify(TgmPlayLayer, PlayLayer) {
             tgm::bot::muat(id, tgm::cfg().slot, pesan);
         }
 
-        // Mode Aman: cheat aktif -> progres tidak disimpan
-        if (tgm::cfg().autoSafeMode && tgm::cheatsActive()) {
+        // Mode Aman: cheat aktif (atau Safe Mode manual) -> progres tidak disimpan
+        if (tgm::perluModeAman()) {
             m_isTestMode = true;
         }
 
@@ -300,6 +353,10 @@ class $modify(TgmPlayLayer, PlayLayer) {
         bersihkan(m_uiLayer, "tgm-iv"_spr);
         bersihkan(m_uiLayer, "tgm-restart"_spr);
         bersihkan(m_uiLayer, "tgm-stepper"_spr);
+        bersihkan(m_objectLayer, "tgm-jejak"_spr);
+        m_fields->jejak1.clear();
+        m_fields->jejak2.clear();
+        m_fields->jejakNode = nullptr;
 
         // Label HUD + latar gelap
         auto latar = CCLayerColor::create(ccc4(0, 0, 0, 90));
@@ -366,8 +423,18 @@ class $modify(TgmPlayLayer, PlayLayer) {
         tgm::cbf::levelDimuat();
         if (tgm::cfg().musikPracticeAsli) m_practiceMusicSync = true;
 
-        // Auto Practice: nyalakan mode practice begitu level siap
-        if (tgm::cfg().autoPractice && !m_isPracticeMode) this->togglePracticeMode(true);
+        // Jejak lintasan: node gambar di atas objek level
+        if (m_objectLayer) {
+            auto* node = CCDrawNode::create();
+            node->setID("tgm-jejak"_spr);
+            m_objectLayer->addChild(node, 1000);
+            m_fields->jejakNode = node;
+        }
+
+        // Auto Practice: masuk mode Practice begitu level siap
+        if (tgm::cfg().autoPractice && !m_isPracticeMode) {
+            this->togglePracticeMode(true);
+        }
     }
 
     // Hitbox memakai debug draw bawaan GD
@@ -411,7 +478,19 @@ class $modify(TgmPlayLayer, PlayLayer) {
 
     void resetLevel() {
         if (tgm::cfg().musikPracticeAsli) m_practiceMusicSync = true;
+        int percobaanSebelum = m_attempts;
         PlayLayer::resetLevel();
+
+        // Bekukan Percobaan: nomor percobaan dikembalikan ke nilai sebelum reset
+        if (tgm::cfg().bekukanPercobaan && m_attempts != percobaanSebelum) {
+            m_attempts = percobaanSebelum;
+            this->updateAttempts();
+        }
+
+        // Jejak lintasan dimulai lagi dari titik respawn
+        m_fields->jejak1.clear();
+        m_fields->jejak2.clear();
+        if (m_fields->jejakNode) m_fields->jejakNode->clear();
 
         auto& st = tgm::stats();
         st.klik = 0;
@@ -419,7 +498,15 @@ class $modify(TgmPlayLayer, PlayLayer) {
         st.frameTabrak = 0;
         st.frameTabrakAkhir = 0xFFFFFFFF;
         st.detikCp = 0.f;
+        st.matiNoclip = 0;
+        st.frameMatiNoclipAkhir = 0xFFFFFFFF;
+        st.runMulai = this->getCurrentPercent();
         m_fields->menungguReset = false;
+        m_fields->autoKillSudah = false;
+        if (m_fields->musikDijeda) {
+            FMODAudioEngine::get()->resumeMusic(0);
+            m_fields->musikDijeda = false;
+        }
 
         tgm::riwayat::catatPercobaan(idLevel(this));
 
@@ -437,7 +524,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
         }
 
         // Mode Aman diterapkan lagi (cheat bisa saja baru dinyalakan lewat menu)
-        if (tgm::cfg().autoSafeMode && tgm::cheatsActive()) {
+        if (tgm::perluModeAman()) {
             m_isTestMode = true;
         }
     }
@@ -453,6 +540,9 @@ class $modify(TgmPlayLayer, PlayLayer) {
                 auto& st = tgm::stats();
                 auto frame = m_gameState.m_currentProgress;
                 st.tabrakan++;
+                auto frameU = static_cast<uint32_t>(frame);
+                if (st.frameMatiNoclipAkhir == 0xFFFFFFFF || frameU > st.frameMatiNoclipAkhir + 1) st.matiNoclip++;
+                st.frameMatiNoclipAkhir = frameU;
                 if (frame != st.frameTabrakAkhir) {
                     st.frameTabrak++;
                     st.frameTabrakAkhir = frame;
@@ -474,7 +564,23 @@ class $modify(TgmPlayLayer, PlayLayer) {
         tgm::riwayat::catatZonaMati(id, persenMati);
         tgm::stats().persenMatiTerakhir = static_cast<float>(persenMati);
 
+        // Best Run: run terpanjang (persen akhir - persen awal) pada sesi level ini
+        {
+            auto& st = tgm::stats();
+            float akhir = this->getCurrentPercent();
+            if (akhir - st.runMulai > st.bestRunB - st.bestRunA) {
+                st.bestRunA = st.runMulai;
+                st.bestRunB = akhir;
+            }
+        }
+
         PlayLayer::destroyPlayer(player, object);
+
+        // Mute Audio Saat Mati: jeda musik level sampai respawn
+        if (c.muteMati && !m_fields->musikDijeda) {
+            FMODAudioEngine::get()->pauseMusic(0);
+            m_fields->musikDijeda = true;
+        }
 
         // Respawn cepat: jadwalkan reset lebih awal; panggilan reset yang terlambat diabaikan (lihat delayedResetLevel)
         if (c.respawnCepat && player && player->m_isDead) {
@@ -498,7 +604,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
 
     void levelComplete() {
         // Mode Aman: jangan simpan penyelesaian bila ada cheat aktif
-        if (tgm::cfg().autoSafeMode && tgm::cheatsActive()) {
+        if (tgm::perluModeAman()) {
             m_isTestMode = true;
         }
 
@@ -507,6 +613,14 @@ class $modify(TgmPlayLayer, PlayLayer) {
             std::string pesan;
             bool ok = tgm::bot::simpan(m_level->m_levelID.value(), tgm::cfg().slot, pesan);
             kabari(pesan, ok ? NotificationIcon::Success : NotificationIcon::Error);
+        }
+
+        {
+            auto& st = tgm::stats();
+            if (100.f - st.runMulai > st.bestRunB - st.bestRunA) {
+                st.bestRunA = st.runMulai;
+                st.bestRunB = 100.f;
+            }
         }
 
         int id = idLevel(this);
@@ -521,6 +635,12 @@ class $modify(TgmPlayLayer, PlayLayer) {
     void onQuit() {
         tgm::bot::berhenti();
         tgm::stepper::reset();
+
+        // Kembalikan Low Detail Mode ke nilai awal bila kita yang menyalakannya
+        if (g_ldmDiubah) {
+            GameManager::get()->setGameVariable("0042", g_ldmAsli);
+            g_ldmDiubah = false;
+        }
 
         // Catat sisa waktu main lalu simpan ke disk sebelum keluar level
         auto& st = tgm::stats();
@@ -572,6 +692,40 @@ class $modify(TgmPlayLayer, PlayLayer) {
 
         if (m_fields->inputViewer) perbaruiInputViewer(m_fields->inputViewer, this, m_fields->ivCache);
 
+        // Auto Kill: matikan pemain begitu mencapai persen yang dipilih (sekali per percobaan)
+        if (c.autoKill && !m_fields->autoKillSudah && !m_isPaused && !m_levelEndAnimationStarted
+            && m_player1 && !m_player1->m_isDead
+            && this->getCurrentPercent() >= static_cast<float>(c.autoKillPersen)) {
+            m_fields->autoKillSudah = true;
+            this->destroyPlayer(m_player1, m_anticheatSpike);
+        }
+
+        // Jejak lintasan: titik baru tiap 2 frame (4 frame di Mode Ringan)
+        if (m_fields->jejakNode) {
+            if (!c.jejak) {
+                if (!m_fields->jejak1.empty() || !m_fields->jejak2.empty()) {
+                    m_fields->jejak1.clear();
+                    m_fields->jejak2.clear();
+                    m_fields->jejakNode->clear();
+                }
+            } else if (m_player1 && !m_player1->m_isDead && !m_isPaused) {
+                if (++m_fields->jejakAkum >= (c.modeRingan ? 4 : 2)) {
+                    m_fields->jejakAkum = 0;
+                    auto maks = static_cast<std::size_t>(c.modeRingan ? std::min(c.jejakPanjang, 120) : c.jejakPanjang);
+                    m_fields->jejak1.push_back(m_player1->getPosition());
+                    potongJejak(m_fields->jejak1, maks);
+                    bool dua = m_gameState.m_isDualMode && m_player2;
+                    if (dua) {
+                        m_fields->jejak2.push_back(m_player2->getPosition());
+                        potongJejak(m_fields->jejak2, maks);
+                    } else {
+                        m_fields->jejak2.clear();
+                    }
+                    gambarJejak(m_fields->jejakNode, m_fields->jejak1, m_fields->jejak2);
+                }
+            }
+        }
+
         // Hitbox dinyalakan / dimatikan lewat menu saat level berjalan
         if (m_fields->hitboxTerapkan != c.hitbox) {
             m_fields->hitboxTerapkan = c.hitbox;
@@ -580,7 +734,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
 
         // Perbarui HUD paling banyak 10x per detik
         m_fields->akumulasiHud += dtNyata;
-        if (m_fields->akumulasiHud < (c.modeRingan ? 0.3f : 0.1f)) return;
+        if (m_fields->akumulasiHud < (c.modeRingan ? 0.25f : 0.1f)) return;
         m_fields->akumulasiHud = 0.f;
 
         auto* label = typeinfo_cast<CCLabelBMFont*>(m_uiLayer->getChildByID("tgm-hud"_spr));
@@ -594,7 +748,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
         }
         label->setVisible(true);
 
-        auto teks = susunTeksHud(this, m_isTestMode && tgm::cheatsActive());
+        auto teks = susunTeksHud(this, m_isTestMode && tgm::perluModeAman());
         if (teks != m_fields->teksTerakhir) {
             m_fields->teksTerakhir = teks;
             label->setString(teks.c_str());

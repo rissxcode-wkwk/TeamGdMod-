@@ -10,9 +10,6 @@ Mod menu **Geometry Dash 2.2091** buatan sendiri untuk Geode 6.
 
 ## Fitur
 
-- **Menu panel berkolom** yang bisa di-scroll, dengan **tema** (8 warna, Mode Terang)
-- **Mode Ringan**, **Tanpa Partikel**, **Auto Practice**
-- **Tampilkan Lintasan** dan **FPS Bypass** (eksperimental)
 - **Musik Practice Sama dengan Normal**: di Practice, lagu level asli tetap diputar dan sinkron dengan checkpoint
 - **Hitbox**, **Langkah Frame**
 - **Input Viewer** dan **Presisi Klik** (Klik di Langkah / Click Between Frames), **Klik Otomatis**

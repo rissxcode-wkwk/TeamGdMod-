@@ -1,6 +1,8 @@
 #include "Config.hpp"
 #include "Db.hpp"
 #include "Riwayat.hpp"
+#include "Keybinds.hpp"
+#include "../hacks/Extra.hpp"
 
 #include <Geode/Geode.hpp>
 
@@ -123,22 +125,36 @@ namespace tgm {
                 B("hitbox-mati", c.hitboxMati);
                 B("frame-stepper", c.frameStepper);
 
-                // Baru di v1.6.0
+                // Fitur v1.6
                 B("mode-ringan", c.modeRingan);
-                B("tanpa-partikel", c.tanpaPartikel);
-                B("auto-practice", c.autoPractice);
                 B("fps-bypass", c.fpsBypass);
-                I("fps-target", c.fpsTarget, 30, 1000);
-                B("lintasan", c.lintasan);
-                I("lintasan-langkah", c.lintasanLangkah, 20, 120);
+                I("fps-target", c.fpsTarget, 30, 360);
+                B("safe-mode", c.safeMode);
+                B("auto-practice", c.autoPractice);
+                B("auto-ldm", c.autoLdm);
+                B("bekukan-percobaan", c.bekukanPercobaan);
+                B("jejak", c.jejak);
+                I("jejak-panjang", c.jejakPanjang, 50, 600);
+                I("jejak-warna", c.jejakWarna, 0, 7);
+                B("show-cheat", c.showCheat);
+                B("persen-akurat", c.persenAkurat);
+
+                // Fitur v1.7
+                B("instant-mirror", c.instantMirror);
+                B("auto-kill", c.autoKill);
+                I("auto-kill-persen", c.autoKillPersen, 1, 100);
+                B("mute-mati", c.muteMati);
+                B("show-testmode", c.showTestmode);
+                B("show-best-run", c.showBestRun);
+                B("show-noclip-mati", c.showNoclipMati);
 
                 // Antarmuka
                 I("tab-terakhir", c.tabTerakhir, 0, 20);
-                I("tema", c.tema, 0, 7);
-                B("menu-terang", c.menuTerang);
-                I("menu-skala", c.menuSkala, 60, 130);
-                I("menu-opasitas", c.menuOpasitas, 40, 100);
-                I("panel-tutup", c.panelTutup, 0, 65535);
+                I("tema-menu", c.temaMenu, 0, 7);
+                I("skala-ui", c.skalaUi, 50, 150);
+                I("opasitas-menu", c.opasitasMenu, 30, 100);
+                B("menu-klasik", c.menuKlasik);
+                I("mm-tutup", c.mmTutup, 0, 65535);
                 return r;
             }();
             return v;
@@ -240,6 +256,10 @@ namespace tgm {
 $on_mod(DataLoaded) {
     tgm::db::muat();
     tgm::loadConfig();
+    tgm::kb::muat();
     // Catat sesi game baru setelah database terbuka
-    queueInMainThread([] { tgm::riwayat::catatSesiBaru(); });
+    queueInMainThread([] {
+        tgm::riwayat::catatSesiBaru();
+        tgm::terapkanFps();
+    });
 }

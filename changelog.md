@@ -1,20 +1,26 @@
 # TeamGdMod
 
-## v1.6.0
-**Tampilan**:
-* <cy>Diubah</c> menu jadi <cl>panel berkolom</c> dengan header berwarna (Global, Level, Player, Bypass, Bot, Label, Gaya Label, Input Viewer, Interface, Shortcuts, Statistik, Data). Panel yang kepanjangan bisa di-scroll, panel bisa dilipat lewat header, dan halaman panel diganti lewat tombol < >
-* <cg>Ditambah</c> <cl>Tema menu</c>: 8 warna aksen, <co>Mode Terang</c>, kepekatan panel, dan ukuran menu
+## v1.7.0
+**Keybind kustom**:
+* <cg>Ditambah</c> jendela <cl>Keybinds</c>: <co>Buka Menu</c> (bawaan Tab), <co>P1 Lompat</c>, <co>P2 Lompat</c>
+* <cg>Ditambah</c> pasang tombol keyboard ke <cl>toggle atau tombol apa pun</c> di menu: tahan barisnya 0,6 detik, lalu tekan tombol (Esc batal, Del hapus). Keybind tersimpan di database
+* Keybind butuh keyboard (komputer atau keyboard Bluetooth)
 
 **Fitur baru**:
-* <cg>Ditambah</c> <cl>Mode Ringan</c>: partikel, guncangan, efek kematian dimatikan, HUD diperbarui lebih jarang, animasi menu dimatikan
-* <cg>Ditambah</c> <co>Tanpa Partikel</c>, <co>Auto Practice Mode</c>
-* <cg>Ditambah</c> <cl>Tampilkan Lintasan</c> (eksperimental): perkiraan busur lompatan kubus
-* <cg>Ditambah</c> <cl>FPS Bypass</c> (eksperimental) dengan target FPS pilihan
-* <cg>Ditambah</c> panel <cl>Shortcuts</c>: Restart Level, Toggle Practice, Pasang / Hapus Checkpoint
+* <cg>Ditambah</c> <cl>Instant Mirror</c>, <cl>Auto Kill</c> (mati di persen pilihan), <cl>Mute Audio Saat Mati</c>
+* <cg>Ditambah</c> tombol <cl>Speed +0.1 / -0.1</c> dan <cl>Stepper: Jeda/Lanjut</c>, <cl>Stepper: Langkah</c> (bisa dipasangi keybind)
+* <cg>Ditambah</c> label: <cl>Testmode</c>, <cl>Best Run</c>, <cl>Noclip Mati</c>
 
-**Catatan**:
-* Physics Bypass (TPS) belum ada: langkah fisika GD 2.2 harus diubah dari dalam game dan belum bisa diuji di sini
-* Semua kode baru belum dikompilasi atau diuji di dalam game
+## v1.6.0
+**Tampilan**:
+* <cy>Diubah</c> menu utama kini berupa <cl>jendela-jendela berjajar</c> (Global, Level, Player, Bypass, Bot, Labels, Input, Shortcuts, Interface, Statistik, Data). Geser kiri / kanan untuk menggulir deretan jendela, geser atas / bawah untuk menggulir isi jendela yang panjang, ketuk judul untuk melipat. Menu popup tab lama masih ada lewat <co>Menu Klasik</c>
+* <cg>Ditambah</c> <cl>Tema menu</c> (8 warna), <cl>Ukuran Menu</c>, dan <cl>Kepekatan Latar</c> di jendela Interface
+
+**Fitur baru**:
+* <cg>Ditambah</c> <cl>Mode Ringan</c>: Low Detail Mode otomatis, tanpa efek mati dan guncangan, HUD diperbarui lebih jarang, animasi menu dimatikan
+* <cg>Ditambah</c> <cl>FPS Bypass</c> dengan FPS target 30 - 360
+* <cg>Ditambah</c> <cl>Jejak Lintasan</c> (panjang dan warna bisa diatur), <cl>Auto Practice Mode</c>, <cl>Auto LDM</c>, <cl>Bekukan Percobaan</c>, <cl>Safe Mode</c> manual, <cl>Cheat Indicator</c>
+* <cg>Ditambah</c> jendela <cl>Shortcuts</c>: Restart Level, Toggle Practice Mode, Place / Remove Checkpoint
 
 ## v1.5.1
 **Perbaikan**:

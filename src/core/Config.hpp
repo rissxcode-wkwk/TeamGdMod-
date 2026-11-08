@@ -89,22 +89,36 @@ namespace tgm {
         bool  hitboxMati     = false; // tampilkan hitbox saat mati
         bool  frameStepper   = false; // tombol Jeda / Langkah frame di layar
 
-        // ================= Baru di v1.6.0 =================
-        bool  modeRingan     = false; // matikan efek berat (partikel, guncangan, efek mati) untuk HP lemah
-        bool  tanpaPartikel  = false; // sembunyikan partikel di dalam level
-        bool  autoPractice   = false; // otomatis nyalakan mode practice saat level dibuka
-        bool  fpsBypass      = false; // pakai batas FPS sendiri (eksperimental)
-        int   fpsTarget      = 120;   // target FPS bila FPS Bypass aktif (30 - 1000)
-        bool  lintasan       = false; // gambar perkiraan lintasan lompatan kubus
-        int   lintasanLangkah = 60;   // panjang lintasan dalam langkah 1/60 detik (20 - 120)
+        // ================= Fitur v1.6 =================
+        bool  modeRingan     = false; // Mode Ringan: LDM otomatis, tanpa efek mati / guncangan, HUD lebih hemat, animasi menu mati
+        bool  fpsBypass      = false; // pakai FPS target sendiri
+        int   fpsTarget      = 120;   // FPS target (30 - 360)
+        bool  safeMode       = false; // Mode Aman manual: progres level tidak pernah tersimpan
+        bool  autoPractice   = false; // otomatis masuk mode Practice saat level dibuka
+        bool  autoLdm        = false; // nyalakan Low Detail Mode otomatis saat level dibuka
+        bool  bekukanPercobaan = false; // nomor percobaan tidak bertambah
+        bool  jejak          = false; // gambar jejak lintasan pemain
+        int   jejakPanjang   = 200;   // jumlah titik jejak (50 - 600)
+        int   jejakWarna     = 1;     // indeks warna jejak (0 - 7)
+        bool  persenAkurat   = false; // persentase HUD dengan 2 desimal
+        bool  showCheat      = false; // HUD: penanda saat cheat aktif
+
+        // ================= Fitur v1.7 =================
+        bool  instantMirror  = false; // portal cermin langsung berpindah tanpa animasi
+        bool  autoKill       = false; // otomatis mati pada persen tertentu (untuk latihan bagian level)
+        int   autoKillPersen = 50;    // persen tempat Auto Kill (1 - 100)
+        bool  muteMati       = false; // musik level dijeda saat pemain mati
+        bool  showTestmode   = false; // HUD: penanda Testmode
+        bool  showBestRun    = false; // HUD: run terbaik (persen awal - persen akhir)
+        bool  showNoclipMati = false; // HUD: berapa kali pemain seharusnya mati (Noclip)
 
         // ================= Antarmuka =================
-        int   tabTerakhir    = 0;     // dipakai ulang sebagai halaman panel terakhir
-        int   tema           = 0;     // warna aksen menu (0 - 7)
-        bool  menuTerang     = false; // tema menu terang
-        int   menuSkala      = 100;   // ukuran menu dalam persen (60 - 130)
-        int   menuOpasitas   = 95;    // kepekatan latar panel dalam persen (40 - 100)
-        int   panelTutup     = 0;     // bitmask panel yang dilipat
+        int   tabTerakhir    = 0;     // tab menu klasik yang terakhir dibuka
+        int   temaMenu       = 0;     // tema warna menu (0 - 7)
+        int   skalaUi        = 100;   // ukuran menu dalam persen (50 - 150)
+        int   opasitasMenu   = 92;    // kepekatan latar menu dalam persen (30 - 100)
+        bool  menuKlasik     = false; // pakai menu popup lama (tab) alih-alih menu jendela
+        int   mmTutup        = 0;     // bitmask jendela menu yang dilipat
     };
 
     // Akses tunggal ke konfigurasi
