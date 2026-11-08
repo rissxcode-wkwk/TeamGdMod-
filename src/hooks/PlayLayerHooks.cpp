@@ -314,7 +314,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
     };
 
     // LDM otomatis (atau Mode Ringan) harus menyala sebelum objek level dibuat
-    bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
+    bool init(GJGameLevel* level, bool dontCreateObjects) {
         auto const& c = tgm::cfg();
         tgm::terapkanFps();
         if ((c.autoLdm || c.modeRingan) && !g_ldmDiubah) {
@@ -323,7 +323,7 @@ class $modify(TgmPlayLayer, PlayLayer) {
             gm->setGameVariable("0042", true);
             g_ldmDiubah = true;
         }
-        return PlayLayer::init(level, useReplay, dontCreateObjects);
+        return PlayLayer::init(level, dontCreateObjects);
     }
 
     void setupHasCompleted() {
