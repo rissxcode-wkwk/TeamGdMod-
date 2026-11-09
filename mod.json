@@ -1,0 +1,37 @@
+{
+  "geode": "6.0.0-alpha.1",
+  "gd": {
+    "win": "2.2091",
+    "android": "2.2091",
+    "mac": "2.2091",
+    "ios": "2.2091"
+  },
+  "id": "teamgd.teamgdmod",
+  "name": "TeamGdMod",
+  "version": "v1.0.0",
+  "developer": "TeamGd",
+  "description": "Mod menu TeamGd: floating button, panel kategori, command palette, bot, labels, tema.",
+  "tags": ["utility", "interface"],
+  "settings": {
+    "open-menu":        { "type": "keybind", "name": "Open Menu",        "default": "Tab" },
+    "open-palette":     { "type": "keybind", "name": "Open Command Palette", "default": "F2" },
+    "p1-jump":          { "type": "keybind", "name": "P1 Jump",          "default": "J" },
+    "p2-jump":          { "type": "keybind", "name": "P2 Jump",          "default": "K" },
+    "show-options":     { "type": "keybind", "name": "Show Options",     "default": "O" },
+    "restart-level":    { "type": "keybind", "name": "Restart Level",    "default": "R" },
+    "toggle-practice":  { "type": "keybind", "name": "Toggle Practice Mode", "default": "P" },
+    "place-checkpoint": { "type": "keybind", "name": "Place Checkpoint", "default": "C" },
+    "remove-checkpoint":{ "type": "keybind", "name": "Remove Checkpoint","default": "V" },
+    "step-frame":       { "type": "keybind", "name": "Step Frame (Frame Stepper)", "default": "F" },
+    "button-size": {
+      "type": "float", "name": "Ukuran Floating Button",
+      "default": 48, "min": 30, "max": 100,
+      "control": { "slider": true, "input": true }
+    },
+    "button-opacity": {
+      "type": "float", "name": "Transparansi Floating Button",
+      "default": 0.85, "min": 0.2, "max": 1,
+      "control": { "slider": true, "input": true }
+    }
+  }
+}
