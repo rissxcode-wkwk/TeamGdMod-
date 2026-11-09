@@ -40,11 +40,11 @@ inline bool save(std::string name) {
     if (name.empty()) return false;
     std::string s;
     for (auto& e : rec) s += fmt::format("{} {} {}\n", e.frame, e.down ? 1 : 0, e.p1 ? 1 : 0);
-    return geode::utils::file::writeString(dir() / (name + ".tgr"), s).isOk();
+    return geode::utils::file::writeString((dir() / (name + ".tgr")).string(), s).isOk();
 }
 inline bool load(std::string const& name) {
     if (name.empty()) return false;
-    auto r = geode::utils::file::readString(dir() / (name + ".tgr"));
+    auto r = geode::utils::file::readString((dir() / (name + ".tgr")).string());
     if (r.isErr()) return false;
     rec.clear();
     std::istringstream in(r.unwrap());

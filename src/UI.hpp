@@ -797,19 +797,20 @@ private:
 public:
     // tanpa 'override' agar tetap compile bila signature berbeda antar versi
     void keyDown(enumKeyCodes key) { handleKey((int)key); }
-    void keyDown(enumKeyCodes key, double) { handleKey((int)key); }
+    void keyDown(enumKeyCodes key, double) override { handleKey((int)key); }
 
-    void scrollWheel(float y, float x) {
+    bool scrollWheel(float y, float x) override {
         if (!m_ov.empty()) {
             int pi = overlayIndex(2);
             if (pi >= 0 && m_kbLabel == nullptr) { m_palPage = std::max(0, m_palPage + (y > 0 ? 1 : -1)); refreshPalette(); }
-            return;
+            return true;
         }
         auto mp = geode::cocos::getMousePos();
         int i = panelAt(mp);
         if (std::abs(x) > 0.01f) scrollRow(x > 0 ? 24.f : -24.f);
         else if (i >= 0) scrollPanel(i, y > 0 ? 24.f : -24.f);
         else scrollRow(y > 0 ? 24.f : -24.f);
+        return true;
     }
 
 private:

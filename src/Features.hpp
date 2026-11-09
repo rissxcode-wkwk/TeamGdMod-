@@ -326,10 +326,10 @@ inline bool saveConfig() {
         else
             s += fmt::format("{}={}\n", f.id, get(f.id));
     }
-    return geode::utils::file::writeString(cfgPath(), s).isOk();
+    return geode::utils::file::writeString(cfgPath().string(), s).isOk();
 }
 inline bool loadConfig() {
-    auto r = geode::utils::file::readString(cfgPath());
+    auto r = geode::utils::file::readString(cfgPath().string());
     if (r.isErr()) return false;
     std::istringstream in(r.unwrap());
     std::string line;
