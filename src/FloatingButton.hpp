@@ -1,9 +1,15 @@
 #pragma once
 #include "UI.hpp"
+#if __has_include(<Geode/ui/OverlayManager.hpp>)
+#include <Geode/ui/OverlayManager.hpp>
+#define TG_HAS_OVERLAY 1
+#else
+#define TG_HAS_OVERLAY 0
+#endif
 
 namespace tg {
 
-// Satu-satunya instance; hidup lintas scene lewat SceneManager (tidak duplikat).
+// Satu-satunya instance; hidup lintas scene lewat OverlayManager (tidak duplikat).
 class FloatingButton : public CCLayer {
     CCSprite* m_bg = nullptr;
     CCSprite* m_logo = nullptr;
@@ -66,10 +72,24 @@ public:
         if (b && b->init()) {
             b->autorelease();
             s_inst = b;
-            SceneManager::get()->keepAcrossScenes(b);
+#if TG_HAS_OVERLAY
+            OverlayManager::get()->addChild(b);
+#else
+            attach();
+#endif
         } else {
             CC_SAFE_DELETE(b);
         }
+    }
+    // cadangan bila OverlayManager tidak ada: tempel ulang ke scene aktif (tetap satu instance)
+    static void attach() {
+        if (!s_inst) return;
+        auto sc = CCDirector::get()->getRunningScene();
+        if (!sc || s_inst->getParent() == sc) return;
+        s_inst->retain();
+        s_inst->removeFromParent();
+        sc->addChild(s_inst, 10000);
+        s_inst->release();
     }
     static void refresh() { if (s_inst) s_inst->applySettings(); }
 

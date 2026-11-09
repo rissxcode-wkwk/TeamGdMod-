@@ -319,7 +319,7 @@ private:
         auto win = CCDirector::get()->getWinSize();
         float W = std::min(win.width * 0.86f, 800.f), H = std::min(win.height * 0.84f, 300.f);
         if (m_minimized) H = HDR + 2.f;
-        m_size = {W, H};
+        m_size = CCSize{W, H};
         m_win = CCNode::create();
         m_win->setContentSize(m_size);
         m_win->setAnchorPoint({0.5f, 0.5f});
@@ -417,7 +417,7 @@ private:
         }, nullptr, inRow, false);
 
         Panel p;
-        p.cat = cat; p.node = node; p.size = {w, h};
+        p.cat = cat; p.node = node; p.size = CCSize{w, h};
         if (collapsed) { m_panels.push_back(p); return; }
 
         float viewH = h - HP - 6.f, cw = w - 8.f;
@@ -534,7 +534,7 @@ private:
             redraw();
         };
         Hit h2;
-        h2.node = tn; h2.size = {tw, 12.f}; h2.clip = view; h2.inRow = m_hview != nullptr; h2.press = false;
+        h2.node = tn; h2.size = CCSize{tw, 12.f}; h2.clip = view; h2.inRow = m_hview != nullptr; h2.press = false;
         h2.drag = [=](CCPoint p) { apply(mn + std::clamp(p.x / tw, 0.f, 1.f) * (mx - mn)); };
         h2.end = [this] { m_dirty = m_dirty || m_uiDirty; };
         m_hits.push_back(std::move(h2));
@@ -869,7 +869,7 @@ private:
         node->addChild(rrect({W, H}, 6.f, c4f(mix(m_th.bg, {255, 255, 255}, 0.05f), 0.98f), 1.f, c4f(m_th.accent, 1.f)));
 
         Overlay o;
-        o.node = node; o.size = {W, H}; o.kind = 2;
+        o.node = node; o.size = CCSize{W, H}; o.kind = 2;
         o.outside = [this] { removeOverlay(3); removeOverlay(2); };
         int z = 100;
         if (atIndex < 0 || atIndex > (int)m_ov.size()) atIndex = (int)m_ov.size();

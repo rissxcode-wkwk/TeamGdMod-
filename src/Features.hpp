@@ -180,7 +180,7 @@ inline std::vector<Feature> buildFeatures() {
         "level-auto-practice-mode", "level-freeze-attempts", "level-show-hitboxes", "level-no-mirror",
         "level-hide-pause-menu", "level-accurate-percentage", "player-no-robot-fire", "player-no-trail",
         "level-auto-ldm", "player-auto-kill", "player-auto-kill-percent",
-        "bypass-unlock-shops", "bypass-unlock-vaults", "bypass-character-limit-bypass", "player-jump-hack",
+        "bypass-unlock-shops", "bypass-unlock-vaults", "player-jump-hack",
         "player-no-ghost-trail", "player-no-vehicle-particles", "player-solid-wave-trail",
         "bypass-unlock-icons",
         "player-autoclicker", "player-autoclicker-interval", "player-frame-stepper",

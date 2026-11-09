@@ -7,7 +7,6 @@
 #include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/PauseLayer.hpp>
 #include <Geode/modify/GameStatsManager.hpp>
-#include <Geode/modify/CCTextInputNode.hpp>
 #include "FloatingButton.hpp"
 
 using namespace geode::prelude;
@@ -16,9 +15,22 @@ using namespace geode::prelude;
 namespace tg {
 void actRestart() { if (auto p = PlayLayer::get()) p->resetLevel(); }
 void actPractice() { if (auto p = PlayLayer::get()) p->togglePracticeMode(!p->m_isPracticeMode); }
-void actPlaceCheckpoint() { if (auto p = PlayLayer::get()) if (p->m_isPracticeMode) p->createCheckpoint(); }
-void actRemoveCheckpoint() { if (auto p = PlayLayer::get()) if (p->m_isPracticeMode) p->removeLastCheckpoint(); }
-void actShowOptions() { OptionsLayer::addToCurrentScene(false); }
+// API checkpoint & options berbeda antar versi GD -> dipilih saat compile
+template <class P> void placeCP(P* p) {
+    if constexpr (requires { p->createCheckpoint(); }) p->createCheckpoint();
+    else if constexpr (requires { p->markCheckpoint(); }) p->markCheckpoint();
+}
+template <class P> void removeCP(P* p) {
+    if constexpr (requires { p->removeLastCheckpoint(); }) p->removeLastCheckpoint();
+    else if constexpr (requires { p->removeCheckpoint(true); }) p->removeCheckpoint(true);
+}
+template <class O> void openOptions() {
+    if constexpr (requires { O::addToCurrentScene(false); }) O::addToCurrentScene(false);
+    else if constexpr (requires { O::create()->show(); }) O::create()->show();
+}
+void actPlaceCheckpoint() { if (auto p = PlayLayer::get()) if (p->m_isPracticeMode) placeCP(p); }
+void actRemoveCheckpoint() { if (auto p = PlayLayer::get()) if (p->m_isPracticeMode) removeCP(p); }
+void actShowOptions() { openOptions<OptionsLayer>(); }
 void actJump(bool p1) {
     auto p = PlayLayer::get();
     if (!p) return;
@@ -107,6 +119,9 @@ class $modify(TGMenuLayer, MenuLayer) {
     bool init() {
         if (!MenuLayer::init()) return false;
         tg::FloatingButton::ensure();
+#if !TG_HAS_OVERLAY
+        tg::FloatingButton::attach();
+#endif
         return true;
     }
 };
@@ -289,12 +304,5 @@ class $modify(TGStats, GameStatsManager) {
     bool isItemUnlocked(UnlockType type, int id) {
         if (tg::cache().unlockShops) return true;
         return GameStatsManager::isItemUnlocked(type, id);
-    }
-};
-
-// Character Limit Bypass
-class $modify(TGTextInput, CCTextInputNode) {
-    void setMaxLabelLength(int len) {
-        CCTextInputNode::setMaxLabelLength(tg::cache().charLimit ? 9999 : len);
     }
 };
