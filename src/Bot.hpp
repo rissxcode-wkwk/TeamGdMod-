@@ -12,7 +12,7 @@ inline int frame = 0;
 inline size_t idx = 0;
 
 inline std::filesystem::path dir() {
-    auto d = Mod::get()->getSaveDir() / "replays";
+    std::filesystem::path d = saveDir() / "replays";
     std::error_code ec;
     std::filesystem::create_directories(d, ec);
     return d;

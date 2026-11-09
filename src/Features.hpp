@@ -2,6 +2,8 @@
 #include <Geode/Geode.hpp>
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
+#include <filesystem>
 #include <functional>
 #include <map>
 #include <set>
@@ -315,7 +317,15 @@ inline void setV(Feature const& f, float v) {
 }
 
 // ---------------------------------------------------------------- config file
-inline std::filesystem::path cfgPath() { return Mod::get()->getSaveDir() / "config.txt"; }
+// getSaveDir() bertipe berbeda antar versi SDK (std::filesystem::path / asp::fs::Path) -> ubah ke string dulu
+template <class P> std::string pstr(P const& p) {
+    if constexpr (requires { std::string(p.string()); }) return std::string(p.string());
+    else if constexpr (requires { std::string(p.str()); }) return std::string(p.str());
+    else if constexpr (requires { std::string(p.native()); }) return std::string(p.native());
+    else return std::string(p);
+}
+inline std::filesystem::path saveDir() { return std::filesystem::path(pstr(Mod::get()->getSaveDir())); }
+inline std::filesystem::path cfgPath() { return saveDir() / "config.txt"; }
 
 inline bool saveConfig() {
     std::string s;
