@@ -6,6 +6,7 @@
 #include <concepts>
 #include <utility>
 #include <Geode/loader/Event.hpp>
+#include "event-bus.hpp"
 
 namespace eclipse::config {
 
@@ -20,7 +21,7 @@ namespace eclipse::config {
 namespace eclipse::events {
 
     template <config::SupportedType T>
-    class RequestConfigValueEvent : public geode::Event {
+    class RequestConfigValueEvent : public PostableEvent<RequestConfigValueEvent<T>> {
     public:
         explicit RequestConfigValueEvent(std::string key, bool internal = false)
             : m_key(std::move(key)), m_useInternal(internal) {}
@@ -42,7 +43,7 @@ namespace eclipse::events {
     };
 
     template <config::SupportedType T>
-    class SetConfigValueEvent : public geode::Event {
+    class SetConfigValueEvent : public PostableEvent<SetConfigValueEvent<T>> {
     public:
         SetConfigValueEvent(std::string key, T value, bool internal = false)
             : m_key(std::move(key)), m_value(value), m_useInternal(internal) {}

@@ -48,8 +48,8 @@ namespace eclipse::gui {
         m_sprite->setID("main-sprite");
         this->addChild(m_sprite);
 
-        CCScene::get()->addChild(this);
-        geode::SceneManager::get()->keepAcrossScenes(this);
+        // Geode v5+: SceneManager diganti OverlayManager (node yang bertahan antar scene)
+        geode::OverlayManager::get()->addChild(this);
 
         return true;
     }

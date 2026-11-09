@@ -6,6 +6,7 @@
 #include <string_view>
 #include <concepts>
 #include <Geode/loader/Event.hpp>
+#include "event-bus.hpp"
 
 namespace eclipse::label {
 
@@ -21,7 +22,7 @@ namespace eclipse::label {
 
 namespace eclipse::events {
 
-    class FormatRiftStringEvent final : public geode::Event {
+    class FormatRiftStringEvent final : public PostableEvent<FormatRiftStringEvent> {
     public:
         explicit FormatRiftStringEvent(std::string_view source) : m_source(source) {}
         std::string_view getSource() const { return m_source; }
@@ -33,7 +34,7 @@ namespace eclipse::events {
     };
 
     template <label::SupportedType T>
-    class GetRiftVariableEvent final : public geode::Event {
+    class GetRiftVariableEvent final : public PostableEvent<GetRiftVariableEvent<T>> {
     public:
         explicit GetRiftVariableEvent(std::string_view name)
             : m_name(name), m_result(geode::Err("Unknown error")) {}
@@ -47,7 +48,7 @@ namespace eclipse::events {
     };
 
     template <label::SupportedType T>
-    class SetRiftVariableEvent final : public geode::Event {
+    class SetRiftVariableEvent final : public PostableEvent<SetRiftVariableEvent<T>> {
     public:
         explicit SetRiftVariableEvent(std::string_view name, T value) : m_name(name), m_value(value) {}
         std::string_view getName() const { return m_name; }

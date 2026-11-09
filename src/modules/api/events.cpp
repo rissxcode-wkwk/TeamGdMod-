@@ -8,30 +8,30 @@ using namespace geode::prelude;
 
 template <config::SupportedType T>
 void createGetConfigListener() {
-    new EventListener<EventFilter<events::RequestConfigValueEvent<T>>>(+[](events::RequestConfigValueEvent<T>* e) {
+    events::listen<events::RequestConfigValueEvent<T>>([](events::RequestConfigValueEvent<T>* e) {
         auto useInternal = e->getUseInternal();
         auto res = useInternal ? config::get<T>(e->getKey()) : config::getTemp<T>(e->getKey());
-        if (!res) return ListenerResult::Stop;
+        if (!res) return;
         e->setValue(res.unwrap());
-        return ListenerResult::Stop;
+        return;
     });
 }
 
 template <config::SupportedType T>
 void createSetConfigListener() {
-    new EventListener<EventFilter<events::SetConfigValueEvent<T>>>(+[](events::SetConfigValueEvent<T>* e) {
+    events::listen<events::SetConfigValueEvent<T>>([](events::SetConfigValueEvent<T>* e) {
         if (e->getUseInternal()) {
             config::set<T>(e->getKey(), e->getValue());
         } else {
             config::setTemp<T>(e->getKey(), e->getValue());
         }
-        return ListenerResult::Stop;
+        return;
     });
 }
 
 template <label::SupportedType T>
 void createGetRiftVariableListener() {
-    new EventListener<EventFilter<events::GetRiftVariableEvent<T>>>(+[](events::GetRiftVariableEvent<T>* e) {
+    events::listen<events::GetRiftVariableEvent<T>>([](events::GetRiftVariableEvent<T>* e) {
         auto val = labels::VariableManager::get().getVariable(std::string(e->getName()));
 
 #define HANDLE_CASE(type) \
@@ -55,60 +55,60 @@ void createGetRiftVariableListener() {
 
 #undef HANDLE_CASE
 
-        return ListenerResult::Stop;
+        return;
     });
 }
 
 template <label::SupportedType T>
 void createSetRiftVariableListener() {
-    new EventListener<EventFilter<events::SetRiftVariableEvent<T>>>(+[](events::SetRiftVariableEvent<T>* e) {
+    events::listen<events::SetRiftVariableEvent<T>>([](events::SetRiftVariableEvent<T>* e) {
         if constexpr (std::same_as<T, label::null_t>) {
             labels::VariableManager::get().removeVariable(std::string(e->getName()));
         } else {
             labels::VariableManager::get().setVariable(std::string(e->getName()), rift::Value::from<T>(e->getValue()));
         }
-        return ListenerResult::Stop;
+        return;
     });
 }
 
 $execute {
-    new EventListener<EventFilter<events::CreateMenuTabEvent>>(+[](events::CreateMenuTabEvent* e) {
+    events::listen<events::CreateMenuTabEvent>([](events::CreateMenuTabEvent* e) {
         gui::MenuTab::find(e->getName());
-        return ListenerResult::Stop;
+        return;
     });
 
     /* Components */
-    new EventListener<EventFilter<events::AddLabelEvent>>(+[](events::AddLabelEvent* e) {
+    events::listen<events::AddLabelEvent>([](events::AddLabelEvent* e) {
         auto tab = gui::MenuTab::find(e->getTabName());
         auto label = tab->addLabel(e->getTitle());
         e->setUniqueID(label->getUID());
-        return ListenerResult::Stop;
+        return;
     });
-    new EventListener<EventFilter<events::AddToggleEvent>>(+[](events::AddToggleEvent* e) {
+    events::listen<events::AddToggleEvent>([](events::AddToggleEvent* e) {
         auto tab = gui::MenuTab::find(e->getTabName());
         auto toggle = tab->addToggle(e->getTitle(), e->getID());
         toggle->callback([callback = std::get<0>(e->getCallbacks())](bool value) {
             std::invoke(callback, value);
         })->handleKeybinds()->disableSaving();
         e->setUniqueID(toggle->getUID());
-        return ListenerResult::Stop;
+        return;
     });
-    new EventListener<EventFilter<events::AddButtonEvent>>(+[](events::AddButtonEvent* e) {
+    events::listen<events::AddButtonEvent>([](events::AddButtonEvent* e) {
         auto tab = gui::MenuTab::find(e->getTabName());
         auto button = tab->addButton(e->getTitle());
         button->callback([callback = std::get<0>(e->getCallbacks())] {
             std::invoke(callback);
         });
         e->setUniqueID(button->getUID());
-        return ListenerResult::Stop;
+        return;
     });
 
     /* Component Descriptions */
-    new EventListener<EventFilter<events::SetComponentDescriptionEvent>>(+[](events::SetComponentDescriptionEvent* e) {
+    events::listen<events::SetComponentDescriptionEvent>([](events::SetComponentDescriptionEvent* e) {
         auto component = gui::Component::find(e->getID());
-        if (!component) return ListenerResult::Stop;
+        if (!component) return;
         component->setDescription(e->getDescription());
-        return ListenerResult::Stop;
+        return;
     });
 
     /* Config */
@@ -122,9 +122,9 @@ $execute {
     createSetConfigListener<std::string>();
 
     /* RIFT */
-    new EventListener<EventFilter<events::FormatRiftStringEvent>>(+[](events::FormatRiftStringEvent* e) {
+    events::listen<events::FormatRiftStringEvent>([](events::FormatRiftStringEvent* e) {
         e->setResult(rift::format(e->getSource(), labels::VariableManager::get().getVariables()));
-        return ListenerResult::Stop;
+        return;
     });
     createGetRiftVariableListener<std::string>();
     createGetRiftVariableListener<bool>();
