@@ -25,7 +25,16 @@ set(HAS_IMGUI ON)
 if (NOT ANDROID)
     set(RAPIDJSONTEST OFF)
     set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    CPMAddPackage("gh:discord/discord-rpc#963aa9f")
+    CPMAddPackage(
+        NAME discord-rpc
+        GITHUB_REPOSITORY discord/discord-rpc
+        GIT_TAG 963aa9f
+        DOWNLOAD_ONLY YES
+    )
+    # .clang-format bawaan discord-rpc rusak (key ganda) dan membuat build gagal di Windows,
+    # jadi diganti dengan versi minimal yang valid sebelum di-add.
+    file(WRITE "${discord-rpc_SOURCE_DIR}/.clang-format" "BasedOnStyle: LLVM\n")
+    add_subdirectory("${discord-rpc_SOURCE_DIR}" "${discord-rpc_BINARY_DIR}")
 endif()
 
 # imgui-cocos terbaru (mendukung Geode v6). Dinonaktifkan hook awal karena ini mod menu.
