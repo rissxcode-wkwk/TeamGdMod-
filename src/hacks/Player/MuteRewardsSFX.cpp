@@ -29,7 +29,7 @@ namespace eclipse::hacks::Player {
             HOOKS_TOGGLE_ALL("player.muterewardssfx");
         }
 
-        void playEffect(std::string path, float speed, float p2, float volume) {
+        int playEffect(std::string path, float speed, float p2, float volume) {
             auto* pl = PlayLayer::get();
 
             // play sfx if not in playlayer
@@ -37,7 +37,9 @@ namespace eclipse::hacks::Player {
                 return FMODAudioEngine::playEffect(path, speed, p2, volume);
 
             if (std::ranges::find(badSFX, std::string_view(path)) == badSFX.end())
-                FMODAudioEngine::playEffect(path, speed, p2, volume);
+                return FMODAudioEngine::playEffect(path, speed, p2, volume);
+
+            return 0;
         }
     };
 
