@@ -1,0 +1,98 @@
+name: Build Eclipse
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - name: Windows
+          os: windows-latest
+          build-type: RelWithDebInfo
+
+        - name: macOS
+          os: macos-latest
+
+        - name: Android32
+          os: ubuntu-latest
+          target: Android32
+
+        - name: Android64
+          os: ubuntu-latest
+          target: Android64
+
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the mod
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          # sdk 'given' = pakai versi Geode dari mod.json ("geode": "6.0.0-alpha.1"),
+          # supaya SDK yang terpasang selalu cocok dengan mod.json (bukan alpha/nightly acak)
+          sdk: given
+          combine: true
+          export-pdb: true
+          target: ${{ matrix.config.target }}
+          build-config: ${{ matrix.config.build-type || 'Release' }}
+
+  package:
+    name: Package builds
+    runs-on: ubuntu-latest
+    needs: ['build']
+
+    steps:
+      - uses: geode-sdk/build-geode-mod/combine@main
+        id: build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Geode Build
+          path: ${{ steps.build.outputs.build-output }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}/bin
+          merge-multiple: true
+
+      - name: Create rolling release
+        uses: andelf/nightly-release@main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: rolling-release
+          prerelease: true
+          name: 'Rolling Release'
+          body: |
+            This is the latest build of the mod for commit ${{ github.sha }} (${{ github.event.head_commit.message }}).
+            
+            ## IMPORTANT NOTICE FOR PEOPLE:
+            
+            Whatever you do, DO NOT download this expecting support from the Eclipse devs.
+            This is my own modification of Eclipse and is not affiliated nor endorsed by the project.
+            I will only provide support for my own changes, not any changes made by the Eclipse devs.
+
+            ## Supported Platforms Of This Build:
+
+            1. Windows
+            2. MacOS
+            3. Android
+
+            Target: Geometry Dash 2.2091 + Geode 6.0.0-alpha.1 (kompatibel dengan Geode 6.0.0).
+          files: |
+            ${{ github.workspace }}/bin/eclipse.eclipse-menu.geode
+            ${{ github.workspace }}/bin/eclipse.eclipse-menu.pdb
+
+            
