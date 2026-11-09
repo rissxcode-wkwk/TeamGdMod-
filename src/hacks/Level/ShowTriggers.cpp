@@ -66,7 +66,7 @@ namespace eclipse::hacks::Level {
             /*
              * // original code
              * if (m_objectID == 3613 || m_objectID == 3662
-             *  || obj->getType(obj) == Modifier && (obj->m_unk4D0 != 1 || !obj->m_isTouchTriggered) && obj->m_objectID != 2063) {
+             *  || obj->getType(obj) == Modifier && (static_cast<int>(obj->m_classType) != 1 || !obj->m_isTouchTriggered) && obj->m_objectID != 2063) {
              *     obj->m_outerSectionIndex = -1;
              * } else {
              *     this->addToSection(this, obj);
@@ -75,7 +75,7 @@ namespace eclipse::hacks::Level {
             bool isTrigger = obj->m_objectType == GameObjectType::Modifier;
             bool idsCheck = obj->m_objectID == 3613 || obj->m_objectID == 3662;
             if (isTrigger && !idsCheck && config::get<bool>("level.showtriggers", false)) {
-                if ((obj->m_unk4D0 != 1 || !static_cast<EffectGameObject*>(obj)->m_isTouchTriggered) && obj->m_objectID != 2063) {
+                if ((static_cast<int>(obj->m_classType) != 1 || !static_cast<EffectGameObject*>(obj)->m_isTouchTriggered) && obj->m_objectID != 2063) {
                     s_lastEditedTrigger = obj; // this will queue the trigger to be added to the section
                     s_originalSectionIndex = obj->m_outerSectionIndex;
                 }
