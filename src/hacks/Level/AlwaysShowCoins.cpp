@@ -8,34 +8,51 @@
 
 namespace eclipse::hacks::Level {
 
+    namespace {
+        // Menyimpan objek asli untuk key -142 / -1329 pada satu dictionary animasi
+        struct CoinAnimBackup {
+            cocos2d::CCObject* secret = nullptr;
+            cocos2d::CCObject* user = nullptr;
+            bool saved = false;
+        };
+
+        void applyShowCoins(cocos2d::CCDictionary* dict, CoinAnimBackup& backup, bool state) {
+            if (!dict) return;
+
+            constexpr intptr_t kSecretCoin = 142;
+            constexpr intptr_t kUserCoin = 1329;
+
+            if (!backup.saved) {
+                backup.secret = dict->objectForKey(-kSecretCoin);
+                backup.user = dict->objectForKey(-kUserCoin);
+                if (backup.secret) backup.secret->retain();
+                if (backup.user) backup.user->retain();
+                backup.saved = true;
+            }
+
+            if (state) {
+                // pakai varian "sudah dikoleksi" yang sama dengan varian normal
+                if (auto* secret = dict->objectForKey(kSecretCoin)) dict->setObject(secret, -kSecretCoin);
+                if (auto* user = dict->objectForKey(kUserCoin)) dict->setObject(user, -kUserCoin);
+            } else {
+                if (backup.secret) dict->setObject(backup.secret, -kSecretCoin);
+                if (backup.user) dict->setObject(backup.user, -kUserCoin);
+            }
+        }
+    }
+
     void onChangeShowCoins(bool state) {
-        static cocos2d::CCObject* uncollectedSecretCoin = nullptr;
-        static cocos2d::CCObject* uncollectedUserCoin = nullptr;
+        // Geode/GD 2.2091: m_unkAnimationDict sudah tidak ada, data animasi dipecah ke beberapa dictionary
+        static CoinAnimBackup mainFrames, detailFrames, frameTime, frames, defaults;
 
         auto* GM = GameManager::sharedState();
+        if (!GM) return;
 
-        if (!uncollectedSecretCoin)
-            uncollectedSecretCoin = GM->m_unkAnimationDict->objectForKey(-142)->copy();
-
-        if (!uncollectedUserCoin)
-            uncollectedUserCoin = GM->m_unkAnimationDict->objectForKey(-1329)->copy();
-
-        if (state) {
-            uncollectedSecretCoin->retain();
-            uncollectedUserCoin->retain();
-
-            GM->m_unkAnimationDict->removeObjectForKey(-142);
-            GM->m_unkAnimationDict->removeObjectForKey(-1329);
-
-            GM->m_unkAnimationDict->setObject(GM->m_unkAnimationDict->objectForKey(142)->copy(), -142);
-            GM->m_unkAnimationDict->setObject(GM->m_unkAnimationDict->objectForKey(1329)->copy(), -1329);
-        } else if (uncollectedSecretCoin && uncollectedUserCoin) {
-            GM->m_unkAnimationDict->removeObjectForKey(-142);
-            GM->m_unkAnimationDict->removeObjectForKey(-1329);
-
-            GM->m_unkAnimationDict->setObject(uncollectedSecretCoin, -142);
-            GM->m_unkAnimationDict->setObject(uncollectedUserCoin, -1329);
-        }
+        applyShowCoins(GM->m_mainFramesForAnimation, mainFrames, state);
+        applyShowCoins(GM->m_detailFramesForAnimation, detailFrames, state);
+        applyShowCoins(GM->m_frameTimeForAnimation, frameTime, state);
+        applyShowCoins(GM->m_framesForAnimation, frames, state);
+        applyShowCoins(GM->m_defaultFrames, defaults, state);
     }
 
     class AlwaysShowCoins : public hack::Hack {

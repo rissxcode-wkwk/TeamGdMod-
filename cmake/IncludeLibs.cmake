@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.21)
 add_library(third_party INTERFACE)
 
+# CMake 4.x menghapus kompatibilitas < 3.5; beberapa dependensi lama (discord-rpc, dll.) masih memakainya
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
+
 # Include libraries
 # ImGui: fork EclipseMenu/imgui sudah tidak tersedia, memakai ImGui resmi (sama dengan versi yang
 # dipakai gd-imgui-cocos terbaru yang mendukung Geode v6 / GD 2.2091).
