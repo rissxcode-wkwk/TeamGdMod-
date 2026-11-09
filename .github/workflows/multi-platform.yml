@@ -1,4 +1,4 @@
-name: Build Eclipse
+name: Build Eclipse (Android 64)
 
 on:
   workflow_dispatch:
@@ -15,17 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         config:
-        - name: Windows
-          os: windows-latest
-          build-type: RelWithDebInfo
-
-        - name: macOS
-          os: macos-latest
-
-        - name: Android32
-          os: ubuntu-latest
-          target: Android32
-
         - name: Android64
           os: ubuntu-latest
           target: Android64
@@ -86,9 +75,7 @@ jobs:
 
             ## Supported Platforms Of This Build:
 
-            1. Windows
-            2. MacOS
-            3. Android
+            1. Android 64-bit
 
             Target: Geometry Dash 2.2091 + Geode 6.0.0-alpha.1 (kompatibel dengan Geode 6.0.0).
           files: |
