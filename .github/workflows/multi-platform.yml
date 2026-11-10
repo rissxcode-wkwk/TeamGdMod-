@@ -9,6 +9,10 @@ on:
     branches:
       - "**"
 
+# Izin tulis diperlukan supaya langkah 'Create rolling release' boleh membuat release di repo
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
