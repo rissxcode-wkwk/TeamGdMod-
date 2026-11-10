@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/LevelEditorLayer.hpp>
 
 namespace eclipse::hacks::Creator {
-    class $hack(SmoothTrail) {
+
+    class SmoothTrail : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.creator");
-            tab->addToggle("creator.smoothtrail")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Creator");
+
+            tab->addToggle("Smooth Editor Trail", "creator.smoothtrail")
+                ->handleKeybinds()
+                ->setDescription("Makes the trail in editor playback smoother.");
         }
 
         [[nodiscard]] const char* getId() const override { return "Smooth Editor Trail"; }
@@ -25,4 +28,5 @@ namespace eclipse::hacks::Creator {
             LevelEditorLayer::postUpdate(dt);
         }
     };
+
 }

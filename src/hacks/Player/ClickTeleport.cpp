@@ -1,26 +1,25 @@
-#include <imgui.h>
 #include <numbers>
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
-#include <modules/gui/components/keybind.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 #include <modules/keybinds/manager.hpp>
+#include <imgui.h>
 
-#ifndef GEODE_IS_MOBILE
+#ifndef GEODE_IS_ANDROID
 
 namespace eclipse::hacks::Player {
-    constexpr double degToRad(double degrees) {
+
+    double degToRad(double degrees) {
         return degrees * std::numbers::pi / 180;
     }
 
-    static cocos2d::CCPoint rotateVector(cocos2d::CCPoint const& vector, double angle) {
+    cocos2d::CCPoint rotateVector(const cocos2d::CCPoint& vector, double angle) {
         auto x = vector.x * cos(angle) - vector.y * sin(angle);
         auto y = vector.x * sin(angle) + vector.y * cos(angle);
         return ccp(x, y);
     }
 
-    static cocos2d::CCPoint screenToGame(cocos2d::CCPoint const & screenPos, PlayLayer* playLayer) {
+    cocos2d::CCPoint screenToGame(const cocos2d::CCPoint& screenPos, PlayLayer* playLayer) {
         auto cameraPos = playLayer->m_gameState.m_cameraPosition;
         auto cameraScale = playLayer->m_gameState.m_cameraZoom;
         auto cameraAngle = playLayer->m_gameState.m_cameraAngle;
@@ -38,10 +37,10 @@ namespace eclipse::hacks::Player {
         return point;
     }
 
-    static cocos2d::CCPoint screenToFrame(ImVec2 const& pos) {
-        auto* director = utils::get<cocos2d::CCDirector>();
-        auto frameSize = director->getOpenGLView()->getFrameSize();
-        auto winSize = director->getWinSize();
+    cocos2d::CCPoint screenToFrame(const ImVec2& pos) {
+        auto* director = cocos2d::CCDirector::sharedDirector();
+        const auto frameSize = director->getOpenGLView()->getFrameSize();
+        const auto winSize = director->getWinSize();
 
         return {
             pos.x / frameSize.width * winSize.width,
@@ -49,41 +48,36 @@ namespace eclipse::hacks::Player {
         };
     }
 
-    class $hack(ClickTeleport) {
+    class ClickTeleport : public hack::Hack {
         void init() override {
-            config::setIfEmpty<keybinds::KeybindProps>("player.clicktp.key", keybinds::Keys::MouseRight);
+            auto tab = gui::MenuTab::find("Player");
 
-            auto tab = gui::MenuTab::find("tab.player");
-            tab->addToggle("player.clicktp")->setDescription()->handleKeybinds()
-                ->addOptions([](auto options) {
-                    options->addKeybind("player.clicktp.key", "player.clicktp.key")
-                           ->setInternal()
-                           ->setDefaultKey(keybinds::Keys::MouseRight);
-                });
-
-            keybinds::Manager::get()->addListener("player.clicktp.key", [](auto evt) {
-                if (!evt.down) return;
-                if (!config::get<"player.clicktp", bool>(false)) return;
-
-                auto* playLayer = utils::get<PlayLayer>();
-                if (!playLayer) return;
-
-                playLayer->m_player1->m_position = screenToGame(geode::cocos::getMousePos(), playLayer);
-            });
+            tab->addToggle("Click Teleport", "player.clicktp")
+                ->setDescription("Teleport to the mouse cursor's position when right clicking.")
+                ->handleKeybinds();
         }
 
         void update() override {
-            if (!config::get<"player.clicktp", bool>(false)) return;
+            if (!config::get<bool>("player.clicktp", false)) return;
 
             // Force the cursor to be visible
             PlatformToolbox::showCursor();
+
+            if (keybinds::isKeyPressed(keybinds::Keys::MouseRight)) {
+                auto playLayer = PlayLayer::get();
+                if (!playLayer) return;
+                auto gamePos = screenToGame(geode::cocos::getMousePos(), playLayer);
+
+                playLayer->m_player1->m_position = gamePos;
+            }
         }
 
-        [[nodiscard]] bool isCheating() const override { return config::get<"player.clicktp", bool>(); }
+        [[nodiscard]] bool isCheating() override { return config::get<bool>("player.clicktp", false); }
         [[nodiscard]] const char* getId() const override { return "Click Teleport"; }
     };
 
     REGISTER_HACK(ClickTeleport)
+
 }
 
 #endif

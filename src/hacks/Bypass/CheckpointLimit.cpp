@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/PlayLayer.hpp>
 
 namespace eclipse::hacks::Bypass {
-    class $hack(CheckpointLimit) {
+
+    class CheckpointLimit : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.bypass");
-            tab->addToggle("bypass.checkpointlimit")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Bypass");
+
+            tab->addToggle("Checkpoint Limit", "bypass.checkpointlimit")
+                ->handleKeybinds()
+                ->setDescription("Allows you to place more than 50 checkpoints in practice mode.");
         }
 
         [[nodiscard]] const char* getId() const override { return "Checkpoint Limit"; }
@@ -26,4 +29,5 @@ namespace eclipse::hacks::Bypass {
             PlayLayer::addToSection(checkpointObject->m_physicalCheckpointObject);
         }
     };
+
 }

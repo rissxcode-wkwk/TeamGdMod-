@@ -1,8 +1,5 @@
-#include <Geode/binding/ButtonSprite.hpp>
-#include <Geode/loader/Mod.hpp>
 #include <Geode/loader/SettingV3.hpp>
-#include <Geode/ui/Popup.hpp>
-#include <modules/gui/cocos/components/KeybindComponent.hpp>
+#include <Geode/loader/Mod.hpp>
 #include <modules/gui/theming/manager.hpp>
 
 using namespace geode::prelude;
@@ -28,14 +25,11 @@ public:
     void parseButtonCaption(matjson::Value const& json, std::string const& key) {
         m_buttonCaption = json[key].asString().unwrap();
     }
-
     bool load(matjson::Value const& json) override { return true; }
     bool save(matjson::Value& json) const override { return true; }
     bool isDefaultValue() const override { return true; }
     std::string const& getButtonCaption() const { return m_buttonCaption; }
-
     void reset() override {}
-
     SettingNodeV3* createNode(float width) override;
 };
 
@@ -63,8 +57,8 @@ protected:
     }
 
     void onButton(CCObject*) {
-        static utils::StringMap<void(*)()> buttonCallbacks = {
-            {"reset-theme", +[] {
+        static std::unordered_map<std::string, std::function<void()>> buttonCallbacks = {
+            {"reset-theme", [] {
                 createQuickPopup("Reset Theme", "Are you sure you want to reset the theme to default?",
                     "No", "Yes", [](auto, bool btn2) {
                         if (btn2) eclipse::gui::ThemeManager::get()->reloadTheme();
@@ -78,7 +72,6 @@ protected:
     }
 
     void onCommit() override {}
-
     void onResetToDefault() override {}
 
 public:
@@ -107,81 +100,4 @@ SettingNodeV3* CustomButton::createNode(float width) {
     );
 }
 
-class CustomKeybindSetting : public SettingV3 {
-public:
-    static Result<std::shared_ptr<SettingV3>> parse(std::string const& key, std::string const& modID, matjson::Value const& json) {
-        auto res = std::make_shared<CustomKeybindSetting>();
-        auto root = checkJson(json, "CustomKeybindSetting");
-
-        res->init(key, modID, root);
-        res->parseNameAndDescription(root);
-        res->parseEnableIf(root);
-
-        root.checkUnknownKeys();
-        return root.ok(std::static_pointer_cast<SettingV3>(res));
-    }
-
-    bool load(matjson::Value const& json) override { return true; }
-    bool save(matjson::Value& json) const override { return true; }
-    bool isDefaultValue() const override { return true; }
-
-    void reset() override {}
-
-    SettingNodeV3* createNode(float width) override;
-};
-
-class CustomKeybindSettingNode : public SettingNodeV3 {
-protected:
-    bool init(const std::shared_ptr<CustomKeybindSetting>& setting, float width) {
-        if (!SettingNodeV3::init(setting, width))
-            return false;
-
-        using namespace eclipse;
-        using namespace eclipse::gui;
-        auto keybindComponent = Component::find(keybinds::Manager::get()->getMenuKeybindUID());
-        auto node = gui::cocos::KeybindComponentNode::create(keybindComponent, 240);
-        node->getChildByID("label"_spr)->setVisible(false);
-
-        this->getButtonMenu()->addChildAtPosition(node, Anchor::Center);
-        this->getButtonMenu()->setContentWidth(240);
-        this->getButtonMenu()->updateLayout();
-
-        this->updateState(nullptr);
-
-        return true;
-    }
-
-    void onCommit() override {}
-
-    void onResetToDefault() override {}
-
-public:
-    static CustomKeybindSettingNode* create(const std::shared_ptr<CustomKeybindSetting>& setting, float width) {
-        auto ret = new CustomKeybindSettingNode;
-        if (ret->init(setting, width)) {
-            ret->autorelease();
-            return ret;
-        }
-        delete ret;
-        return nullptr;
-    }
-
-    bool hasUncommittedChanges() const override { return false; }
-    bool hasNonDefaultValue() const override { return false; }
-
-    std::shared_ptr<CustomKeybindSetting> getSetting() const {
-        return std::static_pointer_cast<CustomKeybindSetting>(SettingNodeV3::getSetting());
-    }
-};
-
-SettingNodeV3* CustomKeybindSetting::createNode(float width) {
-    return CustomKeybindSettingNode::create(
-        std::static_pointer_cast<CustomKeybindSetting>(shared_from_this()),
-        width
-    );
-}
-
-$execute {
-    (void) Mod::get()->registerCustomSettingType("custom-btn", &CustomButton::parse);
-    (void) Mod::get()->registerCustomSettingType("keybind", &CustomKeybindSetting::parse);
-}
+$execute { (void) Mod::get()->registerCustomSettingType("custom-btn", &CustomButton::parse); }

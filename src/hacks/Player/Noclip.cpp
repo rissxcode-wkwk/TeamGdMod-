@@ -1,48 +1,41 @@
-#include <modules/config/config.hpp>
-#include <modules/gui/color.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/float-toggle.hpp>
-#include <modules/gui/components/input-float.hpp>
-#include <modules/gui/components/int-toggle.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 #include <modules/labels/variables.hpp>
 
-#include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
+#include <Geode/modify/GJBaseGameLayer.hpp>
 
 namespace eclipse::hacks::Player {
-    class $hack(Noclip) {
+
+    class Noclip : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.player");
+            auto tab = gui::MenuTab::find("Player");
 
             config::setIfEmpty("player.noclip.p1", true);
             config::setIfEmpty("player.noclip.p2", true);
             config::setIfEmpty("player.noclip.opacity", 90.f);
             config::setIfEmpty("player.noclip.time", 0.f);
-            config::setIfEmpty("player.noclip.color", gui::Colors::RED);
+            config::setIfEmpty("player.noclip.color", gui::Color::RED);
             config::setIfEmpty("player.noclip.acclimit", 95.f);
             config::setIfEmpty("player.noclip.deathlimit", 2);
 
-            tab->addToggle("player.noclip")
-               ->setDescription()
-               ->handleKeybinds()
-               ->addOptions([](auto options) {
-                   options->addToggle("player.noclip.p1");
-                   options->addToggle("player.noclip.p2");
-                   options->addFloatToggle("player.noclip.acclimit", 0.01f, 100.f, "%.2f")->handleKeybinds();
-                   options->addIntToggle("player.noclip.deathlimit", 1, 100)->handleKeybinds();
-                   options->addToggle("player.noclip.tint");
-                   options->addColorComponent("player.noclip.color");
-                   options->addInputFloat("player.noclip.opacity", 0.f, 100.f, "%.0f%");
-                   options->addInputFloat("player.noclip.time", 0.f, 5.f, "%.2fs")->setDescription();
-               });
+            tab->addToggle("Noclip", "player.noclip")
+                ->setDescription("Disables player death.")
+                ->handleKeybinds()
+                ->addOptions([](std::shared_ptr<gui::MenuTab> options) {
+                    options->addToggle("Player 1", "player.noclip.p1");
+                    options->addToggle("Player 2", "player.noclip.p2");
+                    options->addFloatToggle("Accuracy Limit", "player.noclip.acclimit", 0.01f, 100.f, "%.2f")->handleKeybinds();
+                    options->addIntToggle("Death Limit", "player.noclip.deathlimit", 1, 100)->handleKeybinds();
+                    options->addToggle("Noclip Tint", "player.noclip.tint");
+                    options->addColorComponent("Tint Color", "player.noclip.color");
+                    options->addInputFloat("Tint Opacity", "player.noclip.opacity", 0.f, 100.f, "%.0f%");
+                    options->addInputFloat("Tint Time", "player.noclip.time", 0.f, 5.f, "%.2fs")->setDescription("0 for instant");
+                });
         }
 
-        [[nodiscard]] bool isCheating() const override {
-            return config::get<"player.noclip", bool>() &&
-                   config::getTemp<int>("noclipDeaths", 0) > 0;
-        }
+        [[nodiscard]] bool isCheating() override { return config::get<bool>("player.noclip", false); }
         [[nodiscard]] const char* getId() const override { return "Noclip"; }
     };
 
@@ -66,8 +59,8 @@ namespace eclipse::hacks::Player {
                 return PlayLayer::destroyPlayer(player, object);
 
             if (config::get<bool>("player.noclip.acclimit.toggle", false)) {
-                auto acc = config::getTemp<double>("noclipAccuracy", 100.0);
-                auto limit = config::get<double>("player.noclip.acclimit", 95.0);
+                auto acc = config::getTemp<float>("noclipAccuracy", 100.f);
+                auto limit = config::get<float>("player.noclip.acclimit", 95.f);
                 if (acc < limit)
                     return PlayLayer::destroyPlayer(player, object);
             }
@@ -81,9 +74,9 @@ namespace eclipse::hacks::Player {
             auto fields = m_fields.self();
 
             if (!fields->m_noclipTint && config::get<bool>("player.noclip.tint", false)) {
-                auto color = config::get<gui::Color>("player.noclip.color", gui::Colors::RED).toCCColor3B();
+                auto color = config::get<gui::Color>("player.noclip.color", gui::Color::RED).toCCColor3B();
                 fields->m_noclipTint = cocos2d::CCLayerColor::create(
-                    cocos2d::_ccColor4B{color.r, color.g, color.b, 0}
+                    cocos2d::_ccColor4B {color.r, color.g, color.b, 0}
                 );
                 fields->m_noclipTint->setZOrder(1000);
                 fields->m_noclipTint->setID("nocliptint"_spr);
@@ -110,25 +103,19 @@ namespace eclipse::hacks::Player {
 
         void postUpdate(float dt) override {
             auto fields = m_fields.self();
-            config::setTemp<bool>("noclipDying", fields->m_wouldDieFrame || fields->m_deadLastFrame);
-
             if (config::get<bool>("player.noclip.tint", false) && fields->m_noclipTint && !m_hasCompletedLevel && !m_player1->m_isDead) {
-                float time = config::get<double>("player.noclip.time", 0.f);
+                float time = config::get<float>("player.noclip.time", 0.f);
                 if (time == 0.f) { // this doesnt really work but ok ninx
                     if (fields->m_wouldDie) {
                         if (fields->m_tintOpacity < 1.f) {
                             fields->m_tintOpacity += 0.25f;
-                            fields->m_noclipTint->setOpacity(
-                                fields->m_tintOpacity * config::get<double>("player.noclip.opacity", 90.f)
-                            );
+                            fields->m_noclipTint->setOpacity(fields->m_tintOpacity * config::get<float>("player.noclip.opacity", 90.f));
                         }
                         fields->m_wouldDie = false;
                     } else {
                         if (fields->m_tintOpacity > 0.f) {
                             fields->m_tintOpacity -= 0.25f;
-                            fields->m_noclipTint->setOpacity(
-                                fields->m_tintOpacity * config::get<double>("player.noclip.opacity", 90.f)
-                            );
+                            fields->m_noclipTint->setOpacity(fields->m_tintOpacity * config::get<float>("player.noclip.opacity", 90.f));
                         }
                     }
                 } else {
@@ -141,7 +128,7 @@ namespace eclipse::hacks::Player {
                             fields->m_tintTimer = 0.F;
                             fields->m_tintOpacity = 0.f;
                         } else {
-                            auto startOpacity = config::get<double>("player.noclip.opacity", 90.f);
+                            auto startOpacity = config::get<float>("player.noclip.opacity", 90.f);
                             fields->m_tintOpacity = (255.F * (startOpacity / 100.F)) * (1.f - progress);
                         }
                         if (fields->m_tintOpacity <= 0.0F)
@@ -154,7 +141,7 @@ namespace eclipse::hacks::Player {
             PlayLayer::postUpdate(dt);
         }
 
-        void resetLevel() override {
+        void resetLevel() {
             PlayLayer::resetLevel();
             auto fields = m_fields.self();
             fields->m_wouldDie = false;
@@ -170,10 +157,12 @@ namespace eclipse::hacks::Player {
     };
 
     class $modify(NoClipGJBGLHook, GJBaseGameLayer) {
-        void processNoclipDeaths() {
-            if (!utils::get<PlayLayer>()) {
+        void processCommands(float dt, bool isHalfTick, bool isLastTick) {
+            GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
+
+            if (!PlayLayer::get()) {
                 config::setTemp<int>("noclipDeaths", 0);
-                config::setTemp<double>("noclipAccuracy", 100.0);
+                config::setTemp<float>("noclipAccuracy", 100.f);
                 return;
             }
 
@@ -187,7 +176,7 @@ namespace eclipse::hacks::Player {
                     auto deaths = config::getTemp<int>("noclipDeaths", 0);
                     config::setTemp<int>("noclipDeaths", deaths + 1);
                     if (config::get<bool>("player.noclip.deathlimit.toggle", false) && deaths + 1 >= config::get<int>("player.noclip.deathlimit", 0))
-                        utils::get<PlayLayer>()->destroyPlayer(m_player1, nullptr);
+                        PlayLayer::get()->destroyPlayer(m_player1, nullptr);
                 }
             }
 
@@ -196,30 +185,18 @@ namespace eclipse::hacks::Player {
 
             auto frame = m_gameState.m_currentProgress;
             if (frame > 0) {
-                double acc = static_cast<double>(frame - fields->m_deadFrames) * 100.0 / frame;
+                float acc = static_cast<float>(frame - fields->m_deadFrames) / static_cast<float>(frame) * 100.f;
                 config::setTemp("noclipAccuracy", acc);
                 bool dead = (m_player1 && m_player1->m_isDead) || (m_player2 && m_player2->m_isDead);
-                //if (config::get<bool>("player.noclip.acclimit.toggle", false) && acc <= config::get<double>("player.noclip.acclimit", 95.f) && !dead)
-                //utils::get<PlayLayer>()->destroyPlayer(m_player1, (GameObject*)((int*)1));
+                //if (config::get<bool>("player.noclip.acclimit.toggle", false) && acc <= config::get<float>("player.noclip.acclimit", 95.f) && !dead)
+                    //PlayLayer::get()->destroyPlayer(m_player1, (GameObject*)((int*)1));
             }
         }
-
-        #ifndef GEODE_IS_MACOS
-        void processCommands(float dt, bool isHalfTick, bool isLastTick) {
-            GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
-            this->processNoclipDeaths();
-        }
-        #else
-        void processQueuedButtons(float dt, bool clearInputQueue) {
-            GJBaseGameLayer::processQueuedButtons(dt, clearInputQueue);
-            this->processNoclipDeaths();
-        }
-        #endif
     };
-}
 
+}
 /*
-if (config::get<bool>("player.noclip.acclimit.toggle", false) && acc < config::get<double>("player.noclip.acclimit", 95.f)) {
-                    utils::get<PlayLayer>()->destroyPlayer(m_player1, nullptr);
-                    config::setTemp("noclipAccuracy", config::get<double>("player.noclip.acclimit", 95.f));
+if (config::get<bool>("player.noclip.acclimit.toggle", false) && acc < config::get<float>("player.noclip.acclimit", 95.f)) {
+                    PlayLayer::get()->destroyPlayer(m_player1, nullptr);
+                    config::setTemp("noclipAccuracy", config::get<float>("player.noclip.acclimit", 95.f));
                 }*/

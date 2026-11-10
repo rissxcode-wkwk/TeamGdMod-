@@ -1,17 +1,19 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
-
-#include <utility>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/CCTextInputNode.hpp>
+#include <utility>
 
 namespace eclipse::hacks::Bypass {
-    class $hack(CharFilter) {
+
+    class CharFilter : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.bypass");
-            tab->addToggle("bypass.charfilter")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Bypass");
+
+            tab->addToggle("Character Filter Bypass", "bypass.charfilter")
+                ->handleKeybinds()
+                ->setDescription("Allows you to bypass the character filter on any text field.");
         }
 
         [[nodiscard]] const char* getId() const override { return "Character Filter Bypass"; }
@@ -30,8 +32,9 @@ namespace eclipse::hacks::Bypass {
                 "`~[]{}/?.>,<\\|;:'\""
                 " "
             );
-
+ 
             CCTextInputNode::updateLabel(std::move(str));
         }
     };
+
 }

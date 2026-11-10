@@ -1,141 +1,80 @@
+#include <modules/utils/compat.hpp>
 #include "config.hpp"
 
 #include <fstream>
-#include <asp/fs/fs.hpp>
-#include <Geode/loader/Log.hpp>
 #include <Geode/loader/Mod.hpp>
-
-#include <fmt/format.h>
-
-#include <modules/gui/color.hpp>
-#include <modules/keybinds/manager.hpp>
-#include <modules/labels/setting.hpp>
-#include <modules/gui/imgui/animation/easing.hpp>
+#include <Geode/loader/Log.hpp>
 
 namespace eclipse::config {
 
-    using CallbackMap = std::unordered_map<std::string_view, std::vector<Function<void()>>>;
+    static nlohmann::json storage;
+    static nlohmann::json tempStorage;
+    static std::unordered_map<std::string_view, std::vector<std::function<void()>>> callbacks;
 
-    CallbackMap& getCallbacks() {
-        static CallbackMap callbacks;
-        return callbacks;
-    }
-
-    CallbackMap& getTempCallbacks() {
-        static CallbackMap tempCallbacks;
-        return tempCallbacks;
-    }
-
-    matjson::Value& getStorage() {
-        static matjson::Value storage = [] {
-            auto res = geode::utils::file::readJson(geode::Mod::get()->getSaveDir() / "config.json");
-            if (!res) {
-                geode::log::warn("Failed to read config file: {}, creating a new one.", res.unwrapErr());
-                return matjson::Value::object();
-            }
-
-            geode::log::debug("Loaded config file");
-            return std::move(res).unwrap();
-        }();
+    nlohmann::json& getStorage() {
         return storage;
     }
 
-    matjson::Value& getTempStorage() {
-        static matjson::Value tempStorage;
+    nlohmann::json& getTempStorage() {
         return tempStorage;
     }
 
     /// @brief Load config file from path
     /// @param path Path to the config file
     /// @return True if the file was loaded successfully
-    bool loadFile(asp::fs::PathView path) {
-        auto& storage = getStorage();
-        auto res = geode::utils::file::readJson(path);
-        if (!res) {
-            geode::log::warn("Failed to read config file: {}, creating a new one.", res.unwrapErr());
-            storage = matjson::Value::object();
-            return false;
-        }
+    bool loadFile(const std::filesystem::path& path) {
+        std::ifstream file(path);
+        if (!file.is_open()) return false;
 
-        geode::log::debug("Loaded config file");
-        storage = std::move(res).unwrap();
-        return true;
+        storage = nlohmann::json::parse(file, nullptr, false);
+        file.close();
+
+        return !getStorage().is_discarded();
     }
 
     void executeCallbacks(std::string_view name) {
-        auto& callbacks = getCallbacks();
         auto it = callbacks.find(name);
         if (it == callbacks.end()) return;
-        for (auto& callback : it->second) {
+        for (const auto& callback : it->second) {
             callback();
         }
     }
 
-    void executeTempCallbacks(std::string_view name) {
-        auto& callbacks = getTempCallbacks();
-        auto it = callbacks.find(name);
-        if (it == callbacks.end()) return;
-        for (auto& callback : it->second) {
-            callback();
-        }
-    }
-
-    void addDelegate(std::string_view key, Function<void()>&& callback, bool first) {
-        auto& callbacks = getCallbacks();
-        auto& existingCallbacks = callbacks[key];
-        first ? void(existingCallbacks.insert(existingCallbacks.begin(), std::move(callback))) :
-                void(existingCallbacks.push_back(std::move(callback)));
-    }
-
-    void addTempDelegate(std::string_view key, Function<void()>&& callback, bool first) {
-        auto& callbacks = getTempCallbacks();
-        auto& existingCallbacks = callbacks[key];
-        first ? void(existingCallbacks.insert(existingCallbacks.begin(), std::move(callback))) :
-                void(existingCallbacks.push_back(std::move(callback)));
-    }
-
-    bool hasTemp(std::string_view key) {
-        return getTempStorage().contains(key);
+    void addDelegate(std::string_view key, std::function<void()> callback) {
+        callbacks[key].push_back(std::move(callback));
     }
 
     void load() {
-        // Unused now
-        // auto path = geode::Mod::get()->getSaveDir() / "config.json";
-        // if (!loadFile(path)) {
-        //     geode::log::warn("Failed to load config file, creating a new one.");
-        //     getStorage() = nlohmann::json::object();
-        // }
+        auto path = eclipse::compat::saveDir() / "config.json";
+        if (!loadFile(path)) {
+            geode::log::warn("Failed to load config file, creating a new one.");
+            storage = nlohmann::json::object();
+        }
     }
 
     /// @brief Save config file to path
     /// @param path Path to save the config file
-    void saveFile(asp::fs::PathView path) {
-        auto data = getStorage().dump();
-        auto res = geode::utils::file::writeStringSafe(path, data);
-        if (res.isErr()) {
-            geode::log::error("Failed to save config file: {}", res.unwrapErr());
-        }
+    void saveFile(const std::filesystem::path& path) {
+        std::ofstream file(path);
+        file << getStorage().dump(4);
+        file.close();
     }
 
     void save() {
-        auto path = geode::Mod::get()->getSaveDir() / "config.json";
+        auto path = eclipse::compat::saveDir() / "config.json";
         saveFile(path);
     }
 
     void saveProfile(std::string_view profile) {
-        auto profilesDir = geode::Mod::get()->getSaveDir() / "profiles";
-        auto res = asp::fs::createDirAll(profilesDir);
-        if (!res) {
-            geode::log::error("Failed to create profiles directory: {}", res.unwrapErr());
-            return;
-        }
+        auto profilesDir = eclipse::compat::saveDir() / "profiles";
+        std::filesystem::create_directories(profilesDir);
 
         auto path = profilesDir / fmt::format("{}.json", profile);
         saveFile(path);
     }
 
     void loadProfile(std::string_view profile) {
-        auto profilesDir = geode::Mod::get()->getSaveDir() / "profiles";
+        auto profilesDir = eclipse::compat::saveDir() / "profiles";
         auto path = profilesDir / fmt::format("{}.json", profile);
         if (!loadFile(path)) {
             geode::log::warn("Failed to load profile: {}", profile);
@@ -144,56 +83,32 @@ namespace eclipse::config {
     }
 
     void deleteProfile(std::string_view profile) {
-        auto profilesDir = geode::Mod::get()->getSaveDir() / "profiles";
+        auto profilesDir = eclipse::compat::saveDir() / "profiles";
         auto path = profilesDir / fmt::format("{}.json", profile);
 
-        if (path.exists()) {
-            auto res = asp::fs::remove(path);
-            if (!res) {
-                geode::log::error("Failed to delete profile {}: {}", profile, res.unwrapErr());
-            }
-        }
+        if (std::filesystem::exists(path))
+            std::filesystem::remove(path);
     }
 
     std::vector<std::string> getProfiles() {
         std::vector<std::string> profiles;
-        auto profilesDir = geode::Mod::get()->getSaveDir() / "profiles";
-
-        if (!profilesDir.exists()) {
+        auto profilesDir = eclipse::compat::saveDir() / "profiles";
+        if (!std::filesystem::exists(profilesDir)) {
             return profiles;
         }
 
-        auto iter = asp::fs::iterDir(profilesDir);
-        if (!iter) {
-            geode::log::error("Failed to list profiles: {}", iter.unwrapErr());
-            return profiles;
-        }
-
-        while (auto entry = iter.unwrap().next()) {
-            auto& itemRes = entry.value();
-            if (!itemRes) continue;
-
-            auto& item = itemRes.unwrap();
-
-            if (item.isFile() && item.path.extension() == "json") {
-                auto stem = item.path.stem();
-                if (stem) profiles.push_back(std::string(*stem));
+        for (auto& entry : std::filesystem::directory_iterator(profilesDir)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".json") {
+                profiles.push_back(entry.path().stem().string());
             }
         }
 
         return profiles;
     }
 
-    bool has(std::string_view key) {
-        return getStorage().contains(key);
+    nlohmann::detail::value_t getType(std::string_view key) {
+        if (!has(key)) return nlohmann::detail::value_t::null;
+        return getStorage().at(key).type();
     }
 
-    void erase(std::string_view key) {
-        getStorage().erase(key);
-    }
-
-    matjson::Type getType(std::string_view key) {
-        if (!has(key)) return matjson::Type::Null;
-        return getStorage()[key].type();
-    }
 }

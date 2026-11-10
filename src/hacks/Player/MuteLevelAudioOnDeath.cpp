@@ -1,16 +1,19 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
-#include <Geode/modify/EffectGameObject.hpp>
 #include <Geode/modify/PlayerObject.hpp>
+#include <Geode/modify/EffectGameObject.hpp>
 
 namespace eclipse::hacks::Player {
-    class $hack(MuteLevelAudioOnDeath) {
+
+    class MuteLevelAudioOnDeath : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.player");
-            tab->addToggle("player.mutelevelaudioondeath")->setDescription()->handleKeybinds();
+            auto tab = gui::MenuTab::find("Player");
+
+            tab->addToggle("Mute Level Audio On Death", "player.mutelevelaudioondeath")
+                ->setDescription("Mutes all level audio (Music + SFX) on player death. (Created by RayDeeUx)")
+                ->handleKeybinds();
         }
 
         [[nodiscard]] const char* getId() const override { return "Mute Level Audio On Death"; }
@@ -27,7 +30,7 @@ namespace eclipse::hacks::Player {
         -- raydeeux
         */
         void playerDestroyed(bool p0) {
-            PlayLayer* pl = utils::get<PlayLayer>();
+            PlayLayer* pl = PlayLayer::get();
 
             // do nothing if playlayer is nullptr
             if (!pl) return PlayerObject::playerDestroyed(p0);
@@ -40,7 +43,7 @@ namespace eclipse::hacks::Player {
             if (pl->m_isPracticeMode && !pl->m_practiceMusicSync)
                 return PlayerObject::playerDestroyed(p0);
 
-            const auto fmod = utils::get<FMODAudioEngine>();
+            const auto fmod = FMODAudioEngine::sharedEngine();
 
             /*
             stopAllMusic(), while not inlined, does not represent
@@ -82,7 +85,7 @@ namespace eclipse::hacks::Player {
 
     class $modify(MuteLevelAudioOnDeathEGOHook, EffectGameObject) {
         ADD_HOOKS_DELEGATE("player.mutelevelaudioondeath")
-
+        
         /*
         as of october 14, 2024, and as a direct result of the
         absolute sin of a death effect in level ID 110961285,
@@ -90,7 +93,7 @@ namespace eclipse::hacks::Player {
         from spawn triggers.
         */
         void triggerObject(GJBaseGameLayer* p0, int p1, std::vector<int> const* p2) {
-            PlayLayer* pl = utils::get<PlayLayer>();
+            PlayLayer* pl = PlayLayer::get();
 
             // do nothing if playlayer is nullptr
             if (!pl) return EffectGameObject::triggerObject(p0, p1, p2);
@@ -105,4 +108,5 @@ namespace eclipse::hacks::Player {
             if (player->m_isDead && id != 3602 && id != 1934) return EffectGameObject::triggerObject(p0, p1, p2);
         }
     };
+
 }

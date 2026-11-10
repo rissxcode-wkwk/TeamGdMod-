@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/PlayerObject.hpp>
 
 namespace eclipse::hacks::Player {
-    class $hack(NoRobotFire) {
+
+    class NoRobotFire : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.player");
-            tab->addToggle("player.norobotfire")->setDescription()->handleKeybinds();
+            auto tab = gui::MenuTab::find("Player");
+
+            tab->addToggle("No Robot Fire", "player.norobotfire")
+                ->setDescription("Disables the robot's fire when jumping.")
+                ->handleKeybinds();
         }
 
         [[nodiscard]] const char* getId() const override { return "No Robot Fire"; }
@@ -26,4 +29,5 @@ namespace eclipse::hacks::Player {
             m_robotBurstParticles->setVisible(false);
         }
     };
+
 }

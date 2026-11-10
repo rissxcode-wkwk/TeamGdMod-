@@ -1,11 +1,11 @@
 #pragma once
+#include <modules/gui/cocos/popup/scroll-layer.hpp>
 
 namespace eclipse::gui {
     class MenuTab;
 }
 
 namespace eclipse::gui::cocos {
-    class ScrollLayer;
 
     /// @brief A container that displays the current tab components.
     class ContentView : public cocos2d::CCNode {
@@ -14,11 +14,12 @@ namespace eclipse::gui::cocos {
         ScrollLayer* m_contentLayer = nullptr;
 
     public:
-        static ContentView* create(cocos2d::CCSize const& size, MenuTab const& tab);
-        void setContent(MenuTab const& tab, bool resetScroll = true) const;
+        static ContentView* create(cocos2d::CCSize const &size, const std::shared_ptr<MenuTab>& tab);
+        void setContent(const std::shared_ptr<MenuTab>& tab);
 
     protected:
-        bool init(cocos2d::CCSize const& size, MenuTab const& tab);
-        void loadContent(MenuTab const& tab) const;
+        bool init(cocos2d::CCSize const &size, const std::shared_ptr<MenuTab> &tab);
+        void loadContent(const std::shared_ptr<MenuTab>& tab) const;
     };
+
 }

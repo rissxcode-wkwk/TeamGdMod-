@@ -1,40 +1,40 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/PlayLayer.hpp>
 
 namespace eclipse::hacks::Level {
-    class $hack(FreezeAttempts) {
+
+    class FreezeAttempts : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.level");
-            tab->addToggle("level.freeze_attempts")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Level");
+
+            tab->addToggle("Freeze Attempts", "level.freeze_attempts")->handleKeybinds();
         }
 
         [[nodiscard]] const char* getId() const override { return "Freeze Attempts"; }
     };
 
     REGISTER_HACK(FreezeAttempts)
-
+    
     class $modify(FreezeAttemptsPLHook, PlayLayer) {
         struct Fields {
             std::uint32_t totalAttempts;
         };
 
         static void onModify(auto& self) {
-            HOOKS_TOGGLE(
-                "level.freeze_attempts", PlayLayer,
+            HOOKS_TOGGLE("level.freeze_attempts", PlayLayer,
                 "updateAttempts", "resetLevel", "onQuit"
             );
         }
 
-        bool init(GJGameLevel* level, bool dontCreateObjects) {
-            auto* GSM = utils::get<GameStatsManager>();
+        bool init(GJGameLevel* level, bool useReplay) {
+            auto* GSM = GameStatsManager::sharedState();
 
             m_fields->totalAttempts = GSM->getStat("2");
 
-            return PlayLayer::init(level, dontCreateObjects);
+            return PlayLayer::init(level, useReplay);
         }
 
         void updateAttempts() {}
@@ -45,7 +45,7 @@ namespace eclipse::hacks::Level {
         }
 
         void onQuit() {
-            utils::get<GameStatsManager>()->setStat("2", m_fields->totalAttempts);
+            GameStatsManager::sharedState()->setStat("2", m_fields->totalAttempts);
             PlayLayer::onQuit();
         }
     };

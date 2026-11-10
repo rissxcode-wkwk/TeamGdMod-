@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/PlayLayer.hpp>
 
 namespace eclipse::hacks::Level {
-    class $hack(AutoPracticeMode) {
+
+    class AutoPracticeMode : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.level");
-            tab->addToggle("level.autopracticemode")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Level");
+
+            tab->addToggle("Auto Practice Mode", "level.autopracticemode")
+                ->handleKeybinds()
+                ->setDescription("Automatically enables practice mode when entering a level. (Created by Uproxide)");
         }
 
         [[nodiscard]] const char* getId() const override { return "Auto Practice Mode"; }
@@ -20,8 +23,8 @@ namespace eclipse::hacks::Level {
     class $modify(AutoPracticeModePLHook, PlayLayer) {
         ADD_HOOKS_DELEGATE("level.autopracticemode")
 
-        bool init(GJGameLevel* level, bool dontCreateObjects) {
-            if (!PlayLayer::init(level, dontCreateObjects))
+        bool init(GJGameLevel* p0, bool p1) {
+            if (!PlayLayer::init(p0, p1))
                 return false;
 
             this->togglePracticeMode(true);

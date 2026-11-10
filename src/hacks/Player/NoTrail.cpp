@@ -1,7 +1,6 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/CCMotionStreak.hpp>
 #include <Geode/modify/PlayerObject.hpp>
@@ -11,8 +10,37 @@
 #endif
 
 namespace eclipse::hacks::Player {
+
+    class NoTrail : public hack::Hack {
+        void init() override {
+            auto tab = gui::MenuTab::find("Player");
+
+            tab->addToggle("No Trail", "player.notrail")
+                ->handleKeybinds()
+                ->setDescription("Force the player trail off.");
+        }
+
+        [[nodiscard]] const char* getId() const override { return "No Trail"; }
+    };
+
+    REGISTER_HACK(NoTrail)
+
+    class AlwaysTrail : public hack::Hack {
+        void init() override {
+            auto tab = gui::MenuTab::find("Player");
+
+            tab->addToggle("Always Show Trail", "player.alwaystrail")
+                ->handleKeybinds()
+                ->setDescription("Always shows the trail.");
+        }
+
+        [[nodiscard]] const char* getId() const override { return "Always Show Trail"; }
+    };
+
+    REGISTER_HACK(AlwaysTrail)
+
     // CCMotionStreak functions are too small to be hooked on ARM
-    #ifdef GEODE_IS_ARM
+#ifdef GEODE_IS_ARM
     class $modify(NoTrailPOHook, PlayerObject) {
         static void onModify(auto& self) {
             SAFE_HOOKS_ALL();
@@ -20,8 +48,7 @@ namespace eclipse::hacks::Player {
             HOOKS_TOGGLE("player.alwaystrail", PlayerObject, "deactivateStreak");
         }
 
-        void deactivateStreak(bool stop) {
-            // if (m_alwaysShowStreak <= stop) m_regularTrail->stopStroke();
+        void deactivateStreak(bool p0) {
             if (!this->m_fadeOutStreak) return;
             this->m_fadeOutStreak = false;
             this->fadeOutStreak2(this->m_playEffects ? 0.2f : 0.6f);
@@ -29,11 +56,10 @@ namespace eclipse::hacks::Player {
 
         void activateStreak() {
             if (this->levelFlipping()) return;
-            if (utils::get<GameManager>()->m_editorEnabled) return;
+            if (GameManager::get()->m_editorEnabled) return;
             if (this->m_isHidden) return;
 
             this->m_fadeOutStreak = true;
-            // m_regularTrail->resumeStroke();
             if (this->m_isDart) {
                 auto pos = this->getPosition();
                 this->m_waveTrail->m_currentPoint = pos;
@@ -43,8 +69,7 @@ namespace eclipse::hacks::Player {
             }
         }
     };
-    #else
-    // and on windows PlayerObject::deactivateStreak is inlined
+#else
     class $modify(NoTrailCCMSHook, cocos2d::CCMotionStreak) {
         static void onModify(auto& self) {
             SAFE_HOOKS_ALL();
@@ -55,76 +80,5 @@ namespace eclipse::hacks::Player {
         void resumeStroke() {}
         void stopStroke() {}
     };
-    #endif
-
-    class $modify(NoWaveTrailBehindPOHook, PlayerObject) {
-        ADD_HOOKS_DELEGATE("player.nowavetrailbehind")
-        void toggleDartMode(bool p0, bool p1) {
-            PlayerObject::toggleDartMode(p0,p1);
-            if (this->m_isDart && this->m_regularTrail) {
-                this->m_regularTrail->stopStroke();
-            }
-        }
-
-        void activateStreak() {
-            if (!this->m_isDart) return PlayerObject::activateStreak();
-            if (this->levelFlipping()) return;
-            if (utils::get<GameManager>()->m_editorEnabled) return;
-            if (this->m_isHidden) return;
-
-            this->m_fadeOutStreak = true;
-            if (this->m_isDart) {
-                auto pos = this->getPosition();
-                this->m_waveTrail->m_currentPoint = pos;
-                this->m_waveTrail->stopAllActions();
-                this->m_waveTrail->setOpacity(255);
-                this->m_waveTrail->resumeStroke();
-            }
-        }
-    };
-
-    class $hack(NoTrail) {
-        void init() override {
-            auto tab = gui::MenuTab::find("tab.player");
-            tab->addToggle("player.notrail")->handleKeybinds()->setDescription()->callback([](bool enabled) {
-                if (!enabled) return;
-                if (auto pl = utils::get<PlayLayer>()) {
-                    pl->m_player1->m_regularTrail->stopStroke();
-                    pl->m_player2->m_regularTrail->stopStroke();
-                }
-            });
-        }
-
-        [[nodiscard]] const char* getId() const override { return "No Trail"; }
-    };
-
-    REGISTER_HACK(NoTrail)
-
-    class $hack(AlwaysTrail) {
-        void init() override {
-            auto tab = gui::MenuTab::find("tab.player");
-            tab->addToggle("player.alwaystrail")->handleKeybinds()->setDescription()->callback([](bool enabled) {
-                if (!enabled) return;
-                if (auto pl = utils::get<PlayLayer>()) {
-                    pl->m_player1->m_regularTrail->resumeStroke();
-                    pl->m_player2->m_regularTrail->resumeStroke();
-                }
-            });
-        }
-
-        [[nodiscard]] const char* getId() const override { return "Always Show Trail"; }
-    };
-
-    REGISTER_HACK(AlwaysTrail)
-
-    class $hack(NoWaveTrailBehind) {
-        void init() override {
-            auto tab = gui::MenuTab::find("tab.player");
-            tab->addToggle("player.nowavetrailbehind")->handleKeybinds()->setDescription();
-        }
-
-        [[nodiscard]] const char* getId() const override { return "No Wave Trail Behind"; }
-    };
-
-    REGISTER_HACK(NoWaveTrailBehind)
+#endif
 }

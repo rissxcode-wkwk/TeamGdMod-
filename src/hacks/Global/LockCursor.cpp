@@ -1,7 +1,6 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #ifdef GEODE_IS_DESKTOP
 
@@ -16,18 +15,20 @@
 #endif
 
 namespace eclipse::hacks::Global {
-    class $hack(LockCursor) {
+
+    class LockCursor : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.global");
-            tab->addToggle("global.lockcursor")->setDescription()->handleKeybinds();
+            auto tab = gui::MenuTab::find("Global");
+
+            tab->addToggle("Lock Cursor", "global.lockcursor")->handleKeybinds();
         }
 
         void update() override {
-            auto* pl = utils::get<PlayLayer>();
-            if (pl == nullptr) return;                                  // not in a level
-            if (pl->m_hasCompletedLevel || pl->m_isPaused) return;      // level is completed or paused
-            if (!config::get<"global.lockcursor", bool>(false)) return; // not toggled
-            if (gui::Engine::get().isToggled()) return;                // gui is open
+            auto* pl = PlayLayer::get();
+            if (pl == nullptr) return; // not in a level
+            if (pl->m_hasCompletedLevel || pl->m_isPaused) return; // level is completed or paused
+            if (!config::get<bool>("global.lockcursor", false)) return; // not toggled
+            if (gui::Engine::get()->isToggled()) return; // gui is open
 
             GEODE_WINDOWS(
                 HWND hwnd = WindowFromDC(wglGetCurrentDC());

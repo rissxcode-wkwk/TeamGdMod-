@@ -1,19 +1,22 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
-#include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/PlayerObject.hpp>
+#include <Geode/modify/GJBaseGameLayer.hpp>
 
 namespace eclipse::hacks::Player {
-    class $hack(JumpHack) {
+
+    class JumpHack : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.player");
-            tab->addToggle("player.jumphack")->setDescription()->handleKeybinds();
+            auto tab = gui::MenuTab::find("Player");
+
+            tab->addToggle("Jump Hack", "player.jumphack")
+                ->setDescription("Allows the player to infinitely jump in the air.")
+                ->handleKeybinds();
         }
 
-        [[nodiscard]] bool isCheating() const override { return config::get<"player.jumphack", bool>(); }
+        [[nodiscard]] bool isCheating() override { return config::get<bool>("player.jumphack", false); }
         [[nodiscard]] const char* getId() const override { return "Jump Hack"; }
     };
 

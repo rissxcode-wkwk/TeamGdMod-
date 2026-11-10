@@ -1,52 +1,45 @@
 #include "tabbed.hpp"
-#include <utils.hpp>
+#include <modules/gui/imgui/imgui.hpp>
 #include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/base-component.hpp>
-#include <modules/gui/imgui/imgui.hpp>
+#include <utils.hpp>
 #include <modules/gui/theming/manager.hpp>
 
 namespace eclipse::gui::imgui {
 
-    void TabbedLayout::init() {
-        m_windows.clear();
+    constexpr std::array themes = {
+        "Default", "MegaHack"
+    };
 
+    void TabbedLayout::init() {
         // Load tabs
-        auto& tabs = Engine::get().getTabs();
-        m_windows.reserve(tabs.size());
+        auto& tabs = Engine::get()->getTabs();
         for (auto& tab : tabs) {
-            m_windows.emplace_back(tab.getTitle(), [tab = &tab] {
+            m_windows.emplace_back(tab->getTitle(), [tab] {
                 for (auto& component : tab->getComponents()) {
-                    if (component->getFlags() & ComponentFlags::DisableTabbed) continue;
-                    ImGuiRenderer::get()->visitComponent(component.get());
+                    ImGuiRenderer::get()->visitComponent(component);
                 }
             });
         }
 
         // Load saved window states
         {
-            auto windowStates = config::get("windows", std::vector<matjson::Value>());
+            auto windowStates = config::get("windows", std::vector<nlohmann::json>());
             for (auto &windowState: windowStates) {
-                auto title = windowState["title"].as<std::string>().unwrapOrDefault();
-                auto window = std::ranges::find_if(m_windows, [&title](Window const& w) {
+                auto title = windowState.at("title").get<std::string>();
+                auto window = std::ranges::find_if(m_windows, [&title](const Window &w) {
                     return w.getTitle() == title;
                 });
                 if (window != m_windows.end()) {
-                    window->applyJson(windowState);
+                    from_json(windowState, *window);
                     window->setDrawPosition(window->getPosition());
                 }
             }
         }
-
-        m_preloadStep = config::get("menu.animateWindows", true) ? 0 : 2;
     }
 
     bool TabbedLayout::shouldRender() const {
-        return Engine::get().isToggled() || wantStayVisible();
-    }
-
-    bool TabbedLayout::wantStayVisible() const {
-        return !m_actions.empty() || m_preloadStep < 2;
+        return Engine::get()->isToggled() || !m_actions.empty();
     }
 
     void TabbedLayout::draw() {
@@ -54,25 +47,24 @@ namespace eclipse::gui::imgui {
             case 0:
                 // Render windows once, to get the correct size
                 ImGui::GetStyle().Alpha = 0.f;
-                ImGui::GetStyle().WindowShadowSize = 0.f;
+                // WindowShadowSize tidak ada di ImGui resmi v1.92.4 (hanya di fork Eclipse)
                 for (auto &window: m_windows) {
                     window.draw();
                 }
                 // Load saved window states
                 {
-                    auto windowStates = config::get("windows", std::vector<matjson::Value>());
+                    auto windowStates = config::get("windows", std::vector<nlohmann::json>());
                     for (auto& windowState: windowStates) {
-                        auto title = windowState["title"].as<std::string>().unwrapOrDefault();
-                        auto window = std::ranges::find_if(m_windows, [&title](Window const& window) {
+                        auto title = windowState.at("title").get<std::string>();
+                        auto window = std::find_if(m_windows.begin(), m_windows.end(), [&title](const Window &window) {
                             return window.getTitle() == title;
                         });
-                        if (window != m_windows.end()) {
-                            window->applyJson(windowState);
-                        }
+                        if (window != m_windows.end())
+                            from_json(windowState, *window);
                     }
                 }
                 m_preloadStep = 1;
-                return;
+                break;
             case 1:
                 // Move windows outside the screen to prepare for animation
                 for (auto& window : m_windows) {
@@ -81,19 +73,23 @@ namespace eclipse::gui::imgui {
                 }
                 ImGui::GetStyle().Alpha = 1.f;
                 m_preloadStep = 2;
-                return;
+                break;
             default:
                 break;
         }
 
         // Run move actions
         auto deltaTime = ImGui::GetIO().DeltaTime;
-        for (auto const& action : m_actions)
+        for (const auto& action : m_actions)
             action->update(deltaTime);
 
         // Remove finished actions
-        std::erase_if(m_actions, [](auto& action) {
-            return action->isFinished();
+        std::erase_if(m_actions, [](auto action) {
+            if (action->isFinished()) {
+                action.reset();
+                return true;
+            }
+            return false;
         });
 
         if (!shouldRender()) return;
@@ -104,46 +100,40 @@ namespace eclipse::gui::imgui {
         }
 
         // Auto reset window positions
-        auto isDragging = config::getTemp<"draggingWindow">(false);
-        auto stackEnabled = config::get<"menu.stackWindows", bool>(true);
+        auto isDragging = config::getTemp("draggingWindow", false);
+        auto stackEnabled = config::get<bool>("menu.stackWindows", true);
         if (m_actions.empty() && !isDragging && stackEnabled)
             stackWindows();
 
         // Reset dragging state
         config::setTemp("draggingWindow", false);
-
-        if (m_actions.empty()) {
-            m_canForceKeyboardFocus = false;
-        }
     }
 
     void TabbedLayout::toggle(bool state) {
-        m_canForceKeyboardFocus = state;
-
         if (!state) {
             // Save window states
-            std::vector<matjson::Value> windowStates;
+            std::vector<nlohmann::json> windowStates;
             for (auto& window : m_windows) {
-                windowStates.push_back(window);
+                nlohmann::json windowState;
+                to_json(windowState, window);
+                windowStates.push_back(windowState);
             }
             config::set("windows", windowStates);
         }
 
-        if (config::get<bool>("menu.animateWindows", true)) {
-            double duration = config::get("menu.animationDuration", 0.3);
-            auto easingType = config::get("menu.animationEasingType", animation::Easing::Quadratic);
-            auto easingMode = config::get("menu.animationEasingMode", animation::EasingMode::EaseInOut);
-            auto easing = animation::getEasingFunction(easingType, easingMode);
+        double duration = config::get("menu.animationDuration", 0.3);
+        auto easingType = config::get("menu.animationEasingType", animation::Easing::Quadratic);
+        auto easingMode = config::get("menu.animationEasingMode", animation::EasingMode::EaseInOut);
+        auto easing = animation::getEasingFunction(easingType, easingMode);
 
-            for (auto& window : m_windows) {
-                auto target = state ? window.getPosition() : randomWindowPosition(window);
-                m_actions.push_back(window.animateTo(target, duration, easing));
-            }
+        for (auto& window : m_windows) {
+            auto target = state ? window.getPosition() : randomWindowPosition(window);
+            m_actions.push_back(window.animateTo(target, duration, easing));
         }
     }
 
     /// @brief Calculate a random window position outside the screen.
-    ImVec2 TabbedLayout::randomWindowPosition(Window const& window) {
+    ImVec2 TabbedLayout::randomWindowPosition(const Window& window) {
         // Calculate target position randomly to be outside the screen
         auto screenSize = ImGui::GetIO().DisplaySize;
         auto windowSize = window.getSize();
@@ -169,39 +159,35 @@ namespace eclipse::gui::imgui {
     }
 
     /// @brief Auto-stacks windows on screen.
-    std::vector<std::pair<Window*, ImVec2>> TabbedLayout::getStackedPositions() {
-        auto firstColumnLock = config::get<"menu.lockFirstColumn", bool>(false);
-        constexpr std::array<std::string_view, 2> BuiltInWindows = {"Interface", "Keybinds"};
+    std::map<Window*, ImVec2> TabbedLayout::getStackedPositions() {
+        auto firstColumnLock = config::get<bool>("menu.lockFirstColumn", false);
+        static std::array<std::string, 2> s_builtInWindows = {"Interface", "Keybinds"}; // TODO: Add all primary windows
+        std::vector<std::string> builtInWindows(s_builtInWindows.begin(), s_builtInWindows.end());
+        if (!firstColumnLock) {
+            builtInWindows.clear();
+        }
 
         auto tm = ThemeManager::get();
-        auto const scale = tm->getGlobalScale();
+        const auto scale = tm->getGlobalScale();
         auto margin = tm->getWindowMargin() * scale;
         ImVec2 screenSize = ImGui::GetIO().DisplaySize;
 
         float windowWidth = Window::MIN_SIZE.x * scale;
         auto columns = static_cast<int>((screenSize.x - margin) / (windowWidth + margin));
 
-        float freeSpace = margin;
-        if (config::get<"menu.horizontallyCenter", bool>(true)) {
-            freeSpace += (screenSize.x - margin - (columns * (windowWidth + margin))) * 0.5f;
-        }
-
-        std::vector<std::pair<Window*, ImVec2>> positions;
-        positions.reserve(m_windows.size());
+        std::map<Window*, ImVec2> positions;
 
         // Built-ins go into first column
-        float x = freeSpace;
+        float x = margin;
         float y = margin;
-        if (firstColumnLock) {
-            for (auto title : BuiltInWindows) {
-                auto it = std::ranges::find_if(m_windows, [&title](Window const& window) {
-                    return window.getTitle() == title;
-                });
+        for (auto& title : builtInWindows) {
+            auto it = std::ranges::find_if(m_windows, [&title](const Window& window) {
+                return window.getTitle() == title;
+            });
 
-                if (it != m_windows.end()) {
-                    positions.emplace_back(&(*it), ImVec2(x, y));
-                    y += it->getSize().y + margin;
-                }
+            if (it != m_windows.end()) {
+                positions[&(*it)] = ImVec2(x, y);
+                y += it->getSize().y + margin;
             }
         }
 
@@ -212,7 +198,7 @@ namespace eclipse::gui::imgui {
         std::vector<float> heights(columnCount, margin);
         for (auto& window : m_windows) {
             // Skip built-in windows
-            if (std::ranges::find(BuiltInWindows, window.getTitle()) != BuiltInWindows.end())
+            if (std::ranges::find(builtInWindows, window.getTitle()) != builtInWindows.end())
                 continue;
 
             // Find the column with the smallest height
@@ -221,7 +207,7 @@ namespace eclipse::gui::imgui {
 
             // Set the position
             auto windowColumn = firstColumnLock ? index + 1 : index;
-            positions.emplace_back(&window, ImVec2(static_cast<float>(windowColumn) * (windowWidth + margin) + freeSpace, *min));
+            positions[&window] = ImVec2(static_cast<float>(windowColumn) * (windowWidth + margin) + margin, *min);
             *min += window.getSize().y + margin;
 
             // Update the height
@@ -232,9 +218,9 @@ namespace eclipse::gui::imgui {
     }
 
     void TabbedLayout::stackWindows() {
-        double duration = config::get<"menu.animationDuration", double>(0.3);
-        auto easingType = config::get<"menu.animationEasingType", animation::Easing>(animation::Easing::Quadratic);
-        auto easingMode = config::get<"menu.animationEasingMode", animation::EasingMode>(animation::EasingMode::EaseInOut);
+        double duration = config::get("menu.animationDuration", 0.3);
+        auto easingType = config::get("menu.animationEasingType", animation::Easing::Quadratic);
+        auto easingMode = config::get("menu.animationEasingMode", animation::EasingMode::EaseInOut);
         auto easing = animation::getEasingFunction(easingType, easingMode);
 
         for (auto& [window, target] : getStackedPositions()) {

@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/CCTextInputNode.hpp>
 
 namespace eclipse::hacks::Bypass {
-    class $hack(CharLimit) {
+
+    class CharLimit : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.bypass");
-            tab->addToggle("bypass.charlimit")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Bypass");
+
+            tab->addToggle("Character Limit Bypass", "bypass.charlimit")
+                ->handleKeybinds()
+                ->setDescription("Allows you to bypass the character limit of any text field.");
         }
 
         [[nodiscard]] const char* getId() const override { return "Character Limit Bypass"; }
@@ -22,7 +25,8 @@ namespace eclipse::hacks::Bypass {
 
         void updateLabel(std::string str) {
             this->setMaxLabelLength(99999);
-            CCTextInputNode::updateLabel(std::move(str));
+            CCTextInputNode::updateLabel(str);
         }
     };
+
 }

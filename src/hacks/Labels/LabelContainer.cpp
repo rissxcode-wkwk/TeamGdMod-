@@ -2,8 +2,6 @@
 
 #include <algorithm>
 #include <modules/config/config.hpp>
-#include <modules/utils/SingletonCache.hpp>
-#include "Label.hpp"
 
 namespace eclipse::hacks::Labels {
 
@@ -13,13 +11,12 @@ namespace eclipse::hacks::Labels {
         m_alignment = alignment;
         updatePosition();
 
-        auto* layout = geode::AxisLayout::create(geode::Axis::Column)
-                           ->setAxisReverse(true)
-                           ->setAutoScale(false)
-                           ->setGrowCrossAxis(false)
-                           ->setCrossAxisOverflow(true)
-                           ->setGap(0.f);
-        layout->ignoreInvisibleChildren(true);
+        auto* layout = geode::AxisLayout::create(geode::Axis::Column);
+        layout->setAxisReverse(true);
+        layout->setAutoScale(false);
+        layout->setGrowCrossAxis(false);
+        layout->setCrossAxisOverflow(true);
+        layout->setGap(0.f);
 
 #define SET_ALIGNMENT(axis, crossAxis, crossAxisLine) \
         layout->setAxisAlignment(geode::AxisAlignment:: axis);               \
@@ -61,13 +58,11 @@ namespace eclipse::hacks::Labels {
 
         this->setLayout(layout, false);
 
-        this->recalculateLayout();
-
         return true;
     }
 
     void LabelsContainer::updatePosition() {
-        auto winSize = utils::get<cocos2d::CCDirector>()->getWinSize();
+        auto winSize = cocos2d::CCDirector::sharedDirector()->getWinSize();
         auto padding = config::get<float>("labels.padding", 3.f);
 
         setContentSize({ winSize.width - padding * 2, winSize.height - padding * 2 });
@@ -111,16 +106,12 @@ namespace eclipse::hacks::Labels {
                 break;
         }
 
-        this->recalculateLayout();
-    }
-
-    void LabelsContainer::recalculateLayout() {
         this->updateLayout(false);
     }
 
-    void LabelsContainer::addLabel(SmartLabel* label) {
+    void LabelsContainer::addLabel(SmartLabel* label, const std::function<void(SmartLabel*)>& update) {
         label->setParentContainer(this);
-        m_labels.emplace_back(label);
+        m_labels.emplace_back(label, update);
 
         // set anchor point
         switch (m_alignment) {
@@ -157,8 +148,8 @@ namespace eclipse::hacks::Labels {
     }
 
     void LabelsContainer::removeLabel(SmartLabel* label) {
-        auto it = std::ranges::find_if(m_labels, [label](SmartLabel* l) {
-            return l == label;
+        auto it = std::ranges::find_if(m_labels, [label](const auto& pair) {
+            return pair.first == label;
         });
 
         if (it != m_labels.end()) {
@@ -170,13 +161,9 @@ namespace eclipse::hacks::Labels {
     void LabelsContainer::update() {
         if (!isVisible()) return;
 
-        for (auto label : m_labels) {
-            label->update();
-        }
-
-        if (m_dirty) {
-            this->recalculateLayout();
-            m_dirty = false;
+        for (auto& label : m_labels) {
+            label.second(label.first);
+            label.first->update();
         }
     }
 

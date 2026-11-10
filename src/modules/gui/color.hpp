@@ -1,29 +1,39 @@
 #pragma once
 
+#include <imgui.h>
+#include <cocos2d.h>
 #include <string>
-#include <Geode/cocos/include/ccTypes.h>
+#include <cmath>
+#include <nlohmann/json.hpp>
 
-struct ImVec4;
-using ImU32 = unsigned int;
+#include <fmt/format.h>
 
 namespace eclipse::gui {
     struct Color {
+        static const Color WHITE;
+        static const Color BLACK;
+        static const Color RED;
+        static const Color GREEN;
+        static const Color BLUE;
+        static const Color YELLOW;
+        static const Color CYAN;
+        static const Color MAGENTA;
+
         float r, g, b, a;
 
-        constexpr Color() : r(0), g(0), b(0), a(1.0f) {}
-        constexpr Color(float r, float g, float b, float a = 1.0f) : r(r), g(g), b(b), a(a) {}
-        constexpr Color(Color const& other) = default;
-        constexpr Color(Color const& other, float a) : r(other.r), g(other.g), b(other.b), a(a) {}
-        explicit constexpr Color(cocos2d::ccColor4F const& other) : r(other.r), g(other.g), b(other.b), a(other.a) {}
-        explicit constexpr Color(cocos2d::ccColor4B const& other) : r(other.r / 255.0f), g(other.g / 255.0f), b(other.b / 255.0f), a(other.a / 255.0f) {}
+        Color() : r(0), g(0), b(0), a(1.0f) {}
+        Color(float r, float g, float b, float a = 1.0f) : r(r), g(g), b(b), a(a) {}
+        Color(const Color& other) = default;
+        explicit Color(const cocos2d::ccColor4F& other) : r(other.r), g(other.g), b(other.b), a(other.a) {}
 
-        constexpr Color(Color&& other) noexcept : r(other.r), g(other.g), b(other.b), a(other.a) {
+        Color(Color&& other) noexcept : r(other.r), g(other.g), b(other.b), a(other.a) {
             other.r = other.g = other.b = 0;
             other.a = 1.0f;
         }
 
-        constexpr Color& operator=(Color const& other) = default;
-        constexpr Color& operator=(Color&& other) noexcept = default;
+        Color& operator=(const Color& other);
+
+        Color& operator=(Color&& other) noexcept;
 
         /// @brief Converts the color to ImVec4
         operator ImVec4() const;
@@ -31,26 +41,13 @@ namespace eclipse::gui {
         /// @brief Converts the color to ImU32
         operator ImU32() const;
 
-        Color& operator=(ImVec4 const& col2);
+        Color& operator=(const ImVec4& col2);
 
-        constexpr operator cocos2d::ccColor4F() const {
-            return {r, g, b, a};
-        }
-
-        constexpr operator cocos2d::ccColor4B() const {
-            return {
-                static_cast<uint8_t>(r * 255),
-                static_cast<uint8_t>(g * 255),
-                static_cast<uint8_t>(b * 255),
-                static_cast<uint8_t>(a * 255)
-            };
-        }
+        operator cocos2d::ccColor4F() const;
 
         /// @brief Returns a pointer to the color data
         /// @return Pointer to the color data
-        constexpr float* data() { return &r; }
-
-        constexpr GLubyte getAlphaByte() const { return static_cast<GLubyte>(a * 255); }
+        float* data() { return &r; }
 
         /// @brief Creates a new color from HSV values
         /// @param h Hue
@@ -63,7 +60,9 @@ namespace eclipse::gui {
         /// @brief Creates a new color from HSV values
         /// @param hsv HSV values
         /// @return New color
-        static Color fromHSV(ImVec4 const& hsv);
+        static Color fromHSV(const ImVec4& hsv) {
+            return fromHSV(hsv.x, hsv.y, hsv.z, hsv.w);
+        }
 
         enum class IntType {
             RGBA, ARGB,
@@ -85,7 +84,7 @@ namespace eclipse::gui {
         /// @param color String color in proper format
         /// @param type Integer type to convert from
         /// @return New color
-        static Color fromString(std::string_view color, IntType type = IntType::RGBA);
+        static Color fromString(const std::string& color, IntType type = IntType::RGBA);
 
         /// @brief Converts the color to a string
         /// @param type Integer type to convert to
@@ -94,36 +93,28 @@ namespace eclipse::gui {
 
         /// @brief Converts the color to a CCColor3B
         /// @return CCColor3B color
-        [[nodiscard]] constexpr cocos2d::ccColor3B toCCColor3B() const {
-            return {
-                static_cast<uint8_t>(r * 255),
-                static_cast<uint8_t>(g * 255),
-                static_cast<uint8_t>(b * 255)
-            };
-        }
+        [[nodiscard]] cocos2d::ccColor3B toCCColor3B() const;
 
         /// @brief Creates a new color from a CCColor3B
         /// @param color CCColor3B color in proper format
         /// @return New color
-        static constexpr Color fromCCColor3B(cocos2d::ccColor3B const& color) {
-            return Color(color.r / 255.F, color.g / 255.F, color.b / 255.F);
-        }
+        static Color fromCCColor3B(cocos2d::ccColor3B const& color);
 
         struct HSL {
             float h, s, l;
 
-            constexpr HSL() : h(0), s(0), l(0) {}
-            constexpr HSL(float h, float s, float l) : h(h), s(s), l(l) {}
-            constexpr HSL(HSL const& other) = default;
+            HSL() : h(0), s(0), l(0) {}
+            HSL(float h, float s, float l) : h(h), s(s), l(l) {}
+            HSL(const HSL& other) = default;
 
-            static HSL fromColor(Color const& color);
-            static Color toColor(HSL const& hsl);
+            static HSL fromColor(const Color& color);
+            static Color toColor(const HSL& hsl);
 
             operator Color() const { return toColor(*this); }
         };
 
         [[nodiscard]] HSL toHSL() const;
-        [[nodiscard]] static Color fromHSL(HSL const& hsl);
+        [[nodiscard]] Color fromHSL(const HSL& hsl) const;
 
         /// @brief Gets the luminance of the color (0-1)
         [[nodiscard]] float luminance() const;
@@ -132,20 +123,6 @@ namespace eclipse::gui {
         [[nodiscard]] Color lighten(float factor) const;
     };
 
-    namespace Colors {
-        constexpr Color WHITE = {1, 1, 1};
-        constexpr Color BLACK = {0, 0, 0};
-        constexpr Color RED = {1, 0, 0};
-        constexpr Color GREEN = {0, 1, 0};
-        constexpr Color BLUE = {0, 0, 1};
-        constexpr Color YELLOW = {1, 1, 0};
-        constexpr Color CYAN = {0, 1, 1};
-        constexpr Color MAGENTA = {1, 0, 1};
-    }
+    void to_json(nlohmann::json& j, const Color& e);
+    void from_json(const nlohmann::json& j, Color& e);
 }
-
-template <>
-struct matjson::Serialize<eclipse::gui::Color> {
-    static Value toJson(eclipse::gui::Color const& color);
-    static geode::Result<eclipse::gui::Color> fromJson(Value const& value);
-};

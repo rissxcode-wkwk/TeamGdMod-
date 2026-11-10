@@ -1,17 +1,19 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/EditLevelLayer.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
 
 namespace eclipse::hacks::Level {
 
-    class $hack(AutoLDM) {
+    class AutoLDM : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.level");
-            tab->addToggle("level.autoldm")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Level");
+
+            tab->addToggle("Auto LDM", "level.autoldm")
+                ->handleKeybinds()
+                ->setDescription("Automatically enables LDM upon entering a level");
         }
 
         [[nodiscard]] const char* getId() const override { return "Auto LDM"; }

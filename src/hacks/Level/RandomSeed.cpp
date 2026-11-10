@@ -1,100 +1,40 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
-#include <Geode/modify/GJBaseGameLayer.hpp>
-#include <Geode/modify/PlayLayer.hpp>
+#include <Geode/modify/GameToolbox.hpp>
 
+#ifndef GEODE_IS_WINDOWS // TODO: Make a patch for Windows
 namespace eclipse::hacks::Level {
-    class $hack(RandomSeed) {
+
+    class RandomSeed : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.level");
+            auto tab = gui::MenuTab::find("Level");
 
             config::setIfEmpty("level.randomseed.seed", 1);
 
-            tab->addToggle("level.randomseed")
-               ->handleKeybinds()
-               ->setDescription()
-               ->addOptions([](auto options) {
-                   options->addToggle("level.randomseed.constantseed")->setDescription();
-                   options->addInputInt("level.randomseed.seed");
-               });
+            tab->addToggle("Random Seed", "level.randomseed")
+                ->handleKeybinds()
+                ->setDescription("Sets a seed of choice for all random triggers.")
+                ->addOptions([](std::shared_ptr<gui::MenuTab> options) {
+                    options->addInputInt("Seed", "level.randomseed.seed");
+                });
         }
 
-        [[nodiscard]] bool isCheating() const override { return config::get<"level.randomseed", bool>(); }
-        [[nodiscard]] char const* getId() const override { return "Random Seed"; }
+        [[nodiscard]] bool isCheating() override { return config::get<bool>("level.randomseed", false); }
+        [[nodiscard]] const char* getId() const override { return "Random Seed"; }
     };
 
     REGISTER_HACK(RandomSeed)
 
-    class $modify(RandomSeedGJBGLHook, GJBaseGameLayer) {
-        inline static geode::Hook* s_hook = nullptr;
-        static void handleToggle() {
-            bool value = config::get("level.randomseed", false);
-            bool constantSeed = config::get("level.randomseed.constantseed", false);
-            if (s_hook) {
-                (void) s_hook->toggle(value && constantSeed);
-            }
-        }
+    class $modify(GameToolbox) {
+        ALL_DELEGATES_AND_SAFE_PRIO("level.randomseed")
 
-        static void onModify(auto& self) {
-            SAFE_HOOKS_ALL();
+        float fast_rand_0_1() {
+            int newSeed = (214'013 * config::get<int>("level.randomseed.seed", false)) + 2'531'011;
 
-            #ifndef GEODE_IS_MACOS
-            s_hook = self.getHook("GJBaseGameLayer::processCommands").unwrapOrDefault();
-            #else
-            s_hook = self.getHook("GJBaseGameLayer::processQueuedButtons").unwrapOrDefault();
-            #endif
-
-            if (!s_hook) return;
-
-            auto value = config::get("level.randomseed", false);
-            s_hook->setAutoEnable(value);
-
-            config::addDelegate("level.randomseed", handleToggle, true);
-            config::addDelegate("level.randomseed.constantseed", handleToggle, true);
-        }
-
-        #ifndef GEODE_IS_MACOS
-        void processCommands(float dt, bool isHalfTick, bool isLastTick) {
-            GameToolbox::fast_srand(config::get<"level.randomseed.seed", int>(1));
-            GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
-        }
-        #else
-        void processQueuedButtons(float dt, bool clearInputQueue) {
-            GameToolbox::fast_srand(config::get<"level.randomseed.seed", int>(1));
-            GJBaseGameLayer::processQueuedButtons(dt, clearInputQueue);
-        }
-        #endif
-    };
-
-    class $modify(RandomSeedPLHook, PlayLayer) {
-        inline static geode::Hook* s_hook = nullptr;
-        static void handleToggle() {
-            bool value = config::get("level.randomseed", false);
-            bool constantSeed = config::get("level.randomseed.constantseed", false);
-            if (s_hook) {
-                (void) s_hook->toggle(value && !constantSeed);
-            }
-        }
-
-        static void onModify(auto& self) {
-            SAFE_HOOKS_ALL();
-
-            s_hook = self.getHook("PlayLayer::resetLevel").unwrapOrDefault();
-            if (!s_hook) return;
-
-            auto value = config::get("level.randomseed", false);
-            s_hook->setAutoEnable(value);
-
-            config::addDelegate("level.randomseed", handleToggle, true);
-            config::addDelegate("level.randomseed.constantseed", handleToggle, true);
-        }
-
-        void resetLevel() {
-            PlayLayer::resetLevel();
-            GameToolbox::fast_srand(config::get<"level.randomseed.seed", int>(1));
+            return ((newSeed >> 16) & 0x7FFF) / 32767.f;
         }
     };
 }
+#endif

@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/LevelInfoLayer.hpp>
 
 namespace eclipse::hacks::Bypass {
-    class $hack(CopyBypass) {
+
+    class CopyBypass : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.creator");
-            tab->addToggle("bypass.copybypass")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Creator");
+
+            tab->addToggle("Level Copy Bypass", "bypass.copybypass")
+                ->handleKeybinds()
+                ->setDescription("Allows you to copy any level.");
         }
 
         [[nodiscard]] const char* getId() const override { return "Level Copy Bypass"; }
@@ -43,4 +46,5 @@ namespace eclipse::hacks::Bypass {
             LevelInfoLayer::confirmClone(sender);
         }
     };
+
 }

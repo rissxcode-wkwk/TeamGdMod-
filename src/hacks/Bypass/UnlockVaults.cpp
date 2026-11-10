@@ -1,20 +1,22 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/CreatorLayer.hpp>
-#include <Geode/modify/GameManager.hpp>
-#include <Geode/modify/GameStatsManager.hpp>
-#include <Geode/modify/LevelPage.hpp>
 #include <Geode/modify/OptionsLayer.hpp>
+#include <Geode/modify/GameStatsManager.hpp>
+#include <Geode/modify/GameManager.hpp>
 #include <Geode/modify/SecretLayer2.hpp>
+#include <Geode/modify/LevelPage.hpp>
 
 namespace eclipse::hacks::Bypass {
-    class $hack(UnlockVaults) {
+
+    class UnlockVaults : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.bypass");
-            tab->addToggle("bypass.unlockvaults")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Bypass");
+            tab->addToggle("Unlock Vaults", "bypass.unlockvaults")
+                ->handleKeybinds()
+                ->setDescription("Unlock all vaults and secrets in the game.");
         }
 
         [[nodiscard]] const char* getId() const override { return "Unlock Vaults"; }
@@ -22,8 +24,8 @@ namespace eclipse::hacks::Bypass {
 
     REGISTER_HACK(UnlockVaults)
 
-    static bool s_bypassUGV = false;     // bypass once
-    static bool s_bypassUGV2 = false;    // bypass twice in a row
+    static bool s_bypassUGV = false; // bypass once
+    static bool s_bypassUGV2 = false; // bypass twice in a row
     static bool s_bypassUGVSkip = false; // bypass after one time
 
     // i hate this (still better than patches/midhooks)

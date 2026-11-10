@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/LevelInfoLayer.hpp>
 
 namespace eclipse::hacks::Level {
-    class $hack(AutoSongDownload) {
+
+    class AutoSongDownload : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.level");
-            tab->addToggle("level.autosongdownload")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Level");
+
+            tab->addToggle("Auto Song Download", "level.autosongdownload")
+                ->handleKeybinds()
+                ->setDescription("Auto-download song and SFX files when viewing an online level. (Created by Uproxide)");
         }
 
         [[nodiscard]] const char* getId() const override { return "Auto Song Download"; }
@@ -20,23 +23,11 @@ namespace eclipse::hacks::Level {
     class $modify(AutoSongDownloadLILHook, LevelInfoLayer) {
         ADD_HOOKS_DELEGATE("level.autosongdownload")
 
-        void tryDownload() {
-            if (!utils::get<GameManager>()->getGameVariable(GameVar::ShownMusicTOS))
-                return;
-            if (m_songWidget->m_downloadBtn->isVisible())
-                m_songWidget->m_downloadBtn->activate();
-        }
-
         void levelDownloadFinished(GJGameLevel* level) override {
             LevelInfoLayer::levelDownloadFinished(level);
-            this->tryDownload();
-        }
 
-        void onEnterTransitionDidFinish() override {
-            LevelInfoLayer::onEnterTransitionDidFinish();
-            if (m_level->m_dailyID > 0) {
-                this->tryDownload();
-            }
+            if (m_songWidget->m_downloadBtn->isVisible())
+                m_songWidget->m_downloadBtn->activate();
         }
     };
 }

@@ -1,51 +1,50 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/keybind.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
-#include <modules/keybinds/manager.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/UILayer.hpp>
 
 namespace eclipse::hacks::Player {
+
     // for on-screen UI
     static bool s_frameStepperPressed = false;
     static bool s_frameStepperDown = false;
 
-    class $hack(FrameStepper) {
+    class FrameStepper : public hack::Hack {
+    public:
         static bool isPressed() {
-            auto stepKey = config::get<"player.framestepper.step_key", keybinds::KeybindProps>(keybinds::Keys::C);
+            auto stepKey = config::get<keybinds::Keys>("player.framestepper.step_key", keybinds::Keys::C);
             return s_frameStepperPressed || keybinds::isKeyPressed(stepKey);
         }
 
         static bool isDown() {
-            auto stepKey = config::get<"player.framestepper.step_key", keybinds::KeybindProps>(keybinds::Keys::C);
+            auto stepKey = config::get<keybinds::Keys>("player.framestepper.step_key", keybinds::Keys::C);
             return s_frameStepperDown || keybinds::isKeyDown(stepKey);
         }
 
+    private:
         void init() override {
             config::setIfEmpty("player.framestepper", false);
-            config::setIfEmpty<keybinds::KeybindProps>("player.framestepper.step_key", keybinds::Keys::C);
+            config::setIfEmpty("player.framestepper.step_key", keybinds::Keys::C);
             config::setIfEmpty("player.framestepper.hold", true);
             config::setIfEmpty("player.framestepper.hold_delay", 0.25f);
             config::setIfEmpty("player.framestepper.hold_speed", 5);
 
-            auto tab = gui::MenuTab::find("tab.player");
+            auto tab = gui::MenuTab::find("Player");
 
-            tab->addToggle("player.framestepper")
-               ->setDescription()
-               ->handleKeybinds()
-               ->addOptions([](auto options) {
-                   options->addKeybind("player.framestepper.step_key", "player.framestepper.step_key")
-                          ->setDefaultKey(keybinds::Keys::C);
-                   options->addToggle("player.framestepper.hold");
-                   options->addInputFloat("player.framestepper.hold_delay", 0.0f, FLT_MAX, "%.2f");
-                   options->addInputInt("player.framestepper.hold_speed", 0);
-               });
+            tab->addToggle("Frame Stepper", "player.framestepper")
+                ->setDescription("Allows you to step through the game frame by frame.")
+                ->handleKeybinds()
+                ->addOptions([](std::shared_ptr<gui::MenuTab> options) {
+                    options->addKeybind("Step Key", "player.framestepper.step_key");
+                    options->addToggle("Enable Hold", "player.framestepper.hold");
+                    options->addInputFloat("Hold Delay", "player.framestepper.hold_delay", 0.0f, FLT_MAX, "%.2f");
+                    options->addInputInt("Hold Speed", "player.framestepper.hold_speed", 0);
+                });
         }
 
-        [[nodiscard]] bool isCheating() const override { return config::get<"player.framestepper", bool>(); }
+        [[nodiscard]] bool isCheating() override { return config::get<bool>("player.framestepper", false); }
         [[nodiscard]] const char* getId() const override { return "Frame Stepper"; }
     };
 
@@ -63,11 +62,11 @@ namespace eclipse::hacks::Player {
         void update(float dt) override {
             // for playlayer, check if the level is not paused/finished (maybe add loading check later?)
             bool usable = false;
-            if (auto playLayer = utils::get<PlayLayer>())
+            if (auto playLayer = PlayLayer::get())
                 usable = !playLayer->m_isPaused && !playLayer->m_hasCompletedLevel && playLayer->m_started && !playLayer->m_player1->m_isDead;
 
             // for level editor, check if it's in playback mode
-            else if (auto editor = utils::get<LevelEditorLayer>())
+            else if (auto editor = LevelEditorLayer::get())
                 usable = editor->m_playbackMode == PlaybackMode::Playing;
 
             if (!usable)
@@ -85,7 +84,7 @@ namespace eclipse::hacks::Player {
                     s_holdDelayTimer = 0;
 
                 // Add a grace period after the first press to allow for holding
-                auto delay = config::get<double>("player.framestepper.hold_delay", 0.25f);
+                auto delay = config::get<float>("player.framestepper.hold_delay", 0.25f);
                 if (FrameStepper::isDown()) {
                     shouldStep = firstPress;
                     s_holdAdvanceTimer++;
@@ -109,9 +108,9 @@ namespace eclipse::hacks::Player {
     /// @brief A button with callbacks for holding and releasing
     class HoldingMenuItem : public CCMenuItemSpriteExtra {
     public:
-        static HoldingMenuItem* create(cocos2d::CCSprite* sprite, Function<void()>&& onHold, Function<void()>&& onRelease) {
+        static HoldingMenuItem* create(cocos2d::CCSprite* sprite, const std::function<void()>& onHold, const std::function<void()>& onRelease) {
             auto ret = new HoldingMenuItem();
-            if (ret->init(sprite, std::move(onHold), std::move(onRelease))) {
+            if (ret->init(sprite, onHold, onRelease)) {
                 ret->autorelease();
                 return ret;
             }
@@ -119,12 +118,12 @@ namespace eclipse::hacks::Player {
             return nullptr;
         }
 
-        bool init(cocos2d::CCSprite* sprite, Function<void()>&& onHold, Function<void()>&& onRelease) {
+        bool init(cocos2d::CCSprite* sprite, const std::function<void()>& onHold, const std::function<void()>& onRelease) {
             if (!CCMenuItemSpriteExtra::init(sprite, nullptr, nullptr, nullptr))
                 return false;
 
-            m_onHold = std::move(onHold);
-            m_onRelease = std::move(onRelease);
+            m_onHold = onHold;
+            m_onRelease = onRelease;
 
             return true;
         }
@@ -140,8 +139,8 @@ namespace eclipse::hacks::Player {
         }
 
     private:
-        Function<void()> m_onHold;
-        Function<void()> m_onRelease;
+        std::function<void()> m_onHold;
+        std::function<void()> m_onRelease;
     };
 
     class FrameStepControl : public cocos2d::CCMenu {
@@ -150,13 +149,12 @@ namespace eclipse::hacks::Player {
                 return false;
 
             this->setPosition(0, 0);
-            this->setVisible(config::get<"player.framestepper", bool>());
 
-            auto winSize = utils::get<cocos2d::CCDirector>()->getWinSize();
+            auto winSize = cocos2d::CCDirector::get()->getWinSize();
             auto sprite = cocos2d::CCSprite::createWithSpriteFrameName("GJ_arrow_01_001.png");
             sprite->setFlipX(true);
-            m_stepForward = HoldingMenuItem::create(
-                sprite, [] {
+            m_stepForward = HoldingMenuItem::create(sprite,
+                [] { 
                     s_frameStepperPressed = true;
                     s_frameStepperDown = true;
                 },
@@ -171,7 +169,7 @@ namespace eclipse::hacks::Player {
         }
 
         void update(float dt) override {
-            this->setVisible(config::get<"player.framestepper", bool>());
+            this->setVisible(config::get<bool>("player.framestepper", false));
         }
 
     public:
@@ -190,7 +188,7 @@ namespace eclipse::hacks::Player {
     };
 
     // Desktop users don't need the on-screen UI
-    #ifndef GEODE_IS_DESKTOP
+#ifndef GEODE_IS_DESKTOP
     class $modify(FrameSFrameStepperUILHook, UILayer) {
         bool init(GJBaseGameLayer* bgl) {
             if (!UILayer::init(bgl))
@@ -202,5 +200,6 @@ namespace eclipse::hacks::Player {
             return true;
         }
     };
-    #endif
+#endif
+
 }

@@ -1,16 +1,16 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/GJBaseGameLayer.hpp>
 
 namespace eclipse::hacks::Level {
 
-    class $hack(NoMirror) {
+    class NoMirror : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.level");
-            tab->addToggle("level.nomirror")->setDescription()->handleKeybinds();
+            auto tab = gui::MenuTab::find("Level");
+
+            tab->addToggle("No Mirror", "level.nomirror")->handleKeybinds();
         }
 
         [[nodiscard]] const char* getId() const override { return "No Mirror"; }

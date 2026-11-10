@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/PlayerObject.hpp>
 
 namespace eclipse::hacks::Player {
-    class $hack(NoRespawnFlash) {
+
+    class NoRespawnFlash : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.player");
-            tab->addToggle("player.norespawnflash")->setDescription()->handleKeybinds();
+            auto tab = gui::MenuTab::find("Player");
+
+            tab->addToggle("No Respawn Flash", "player.norespawnflash")
+                ->setDescription("Removes the blinking effect on respawn.")
+                ->handleKeybinds();
         }
 
         [[nodiscard]] const char* getId() const override { return "No Respawn Flash"; }
@@ -21,4 +24,5 @@ namespace eclipse::hacks::Player {
         ALL_DELEGATES_AND_SAFE_PRIO("player.norespawnflash")
         void playSpawnEffect() {}
     };
+
 }

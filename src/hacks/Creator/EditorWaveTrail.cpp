@@ -1,17 +1,19 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
-#include <Geode/modify/HardStreak.hpp>
 #include <Geode/modify/PlayerObject.hpp>
+#include <Geode/modify/HardStreak.hpp>
 
 namespace eclipse::hacks::Creator { // i didnt do this properly :P
 
-    /*class $hack(EditorWaveTrail) {
+    /*class EditorWaveTrail : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.creator");
-            tab->addToggle("creator.editorwave")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Creator");
+
+            tab->addToggle("Editor Wave Trail", "creator.editorwave")
+                ->handleKeybinds()
+                ->setDescription("Enables the wave trail in the Editor");
         }
 
         [[nodiscard]] const char* getId() const override { return "Editor Wave Trail"; }
@@ -23,20 +25,20 @@ namespace eclipse::hacks::Creator { // i didnt do this properly :P
         ALL_DELEGATES_AND_SAFE_PRIO("creator.editorwave")
 
         void placeStreakPoint() {
-            if (utils::get<LevelEditorLayer>() && m_isDart) m_waveTrail->addPoint(this->getPosition());
+            if (LevelEditorLayer::get() && m_isDart) m_waveTrail->addPoint(this->getPosition());
             else PlayerObject::placeStreakPoint();
         }
 
         void fadeOutStreak2(float dt) {
             PlayerObject::fadeOutStreak2(dt);
 
-            if (utils::get<LevelEditorLayer>()) m_waveTrail->runAction(cocos2d::CCFadeTo::create(dt, 0));
+            if (LevelEditorLayer::get()) m_waveTrail->runAction(cocos2d::CCFadeTo::create(dt, 0));
         }
 
         virtual void update(float dt) {
             PlayerObject::update(dt);
 
-            if (utils::get<LevelEditorLayer>() && m_isDart) m_waveTrail->m_currentPoint = this->getPosition();
+            if (LevelEditorLayer::get() && m_isDart) m_waveTrail->m_currentPoint = this->getPosition();
         }
     };
 
@@ -44,7 +46,7 @@ namespace eclipse::hacks::Creator { // i didnt do this properly :P
         ADD_HOOKS_DELEGATE("creator.editorwave")
 
         void updateStroke(float dt) {
-            if (utils::get<LevelEditorLayer>()) m_drawStreak = true;
+            if (LevelEditorLayer::get()) m_drawStreak = true;
             HardStreak::updateStroke(dt);
         }
     };*/

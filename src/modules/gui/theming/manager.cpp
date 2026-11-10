@@ -1,41 +1,39 @@
+#include <modules/utils/compat.hpp>
 #include "manager.hpp"
 #include <filesystem>
-#include <asp/fs/fs.hpp>
+#include <nlohmann/json.hpp>
 #include <modules/config/config.hpp>
 #include <modules/gui/imgui/imgui.hpp>
 #include <Geode/Loader.hpp>
 #include <Geode/utils/cocos.hpp>
-#include <modules/gui/blur/blur.hpp>
 
 namespace eclipse::gui {
-    static auto IMPORT_PICK_OPTIONS = geode::utils::file::FilePickOptions{
-        std::nullopt, {{
-            "Eclipse Themes",
-            {"*.zip"}
-        }}
+    static auto IMPORT_PICK_OPTIONS = geode::utils::file::FilePickOptions {
+        std::nullopt,
+        {
+            {
+                "Eclipse Themes",
+                { "*.zip" }
+            }
+        }
     };
 
     int getDefaultThemeIndex(std::vector<ThemeMeta> const& themes) {
-        #ifdef GEODE_IS_DESKTOP
-        static auto defaultPath = geode::Mod::get()->getResourcesDir() / "megaoverlay.json";
-        #else
-        static auto defaultPath = geode::Mod::get()->getResourcesDir() / "catppuccinmacchiato.json";
-        #endif
+        static auto defaultPath = eclipse::compat::resourcesDir() / "megaoverlay.json";
         for (auto i = 0; i < themes.size(); i++) {
             if (themes[i].path == defaultPath) return i;
         }
         return 0;
     }
 
-    ThemeManager::ThemeManager() {
-        if (!loadTheme(geode::Mod::get()->getSaveDir() / "theme.json")) {
+    void ThemeManager::init() {
+        if (!loadTheme(eclipse::compat::saveDir() / "theme.json")) {
             // theme not created, load a built-in one
             auto themes = listAvailableThemes();
             if (themes.empty()) {
                 // okay, we're screwed, just set the defaults
                 applyValues(config::getTempStorage(), true);
-                setDefaults();
-                return;
+                return setDefaults();
             }
 
             // TODO: add a priority for default theme
@@ -45,13 +43,13 @@ namespace eclipse::gui {
     }
 
     void ThemeManager::setDefaults() {
-        #ifdef GEODE_IS_DESKTOP
+#ifdef GEODE_IS_DESKTOP
         m_renderer = RendererType::ImGui;
         m_layoutMode = imgui::LayoutMode::Tabbed;
-        #else
+#else
         m_renderer = RendererType::Cocos2d;
         m_layoutMode = imgui::LayoutMode::Panel;
-        #endif
+#endif
 
         m_componentTheme = imgui::ComponentTheme::MegaHack;
         m_schemaVersion = THEME_SCHEMA_VERSION;
@@ -66,14 +64,16 @@ namespace eclipse::gui {
         m_blurSpeed = 0.3f;
         m_blurRadius = 1.f;
 
-        m_searchedColor = Color{ 255, 0, 0, 255 };
-
         // TODO: fill this after all properties are figured out
     }
 
-    ThemeManager* ThemeManager::get() {
-        static ThemeManager instance;
-        return &instance;
+    std::shared_ptr<ThemeManager> ThemeManager::get() {
+        static std::shared_ptr<ThemeManager> instance;
+        if (!instance) {
+            instance = std::make_shared<ThemeManager>();
+            instance->init();
+        }
+        return instance;
     }
 
     void ThemeManager::reloadTheme() {
@@ -86,27 +86,27 @@ namespace eclipse::gui {
     }
 
     template <typename T>
-    std::optional<T> json_try_get(matjson::Value const& j, std::string_view key) {
-        auto res = j[key].as<T>();
-        if (res.isErr()) return std::nullopt;
-        return res.unwrap();
+    std::optional<T> json_try_get(nlohmann::json const& j, std::string_view key) {
+        if (!j.is_object()) return std::nullopt;
+        if (!j.contains(key)) return std::nullopt;
+        return j.at(key).get<T>();
     }
 
     template <typename T>
-    void try_assign(T& v, matjson::Value const& j, std::string_view key) {
+    void try_assign(T& v, nlohmann::json const& j, std::string_view key) {
         auto value = json_try_get<T>(j, key);
         if (value) v = *value;
         else geode::log::warn("Failed to read \"{}\" from theme", key);
     }
 
-    bool ThemeManager::loadTheme(asp::fs::PathView path) {
-        auto res = geode::utils::file::readJson(path);
-        if (res.isErr()) {
-            geode::log::error("Failed to read theme file: {}", res.unwrapErr());
-            return false;
-        }
+    bool ThemeManager::loadTheme(const std::filesystem::path& path) {
+        if (!std::filesystem::exists(path)) return false;
+        std::ifstream file(path);
+        if (!file.is_open()) return false;
 
-        auto json = std::move(res).unwrap();
+        auto json = nlohmann::json::parse(file, nullptr, false);
+        if (json.is_discarded()) return false;
+
         setDefaults();
         auto details = json["details"];
 
@@ -126,11 +126,6 @@ namespace eclipse::gui {
         if (renderer) this->setRenderer(static_cast<RendererType>(*renderer));
         if (layout) this->setLayoutMode(static_cast<imgui::LayoutMode>(*layout));
         if (theme) this->setComponentTheme(static_cast<imgui::ComponentTheme>(*theme));
-
-        // force renderer to cocos2d on launch
-        #if defined(ECLIPSE_DEBUG_BUILD) && defined(GEODE_IS_MOBILE)
-        this->setRenderer(RendererType::Cocos2d);
-        #endif
 
         auto other = json["other"];
         try_assign(m_uiScale, other, "uiScale");
@@ -165,7 +160,6 @@ namespace eclipse::gui {
         try_assign(m_foregroundColor, colors, "foregroundColor");
         try_assign(m_frameBackground, colors, "frameBackground");
         try_assign(m_disabledColor, colors, "disabledColor");
-        try_assign(m_searchedColor, colors, "searchedColor");
         try_assign(m_borderColor, colors, "borderColor");
         try_assign(m_titleBackgroundColor, colors, "titleBackgroundColor");
         try_assign(m_titleForegroundColor, colors, "titleForegroundColor");
@@ -185,50 +179,33 @@ namespace eclipse::gui {
         return true;
     }
 
-    void ThemeManager::saveTheme(asp::fs::PathView path) const {
-        matjson::Value json = matjson::Value::object();
-        this->applyValues(json);
+    void ThemeManager::saveTheme(const std::filesystem::path& path) const {
+        std::ofstream file(path);
+        if (!file.is_open()) return;
 
-        auto res = geode::utils::file::writeString(path, json.dump());
-        if (res.isErr()) {
-            geode::log::error("Failed to save theme file: {}", res.unwrapErr());
-        }
+        nlohmann::json json;
+        applyValues(json);
+
+        file << json.dump(4);
+        file.close();
     }
 
     void ThemeManager::saveTheme() const {
-        saveTheme(geode::Mod::get()->getSaveDir() / "theme.json");
+        saveTheme(eclipse::compat::saveDir() / "theme.json");
     }
 
-    void ThemeManager::applyValues(matjson::Value& json, bool flatten) const {
-        // tech debt my beloved
-        matjson::Value *detailsPtr, *blurPtr, *otherPtr, *colorsPtr;
-        if (flatten) {
-            detailsPtr = &json;
-            blurPtr = &json;
-            otherPtr = &json;
-            colorsPtr = &json;
-        } else {
-            json.set("details", matjson::Value::object());
-            json.set("blur", matjson::Value::object());
-            json.set("other", matjson::Value::object());
-            json.set("colors", matjson::Value::object());
-            detailsPtr = &json["details"];
-            blurPtr = &json["blur"];
-            otherPtr = &json["other"];
-            colorsPtr = &json["colors"];
-        }
-
-        auto& details = *detailsPtr;
-        auto& blur = *blurPtr;
-        auto& other = *otherPtr;
-        auto& colors = *colorsPtr;
+    void ThemeManager::applyValues(nlohmann::json& json, bool flatten) const {
+        auto& details = flatten ? json : json["details"];
+        auto& blur = flatten ? json : json["blur"];
+        auto& other = flatten ? json : json["other"];
+        auto& colors = flatten ? json : json["colors"];
 
         details["name"] = m_themeName;
         details["description"] = m_themeDescription;
         details["author"] = m_themeAuthor;
-        details["renderer"] = static_cast<int>(m_renderer);
-        details["layout"] = static_cast<int>(m_layoutMode);
-        details["style"] = static_cast<int>(m_componentTheme);
+        details["renderer"] = m_renderer;
+        details["layout"] = m_layoutMode;
+        details["style"] = m_componentTheme;
         details["schema"] = m_schemaVersion;
 
         blur["blurEnabled"] = m_enableBlur;
@@ -254,7 +231,6 @@ namespace eclipse::gui {
         colors["frameBackground"] = m_frameBackground;
         colors["foregroundColor"] = m_foregroundColor;
         colors["disabledColor"] = m_disabledColor;
-        colors["searchedColor"] = m_searchedColor;
         colors["borderColor"] = m_borderColor;
         colors["titleBackgroundColor"] = m_titleBackgroundColor;
         colors["titleForegroundColor"] = m_titleForegroundColor;
@@ -276,68 +252,53 @@ namespace eclipse::gui {
         }
     }
 
-    bool ThemeManager::importTheme(asp::fs::PathView path) {
+    bool ThemeManager::importTheme(const std::filesystem::path& path) {
         return false;
     }
 
-    void ThemeManager::exportTheme(asp::fs::PathView path) {}
+    void ThemeManager::exportTheme(const std::filesystem::path &path) {
 
-    float ThemeManager::getGlobalScale() const {
-        auto ret = m_uiScale * imgui::DEFAULT_SCALE;
-        if (config::get<"interface.dpi-scaling", bool>()) {
-            ret *= config::getTemp<"ui.scale", double>(1.f);
-        } else {
-            GEODE_MACOS(ret /= geode::utils::getDisplayFactor();)
-        }
-        return ret;
     }
 
-    std::optional<ThemeMeta> ThemeManager::checkTheme(asp::fs::PathView path) {
-        auto res = geode::utils::file::readJson(path);
-        if (res.isErr()) {
-            return std::nullopt;
-        }
+    float ThemeManager::getGlobalScale() const {
+        return m_uiScale * config::getTemp<float>("ui.scale", 1.f) * imgui::DEFAULT_SCALE;
+    }
 
-        auto json = res.unwrap();
+    std::optional<ThemeMeta> ThemeManager::checkTheme(const std::filesystem::path &path) {
+        if (!std::filesystem::exists(path)) return std::nullopt;
+        std::ifstream file(path);
+        if (!file.is_open()) return std::nullopt;
+
+        auto json = nlohmann::json::parse(file, nullptr, false);
+        if (json.is_discarded()) return std::nullopt;
+
         auto details = json["details"];
         auto name = json_try_get<std::string>(details, "name");
         if (!name) return std::nullopt;
 
-        return ThemeMeta{std::move(name).value(), path};
+        return ThemeMeta { name.value(), path };
     }
 
     std::vector<ThemeMeta> ThemeManager::listAvailableThemes() {
         std::vector<ThemeMeta> themes;
-        auto globThemes = [&](asp::fs::PathView path) {
-            auto res = asp::fs::createDirAll(path);
-            if (res.isErr()) {
-                geode::log::warn("Failed to create themes directory {}: {}", path, res.unwrapErr());
-                return;
-            }
-
-            auto iterRes = asp::fs::iterDir(path);
-            if (!iterRes) {
-                geode::log::error("Failed to list themes in {}: {}", path, iterRes.unwrapErr());
-                return;
-            }
-
-            for (auto entry : iterRes.unwrap()) {
-                if (entry.isErr()) continue;
-                if (entry.unwrap().path.extension() != "json") continue;
-                if (auto theme = checkTheme(entry.unwrap().path))
+        auto globThemes = [&](std::filesystem::path const& path) {
+            std::filesystem::create_directories(path);
+            for (auto& entry : std::filesystem::directory_iterator(path)) {
+                if (entry.path().extension() != ".json") continue;
+                if (auto theme = checkTheme(entry.path()))
                     themes.push_back(*theme);
             }
         };
 
-        globThemes(geode::Mod::get()->getResourcesDir());
-        globThemes(geode::Mod::get()->getConfigDir() / "themes");
+        globThemes(eclipse::compat::resourcesDir());
+        globThemes(eclipse::compat::configDir() / "themes");
 
         return themes;
     }
 
-    void ThemeManager::applyAccentColor(Color const& color) {
+    void ThemeManager::applyAccentColor(const Color& color) {
         auto isDark = color.luminance() < 0.5f;
-        auto foreground = isDark ? Colors::WHITE : Colors::BLACK;
+        auto foreground = isDark ? Color::WHITE : Color::BLACK;
 
         m_disabledColor = isDark ? foreground.darken(0.4f) : foreground.lighten(0.4f);
         m_titleBackgroundColor = color;
@@ -353,9 +314,9 @@ namespace eclipse::gui {
         m_buttonActiveForeground = foreground;
     }
 
-    void ThemeManager::applyBackgroundColor(Color const& color) {
+    void ThemeManager::applyBackgroundColor(const Color& color) {
         auto isDark = color.luminance() < 0.5f;
-        auto foreground = isDark ? Colors::WHITE : Colors::BLACK;
+        auto foreground = isDark ? Color::WHITE : Color::BLACK;
 
         m_backgroundColor = color;
         m_frameBackground = isDark ? color.lighten(0.1f) : color.darken(0.1f);
@@ -366,9 +327,9 @@ namespace eclipse::gui {
     }
 
     void ThemeManager::setRenderer(RendererType renderer) {
-        auto& engine = Engine::get();
-        if (engine.isInitialized()) {
-            engine.setRenderer(renderer);
+        auto engine = Engine::get();
+        if (engine->isInitialized()) {
+            engine->setRenderer(renderer);
         }
         m_renderer = renderer;
     }
@@ -388,11 +349,11 @@ namespace eclipse::gui {
         m_componentTheme = theme;
     }
 
-    void ThemeManager::setSelectedFont(std::string value) {
+    void ThemeManager::setSelectedFont(const std::string &value) {
         if (auto imgui = imgui::ImGuiRenderer::get()) {
             imgui->getFontManager().setFont(value);
         }
-        m_selectedFont = std::move(value);
+        m_selectedFont = value;
     }
 
     void ThemeManager::setSelectedFont(int index) {
@@ -413,10 +374,5 @@ namespace eclipse::gui {
 
     void ThemeManager::setFontSize(float value) {
         m_fontSize = value;
-    }
-
-    void ThemeManager::setBlurEnabled(bool value) {
-        m_enableBlur = value;
-        blur::toggle(value);
     }
 }

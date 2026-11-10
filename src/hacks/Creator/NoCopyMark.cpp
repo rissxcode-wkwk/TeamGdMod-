@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/EditLevelLayer.hpp>
 
 namespace eclipse::hacks::Creator {
-    class $hack(NoCopyMark) {
+
+    class NoCopyMark : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.creator");
-            tab->addToggle("creator.nocopymark")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Creator");
+
+            tab->addToggle("No (C) Mark", "creator.nocopymark")
+                ->handleKeybinds()
+                ->setDescription("Removes the copy mark from your levels when uploading.");
         }
 
         [[nodiscard]] const char* getId() const override { return "No (C) Mark"; }
@@ -25,4 +28,5 @@ namespace eclipse::hacks::Creator {
             EditLevelLayer::onShare(sender);
         }
     };
+
 }

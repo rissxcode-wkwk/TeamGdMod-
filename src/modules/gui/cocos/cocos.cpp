@@ -1,27 +1,16 @@
 #include "cocos.hpp"
 #include <utils.hpp>
 
-#include <modules/config/config.hpp>
-#include <modules/i18n/translations.hpp>
-
-#include "nodes/ModalPopup.hpp"
 #include "popup/options-popup.hpp"
-#include "popup/popup.hpp"
 
 namespace eclipse::gui::cocos {
-    void CocosRenderer::init() {
-        // check if bitmap font exists
-        if (!i18n::hasBitmapFont(i18n::getRequiredGlyphRangesString())) {
-            geode::log::warn("Bitmap font not found for selected language, setting to English");
-            config::set<std::string_view>("language", i18n::DEFAULT_LANGUAGE);
-            i18n::setLanguage(i18n::DEFAULT_LANGUAGE);
-        }
-    }
+
+    void CocosRenderer::init() {}
 
     void CocosRenderer::toggle() {
         if (m_popup) return shutdown();
 
-        m_popup = Popup::create(Engine::get().getTabs());
+        m_popup = Popup::create(Engine::get()->getTabs());
         m_popup->show();
         utils::updateCursorState(isToggled());
     }
@@ -35,14 +24,12 @@ namespace eclipse::gui::cocos {
     }
 
     void CocosRenderer::shutdown(bool noCleanup) {
-        // user closed the popup, but keybind wasn't triggerred, meaning we need to save the config here
-        if (noCleanup) config::save();
-        auto popups = std::move(m_extraPopups);
-        for (auto popup : popups) {
-            if (popup)
-                popup->removeFromParentAndCleanup(true);
-        }
+        for (auto popup : m_optionsPopups)
+            popup->removeFromParentAndCleanup(true);
+        m_optionsPopups.clear();
+
         if (!m_popup) return;
+
         if (!noCleanup)
             m_popup->removeFromParentAndCleanup(true);
         m_popup = nullptr;
@@ -56,25 +43,18 @@ namespace eclipse::gui::cocos {
 
     //since cocos is retained mode, extra work might not be needed
     //might need to change in the future IDK
-    void CocosRenderer::queueAfterDrawing(Function<void()>&& func) {
+    void CocosRenderer::queueAfterDrawing(const std::function<void()>& func) {
         func();
     }
 
-    void CocosRenderer::showPopup(eclipse::Popup&& popup) {
-        auto modal = ModalPopup::create(std::move(popup));
-        modal->show();
-        m_extraPopups.push_back(modal);
-    }
+    void CocosRenderer::showPopup(const eclipse::Popup &popup) {
+        if (popup.isPrompt()) return; // TODO: Implement prompt
 
-    void CocosRenderer::refreshPage() const {
-        if (m_popup) m_popup->refreshPage();
-    }
-
-    std::string_view CocosRenderer::getSelectedTab() const {
-        if (!m_popup) return "";
-        auto& tabs = Engine::get().getTabs();
-        auto idx = config::get<int>("menu.current_tab", 0);
-        if (idx < 0 || idx >= tabs.size()) return "";
-        return tabs[idx].getTitle();
+        geode::createQuickPopup(
+            popup.getTitle().c_str(), popup.getMessage().c_str(),
+            popup.getButton1().c_str(),
+            popup.getButton2().empty() ? nullptr : popup.getButton2().c_str(),
+            [callback = popup.getCallback()](auto, bool result) { callback(result); }
+        )->show();
     }
 }

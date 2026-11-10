@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/UILayer.hpp>
 
 namespace eclipse::hacks::Bypass {
-    class $hack(PauseBuffering) {
+
+    class PauseBuffering : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.bypass");
-            tab->addToggle("bypass.pausebuffering")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Bypass");
+
+            tab->addToggle("Pause Buffering", "bypass.pausebuffering")
+                ->handleKeybinds()
+                ->setDescription("Prevents the game from blocking pause buffering.");
         }
 
         [[nodiscard]] const char* getId() const override { return "Pause Buffering"; }
@@ -21,7 +24,7 @@ namespace eclipse::hacks::Bypass {
         ADD_HOOKS_DELEGATE("bypass.pausebuffering")
 
         void onPause(cocos2d::CCObject* sender) {
-            auto* playLayer = utils::get<PlayLayer>();
+            auto* playLayer = PlayLayer::get();
             if (!playLayer) return UILayer::onPause(sender);
 
             uint32_t original = playLayer->m_gameState.m_pauseCounter;
@@ -30,4 +33,5 @@ namespace eclipse::hacks::Bypass {
             playLayer->m_gameState.m_pauseCounter = original;
         }
     };
+
 }

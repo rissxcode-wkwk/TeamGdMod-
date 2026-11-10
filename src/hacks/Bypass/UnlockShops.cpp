@@ -1,15 +1,18 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/GameManager.hpp>
 
 namespace eclipse::hacks::Bypass {
-    class $hack(UnlockShops) {
+
+    class UnlockShops : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.bypass");
-            tab->addToggle("bypass.unlockshops")->handleKeybinds()->setDescription();
+            auto tab = gui::MenuTab::find("Bypass");
+
+            tab->addToggle("Unlock Shops", "bypass.unlockshops")
+                ->handleKeybinds()
+                ->setDescription("Unlock all shops in the game");
         }
 
         [[nodiscard]] const char* getId() const override { return "Unlock Shops"; }
@@ -21,7 +24,8 @@ namespace eclipse::hacks::Bypass {
         ADD_HOOKS_DELEGATE("bypass.unlockshops")
 
         bool getUGV(const char* key) {
-            if (GameManager::getUGV(key)) return true;
+            if (GameManager::getUGV(key))
+                return true;
 
             // Shops:
             // 11 - Scratch Shop
@@ -29,7 +33,7 @@ namespace eclipse::hacks::Bypass {
             // 34 - Diamond Shopkeeper
             // 35 - Mechanic Shop
             return strcmp(key, "11") == 0 || strcmp(key, "20") == 0
-                   || strcmp(key, "34") == 0 || strcmp(key, "35") == 0;
+                || strcmp(key, "34") == 0 || strcmp(key, "35") == 0;
         }
     };
 }

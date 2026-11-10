@@ -1,36 +1,31 @@
-#include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
-#include <modules/gui/components/toggle.hpp>
 #include <modules/hack/hack.hpp>
+#include <modules/config/config.hpp>
 
 #include <Geode/modify/GameStatsManager.hpp>
 
 namespace eclipse::hacks::Cosmetic {
-    class $hack(PracticeMusic) {
-        void init() override {
-            auto tab = gui::MenuTab::find("tab.bypass");
 
-            tab->addToggle("bypass.practicemusic")
-                ->handleKeybinds()
-                ->setDescription()
-                ->callback([](bool v) {
-                    utils::get<GameStatsManager>()->toggleEnableItem(UnlockType::GJItem, 17, v);
-                });
+    class PracticeMusic : public hack::Hack {
+        void init() override {
+            auto tab = gui::MenuTab::find("Bypass");
+
+            tab->addToggle("Practice Music Sync", "bypass.practicemusic")
+                ->callback([](bool v){
+                    GameStatsManager::get()->toggleEnableItem(UnlockType::GJItem, 17, v);
+                })
+                ->handleKeybinds();
         }
 
         [[nodiscard]] const char* getId() const override { return "Practice Music Sync"; }
     };
 
-    class $hack(MusicCustomizer) {
+    class MusicCustomizer : public hack::Hack {
         void init() override {
-            auto tab = gui::MenuTab::find("tab.bypass");
+            auto tab = gui::MenuTab::find("Bypass");
 
-            tab->addToggle("bypass.musiccustomizer")
-                ->handleKeybinds()
-                ->setDescription()
-                ->callback([](bool v) {
-                    utils::get<GameStatsManager>()->toggleEnableItem(UnlockType::GJItem, 16, v);
-                });
+            tab->addToggle("Music Customizer", "bypass.musiccustomizer")
+                ->handleKeybinds();
         }
 
         [[nodiscard]] const char* getId() const override { return "Music Customizer"; }
@@ -43,14 +38,15 @@ namespace eclipse::hacks::Cosmetic {
         ENABLE_SAFE_HOOKS_ALL()
 
         bool isItemUnlocked(UnlockType type, int key) {
-            if (GameStatsManager::isItemUnlocked(type, key)) return true;
+            if (GameStatsManager::isItemUnlocked(type, key))
+                return true;
 
-            if (type == UnlockType::GJItem && key == 17)
-                return config::get<"bypass.practicemusic", bool>(false);
+            if (config::get<bool>("bypass.practicemusic", false))
+                return type == UnlockType::GJItem && key == 17;
 
-            if (type == UnlockType::GJItem && key == 16)
-                return config::get<"bypass.musiccustomizer", bool>(false);
-
+            if (config::get<bool>("bypass.musiccustomizer", false))
+                return type == UnlockType::GJItem && key == 16;
+            
             return false;
         }
     };

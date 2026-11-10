@@ -1,94 +1,21 @@
+#include <modules/utils/compat.hpp>
 #include "imgui.hpp"
-
-#include <fstream>
+#include <modules/config/config.hpp>
 #include <imgui-cocos.hpp>
 #include <utils.hpp>
-#include <asp/fs/fs.hpp>
-#include <misc/cpp/imgui_stdlib.h>
-#include <modules/config/config.hpp>
-#include <modules/gui/gui.hpp>
-#include <modules/gui/components/base-component.hpp>
 #include <modules/gui/theming/manager.hpp>
-#include <modules/i18n/translations.hpp>
+#include <modules/gui/gui.hpp>
+#include <misc/cpp/imgui_stdlib.h>
 
-#include "components/gruvbox/gruvbox.hpp"
 #include "components/megahack/megahack.hpp"
 #include "components/megaoverlay/megaoverlay.hpp"
-#include "components/openhack/openhack.hpp"
+#include "layouts/tabbed.hpp"
 #include "layouts/panel.hpp"
 #include "layouts/sidebar.hpp"
-#include "layouts/tabbed.hpp"
-
-#ifdef ECLIPSE_DEBUG_BUILD
-#include <modules/debug/benchmark.hpp>
-#include <modules/keybinds/manager.hpp>
-
-static bool isTracingPopupOpen = false;
-
-void showTracingPopup() {
-    using namespace eclipse;
-    static auto _ = [] {
-        auto& keybind = keybinds::Manager::get()->addListener("debug.tracing", [](auto evt) {
-            if (evt.down) {
-                isTracingPopupOpen = !isTracingPopupOpen;
-                if (auto imgui = gui::imgui::ImGuiRenderer::get())
-                    imgui->refreshDisplayState();
-            }
-        });
-        keybind.setKey(keybinds::Keys::F3);
-        return 0;
-    }();
-
-    if (!isTracingPopupOpen) return;
-
-    if (ImGui::Begin("Profiler", &isTracingPopupOpen)) {
-        auto& tabs = debug::Profiler::getTimes();
-        ImGui::Text("Total profilers: %zu", tabs.size());
-        if (ImGui::BeginTabBar("TracingTabs")) {
-            for (auto const& [tab, data] : tabs) {
-                auto ind = tab.find_first_of(')');
-                auto name = tab.substr(ind + 1);
-
-                if (ImGui::BeginTabItem(name.c_str())) {
-                    ImGui::Text("Function: %s", name.c_str());
-                    auto filename = tab.substr(1, ind);
-                    ImGui::Text("File: %s", filename.c_str());
-
-                    if (data.empty()) {
-                        ImGui::Text("No data available.");
-                        ImGui::EndTabItem();
-                        continue;
-                    }
-
-                    std::vector<float> times;
-                    times.reserve(data.size());
-                    auto it = data.begin();
-                    float minTime = *it;
-                    float maxTime = *it;
-                    while (it != data.end()) {
-                        times.push_back(*it);
-                        if (*it < minTime) minTime = *it;
-                        if (*it > maxTime) maxTime = *it;
-                        ++it;
-                    }
-
-                    // build a graph
-                    auto availableSize = ImGui::GetContentRegionAvail();
-                    ImGui::PlotLines("##graph", times.data(), times.size(), 0, nullptr, minTime, maxTime, ImVec2(availableSize.x, 100));
-
-                    ImGui::Text("Average: %.3f us", debug::Profiler::averageTimeFor(tab) / 1000.f);
-
-                    ImGui::EndTabItem();
-                }
-            }
-            ImGui::EndTabBar();
-        }
-    }
-    ImGui::End();
-}
-#endif
+#include "modules/gui/gui.hpp"
 
 namespace eclipse::gui::imgui {
+
     bool ImGuiRenderer::s_initialized = false;
 
     std::string_view FontManager::FontMetadata::getName() const {
@@ -102,91 +29,25 @@ namespace eclipse::gui::imgui {
         return m_font;
     }
 
-    ImWchar const* getDefaultRange() {
-        static constexpr ImWchar ranges[] = {
-            0x0020, 0x00FF, // Basic Latin + Latin Supplement
-            0x0100, 0x017F, // Latin Extended-A
-            0,
-        };
-        return &ranges[0];
-    }
-
-    ImWchar const* getGlyphRange(i18n::GlyphRange range) {
-        switch (range) {
-            case i18n::GlyphRange::Greek: return ImGui::GetIO().Fonts->GetGlyphRangesGreek();
-            case i18n::GlyphRange::Korean: return ImGui::GetIO().Fonts->GetGlyphRangesKorean();
-            case i18n::GlyphRange::Japanese: return ImGui::GetIO().Fonts->GetGlyphRangesJapanese();
-            case i18n::GlyphRange::ChineseFull: return ImGui::GetIO().Fonts->GetGlyphRangesChineseFull();
-            case i18n::GlyphRange::ChineseSimplified: return ImGui::GetIO().Fonts->GetGlyphRangesChineseSimplifiedCommon();
-            case i18n::GlyphRange::Cyrillic: return ImGui::GetIO().Fonts->GetGlyphRangesCyrillic();
-            case i18n::GlyphRange::Thai: return ImGui::GetIO().Fonts->GetGlyphRangesThai();
-            case i18n::GlyphRange::Vietnamese: return ImGui::GetIO().Fonts->GetGlyphRangesVietnamese();
-            default: return getDefaultRange();
-        }
-    }
-
     void FontManager::FontMetadata::load() {
         auto fontSize = ThemeManager::get()->getFontSize() * DEFAULT_SCALE;
-        std::ifstream file(m_path.c_str(), std::ios::binary);
-        if (!file.is_open()) {
-            geode::log::error("Failed to open font file: {}", m_path);
-            return;
-        }
-
-        file.seekg(0, std::ios::end);
-        auto size = file.tellg();
-        file.seekg(0, std::ios::beg);
-        if (size <= 0) {
-            geode::log::error("Font file is empty: {}", m_path);
-            return;
-        }
-
-        auto data = new uint8_t[size]; // ImGui takes ownership
-        file.read(reinterpret_cast<char*>(data), size);
-        if (!file) {
-            geode::log::error("Failed to read font file: {}", m_path);
-            delete[] data;
-            return;
-        }
-        file.close();
-
-        m_font = ImGui::GetIO().Fonts->AddFontFromMemoryTTF(
-            data, size, fontSize,
-            nullptr, getGlyphRange(i18n::getRequiredGlyphRanges())
-        );
-    }
-
-    FontManager* FontManager::get() {
-        auto imgui = ImGuiRenderer::get();
-        return imgui ? &imgui->getFontManager() : nullptr;
+        m_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(m_path.string().c_str(), fontSize);
     }
 
     std::vector<FontManager::FontMetadata> FontManager::fetchAvailableFonts() {
         std::vector<FontMetadata> result;
-        auto globFonts = [&](asp::fs::PathView path) {
-            auto res = asp::fs::createDirAll(path);
-            if (!res) {
-                geode::log::warn("Failed to create fonts directory {}: {}", path, res.unwrapErr());
-                return;
-            }
-
-            auto iterRes = asp::fs::iterDir(path);
-            if (!iterRes) {
-                geode::log::warn("Failed to list fonts in {}: {}", path, iterRes.unwrapErr());
-                return;
-            }
-
-            for (auto entry : iterRes.unwrap()) {
-                if (entry.isErr()) continue;
-                if (entry.unwrap().path.extension() != "ttf") continue;
-                auto filename = entry.unwrap().path.stem().value_or({});
-                FontMetadata font{std::string(filename), entry.unwrap().path};
-                result.push_back(std::move(font));
+        auto globFonts = [&](std::filesystem::path const& path) {
+            std::filesystem::create_directories(path);
+            for (auto& entry : std::filesystem::directory_iterator(path)) {
+                if (entry.path().extension() != ".ttf") continue;
+                auto filename = entry.path().stem().string();
+                FontMetadata font {filename, entry.path()};
+                result.push_back(font);
             }
         };
 
-        globFonts(geode::Mod::get()->getResourcesDir());
-        globFonts(geode::Mod::get()->getConfigDir() / "fonts");
+        globFonts(eclipse::compat::resourcesDir());
+        globFonts(eclipse::compat::configDir() / "fonts");
 
         return result;
     }
@@ -195,7 +56,7 @@ namespace eclipse::gui::imgui {
         m_availableFonts = fetchAvailableFonts();
     }
 
-    std::vector<FontManager::FontMetadata> const& FontManager::getAvailableFonts() {
+    const std::vector<FontManager::FontMetadata>& FontManager::getAvailableFonts() {
         return m_availableFonts;
     }
 
@@ -240,9 +101,6 @@ namespace eclipse::gui::imgui {
                 auto& io = ImGui::GetIO();
                 auto& style = ImGui::GetStyle();
                 io.IniFilename = nullptr;
-                // disable error recovery tooltip and logs
-                io.ConfigErrorRecoveryEnableTooltip = false;
-                io.ConfigErrorRecoveryEnableDebugLog = false;
                 style.DisplaySafeAreaPadding = ImVec2(0, 0);
                 if (m_theme) m_theme->init();
                 m_fontManager.init();
@@ -257,24 +115,14 @@ namespace eclipse::gui::imgui {
         s_initialized = true;
     }
 
-    void ImGuiRenderer::updateTabs() {
-        // init will recreate all tabs
-        if (m_layout) m_layout->init();
-    }
-
     void ImGuiRenderer::draw() {
         auto scale = ImGui::GetIO().DisplaySize.x / 1920.f;
         config::setTemp("ui.scale", scale);
-
-        bool wantVisible = m_isOpened;
 
         m_insideDraw = true;
         if (m_theme) m_theme->update();
         if (m_layout) m_layout->draw();
         renderPopups();
-        #ifdef ECLIPSE_DEBUG_BUILD
-        showTracingPopup();
-        #endif
         m_insideDraw = false;
         setLayoutMode(m_queuedMode);
     }
@@ -284,15 +132,10 @@ namespace eclipse::gui::imgui {
 
         utils::updateCursorState(m_isOpened);
         m_layout->toggle(m_isOpened);
-        refreshDisplayState();
     }
 
     bool ImGuiRenderer::isToggled() const {
         return m_isOpened;
-    }
-
-    std::unique_ptr<Layout> const& ImGuiRenderer::getLayout() const {
-        return m_layout;
     }
 
     void ImGuiRenderer::shutdown() {
@@ -329,32 +172,26 @@ namespace eclipse::gui::imgui {
         if (m_theme && theme == m_theme->getTheme()) return;
         switch (theme) {
             case ComponentTheme::ImGui:
-                m_theme = &themes::DEFAULT_THEME;
+                m_theme = std::make_unique<Theme>();
                 break;
             case ComponentTheme::MegaHack:
             default:
-                m_theme = &themes::MEGAHACK_THEME;
+                m_theme = std::make_unique<themes::Megahack>();
                 break;
             case ComponentTheme::MegaOverlay:
-                m_theme = &themes::MEGAOVERLAY_THEME;
-                break;
-            case ComponentTheme::Gruvbox:
-                m_theme = &themes::GRUVBOX_THEME;
-                break;
-            case ComponentTheme::OpenHack:
-                m_theme = &themes::OPENHACK_THEME;
+                m_theme = std::make_unique<themes::MegaOverlay>();
                 break;
         }
         if (s_initialized) m_theme->init();
     }
 
-    void ImGuiRenderer::visitComponent(Component* component) const {
+    void ImGuiRenderer::visitComponent(const std::shared_ptr<Component>& component) const {
         if (!m_theme) return;
         component->onUpdate();
         m_theme->visit(component);
     }
 
-    bool ImGuiRenderer::beginWindow(std::string const& title) const {
+    bool ImGuiRenderer::beginWindow(const std::string &title) const {
         if (!m_theme) {
             geode::log::error("beginWindow called without initialized theme");
             return false;
@@ -371,21 +208,19 @@ namespace eclipse::gui::imgui {
         ImGuiCocos::get().reload();
     }
 
-    void ImGuiRenderer::queueAfterDrawing(Function<void()>&& func) {
-        m_runAfterDrawingQueue.push_back(std::move(func));
+    void ImGuiRenderer::queueAfterDrawing(const std::function<void()>& func) {
+        m_runAfterDrawingQueue.push_back(func);
     }
 
-    void ImGuiRenderer::showPopup(Popup&& popup) {
-        m_popups.push_back(std::move(popup));
-        refreshDisplayState();
+    void ImGuiRenderer::showPopup(const Popup& popup) {
+        m_popups.push_back(popup);
     }
 
     void ImGuiRenderer::drawFinished() {
-        for (auto& f : m_runAfterDrawingQueue) {
+        for (const auto& f : m_runAfterDrawingQueue) {
             f();
         }
         m_runAfterDrawingQueue.clear();
-        refreshDisplayState();
     }
 
     // https://stackoverflow.com/a/70073137/16349466
@@ -424,10 +259,8 @@ namespace eclipse::gui::imgui {
             bool isOpen = false;
 
             ImGui::OpenPopup(popupName.c_str(), ImGuiPopupFlags_NoOpenOverExistingPopup | ImGuiPopupFlags_NoOpenOverItems);
-            ImGui::SetNextWindowSizeConstraints(
-                {MIN_POPUP_WIDTH * scale, MIN_POPUP_HEIGHT * scale},
-                {MAX_POPUP_WIDTH * scale, MAX_POPUP_HEIGHT * scale}
-            );
+            ImGui::SetNextWindowSizeConstraints({MIN_POPUP_WIDTH * scale, MIN_POPUP_HEIGHT * scale},
+                                                {MAX_POPUP_WIDTH * scale, MAX_POPUP_HEIGHT * scale});
             if (ImGui::BeginPopupModal(popupName.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
                 isOpen = true;
                 // if (keybinds::isKeyPressed(keybinds::Keys::Escape)) {
@@ -444,7 +277,7 @@ namespace eclipse::gui::imgui {
 
                 if (!popup.isPrompt()) {
                     TextCentered(popup.getMessage());
-                    if (m_theme->button(popup.getButton1(), false)) {
+                    if (m_theme->button(popup.getButton1())) {
                         popup.getCallback()(true);
                         toRemove.push_back(&popup);
                         ImGui::CloseCurrentPopup();
@@ -452,7 +285,7 @@ namespace eclipse::gui::imgui {
                     if (!popup.getButton2().empty()) {
                         // TODO: Make an option for same-line buttons
                         // ImGui::SameLine(0, 2);
-                        if (m_theme->button(popup.getButton2(), false)) {
+                        if (m_theme->button(popup.getButton2())) {
                             popup.getCallback()(false);
                             toRemove.push_back(&popup);
                             ImGui::CloseCurrentPopup();
@@ -463,7 +296,7 @@ namespace eclipse::gui::imgui {
                     ImGui::PushItemWidth(ImGui::GetWindowWidth() - 20);
                     ImGui::InputText("##prompt", &popup.getPromptValue());
                     ImGui::PopItemWidth();
-                    if (m_theme->button(popup.getButton1(), false)) {
+                    if (m_theme->button(popup.getButton1())) {
                         popup.getPromptCallback()(true, popup.getPromptValue());
                         toRemove.push_back(&popup);
                         ImGui::CloseCurrentPopup();
@@ -471,7 +304,7 @@ namespace eclipse::gui::imgui {
                     if (!popup.getButton2().empty()) {
                         // TODO: Make an option for same-line buttons
                         // ImGui::SameLine(0, 2);
-                        if (m_theme->button(popup.getButton2(), false)) {
+                        if (m_theme->button(popup.getButton2())) {
                             popup.getPromptCallback()(false, popup.getPromptValue());
                             toRemove.push_back(&popup);
                             ImGui::CloseCurrentPopup();
@@ -488,22 +321,11 @@ namespace eclipse::gui::imgui {
         }
 
         // remove all popups that are done (compare by id)
-        m_popups.erase(std::ranges::remove_if(m_popups, [&](Popup const& p) {
+        m_popups.erase(std::ranges::remove_if(m_popups, [&](const Popup& p) {
             for (auto* r : toRemove) {
                 if (r->getId() == p.getId()) return true;
             }
             return false;
         }).begin(), m_popups.end());
-    }
-
-    void ImGuiRenderer::refreshDisplayState() const {
-        bool wantVisible = m_isOpened;
-        if (m_layout) wantVisible |= m_layout->wantStayVisible();
-        wantVisible |= !m_popups.empty();
-        #ifdef ECLIPSE_DEBUG_BUILD
-        wantVisible |= isTracingPopupOpen;
-        #endif
-
-        ImGuiCocos::get().setVisible(wantVisible);
     }
 }
