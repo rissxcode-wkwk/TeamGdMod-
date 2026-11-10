@@ -25,3 +25,9 @@ Geometry Dash **2.2091** dan Geode **6.0.0-alpha.1** (semua platform), jadi tida
   gui/cocos/components/DirectoryComboComponent.hpp.
 - `std::ranges::find(items, value)` di DirectoryComboComponent.hpp (vector<Path> vs PathView) tidak bisa dikompilasi;
   diganti `find_if` yang membandingkan `item.view() == value` (PathView == PathView; `PathView::view()` mengembalikan string_view sehingga ambigu).
+- Bindings 2.2091 tidak punya `PlayLayer::m_currentCheckpoint`, `PlayLayer::setStartPosObject`, dan
+  `GJGameState::m_unkPoint34`. Kode dibuat adaptif dengan `if constexpr (requires {...})`:
+  - StartPosSwitcher.cpp: checkpoint hanya di-null kalau member-nya ada; start pos diset lewat `setStartPosObject`
+    kalau ada, kalau tidak langsung ke `m_startPosObject`.
+  - NoEndShake.cpp: `m_unkPoint34` hanya disimpan/dipulihkan kalau field-nya ada.
+  Perilaku kedua fitur ini belum teruji di game; kalau tidak jalan, perlu nama field baru dari bindings 2.2091.

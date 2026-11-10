@@ -18,6 +18,24 @@ namespace eclipse::hacks::Level {
     static int32_t currentStartPosIndex = 0;
     static cocos2d::CCSequence* startPosSwitcherSequence = nullptr;
 
+    // Bindings GD 2.2091 tidak lagi punya PlayLayer::m_currentCheckpoint dan PlayLayer::setStartPosObject.
+    // Dibuat adaptif (C++20 requires) supaya tetap kompilasi di bindings lama maupun baru.
+    template <typename PL>
+    static void clearCurrentCheckpoint(PL* pl) {
+        if constexpr (requires { pl->m_currentCheckpoint = nullptr; }) {
+            pl->m_currentCheckpoint = nullptr;
+        }
+    }
+
+    template <typename PL>
+    static void applyStartPosObject(PL* pl, StartPosObject* startPos) {
+        if constexpr (requires { pl->setStartPosObject(startPos); }) {
+            pl->setStartPosObject(startPos);
+        } else {
+            pl->m_startPosObject = startPos;
+        }
+    }
+
     class $hack(StartPosSwitcher) {
     public:
         void init() override {
@@ -81,10 +99,10 @@ namespace eclipse::hacks::Level {
             auto func = [index] {
                 startPosSwitcherSequence = nullptr;
                 PlayLayer* playLayer = utils::get<PlayLayer>();
-                playLayer->m_currentCheckpoint = nullptr;
+                clearCurrentCheckpoint(playLayer);
 
                 auto* startPos = index >= 0 ? startPosObjects[index] : nullptr;
-                playLayer->setStartPosObject(startPos);
+                applyStartPosObject(playLayer, startPos);
                 playLayer->m_isTestMode = index >= 0;
 
                 if (playLayer->m_isPracticeMode)
