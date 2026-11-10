@@ -46,8 +46,8 @@ namespace eclipse::gui::imgui {
         ImGui::Columns(2);
         ImGui::SetColumnOffset(1, 183 * scale);
 
-        style->Colors[ImGuiCol_WindowShadow] = ImVec4(0.f, 0.f, 0.f, 1.f);
-        style->WindowShadowSize = 50.f;
+        // Efek bayangan jendela (WindowShadowSize/ImGuiCol_WindowShadow) hanya ada di fork ImGui Eclipse,
+        // tidak ada di ImGui resmi v1.92.4, jadi dinonaktifkan.
 
         // Logo (not really)
 

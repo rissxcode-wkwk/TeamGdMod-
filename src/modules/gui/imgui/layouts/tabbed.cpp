@@ -47,7 +47,7 @@ namespace eclipse::gui::imgui {
             case 0:
                 // Render windows once, to get the correct size
                 ImGui::GetStyle().Alpha = 0.f;
-                ImGui::GetStyle().WindowShadowSize = 0.f;
+                // WindowShadowSize tidak ada di ImGui resmi v1.92.4 (hanya di fork Eclipse)
                 for (auto &window: m_windows) {
                     window.draw();
                 }
