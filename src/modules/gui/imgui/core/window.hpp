@@ -1,9 +1,9 @@
 #pragma once
 
+#include <functional.hpp>
 #include <string>
 #include <functional>
 #include <imgui.h>
-#include <nlohmann/json.hpp>
 #include "../animation/easing.hpp"
 #include "../animation/move-action.hpp"
 
@@ -23,7 +23,7 @@ namespace eclipse::gui::imgui {
         /// @brief Create new instance of `Window` with set title and draw callback
         /// @param title Title of the window
         /// @param onDraw Callback which will be called when the window is drawn
-        Window(const std::string& title, std::function<void()> onDraw);
+        Window(std::string title, Function<void()>&& onDraw);
 
         /// @brief Draw the window
         void draw();
@@ -40,41 +40,45 @@ namespace eclipse::gui::imgui {
         /// @return True if the window is located in the visible area
         [[nodiscard]] bool isOnScreen() const;
 
-        [[nodiscard]] const std::string& getTitle() const;
-        void setTitle(const std::string& title);
+        [[nodiscard]] std::string const& getTitle() const;
+        void setTitle(std::string title);
 
-        [[nodiscard]] const ImVec2& getPosition() const;
-        void setPosition(const ImVec2& position);
+        [[nodiscard]] ImVec2 const& getPosition() const;
+        void setPosition(ImVec2 const& position);
 
-        [[nodiscard]] const ImVec2& getDrawPosition() const;
-        void setDrawPosition(const ImVec2& position);
+        [[nodiscard]] ImVec2 const& getDrawPosition() const;
+        void setDrawPosition(ImVec2 const& position);
 
-        [[nodiscard]] const ImVec2& getSize() const;
-        void setSize(const ImVec2& size);
+        [[nodiscard]] ImVec2 const& getSize() const;
+        void setSize(ImVec2 const& size);
+
+        void applyJson(matjson::Value const& json);
 
         /// @brief Create new `MoveAction` instance for the window
         /// @param target Target position
         /// @param duration How long the animation should last in seconds
         /// @param easing Easing mode (see "animation/easing.hpp")
         /// @param useRealPosition Whether to change the actual position of the window
-        std::shared_ptr<animation::MoveAction> animateTo(
-                const ImVec2& target,
+        std::unique_ptr<animation::MoveAction> animateTo(
+            ImVec2 const& target,
                 double duration,
                 animation::EasingFunction easing,
                 bool useRealPosition = false);
 
     private:
+        Function<void()> m_drawCallback; // Callback which will be called when the window is drawn
         std::string m_title; // Window title
-        bool m_isOpen;       // Whether the window is collapsed or not
 
         ImVec2 m_position;     // Window position in opened state
         ImVec2 m_drawPosition; // Window position used for drawing (used for animations)
         ImVec2 m_size;         // Window size
 
-        std::function<void()> m_drawCallback; // Callback which will be called when the window is drawn
+        bool m_isOpen;       // Whether the window is collapsed or not
     };
-
-    void to_json(nlohmann::json& j, const Window& e);
-    void from_json(const nlohmann::json& j, Window& e);
-
 }
+
+template <>
+struct matjson::Serialize<eclipse::gui::imgui::Window> {
+    static Value toJson(eclipse::gui::imgui::Window const& window);
+    static geode::Result<eclipse::gui::imgui::Window> fromJson(Value const& value);
+};

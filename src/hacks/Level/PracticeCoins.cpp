@@ -1,18 +1,15 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/GJBaseGameLayer.hpp>
 
 namespace eclipse::hacks::Level {
-
-    class PracticeCoins : public hack::Hack {
+    class $hack(PracticeCoins) {
         void init() override {
-            auto tab = gui::MenuTab::find("Level");
-
-            tab->addToggle("Practice Coins", "level.practicecoins")
-                ->setDescription("Allows you to collect coins in practice mode.")
-                ->handleKeybinds();
+            auto tab = gui::MenuTab::find("tab.level");
+            tab->addToggle("level.practicecoins")->setDescription()->handleKeybinds();
         }
 
         [[nodiscard]] const char* getId() const override { return "Practice Coins"; }

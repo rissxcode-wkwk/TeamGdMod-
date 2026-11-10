@@ -1,21 +1,25 @@
 #include "scroll-layer.hpp"
+#include "utils.hpp"
+
+#include <modules/utils/SingletonCache.hpp>
 // all thanks to https://github.com/CallocGD/GD-2.205-Decompiled
 // and also from https://github.com/geode-sdk/geode
 
 namespace eclipse::gui::cocos {
     bool ScrollLayer::scrollWheel(float pointX, float pointY) {
-        // Geode v6: CCMouseDelegate::scrollWheel sekarang mengembalikan bool
         if (pointX != 0.0) {
             CCScrollLayerExt::scrollLayer(pointX);
+            return true;
         }
         return false;
     }
+
     bool ScrollLayer::ccTouchBegan(cocos2d::CCTouch *touch, cocos2d::CCEvent *event) {
         if (geode::cocos::nodeIsVisible(this)) {
             bool value = CCScrollLayerExt::ccTouchBegan(touch, event);
             if (value) {
                 m_touchStart = touch;
-                auto touchPos = cocos2d::CCDirector::sharedDirector()->convertToGL(m_touchStart->getLocationInView());
+                auto touchPos = utils::get<cocos2d::CCDirector>()->convertToGL(m_touchStart->getLocationInView());
                 m_touchStartPosition2 = touchPos;
                 m_touchPosition2 = touchPos;
                 if (m_touchOutOfBoundary) {
@@ -50,7 +54,7 @@ namespace eclipse::gui::cocos {
     void ScrollLayer::ccTouchMoved(cocos2d::CCTouch *touch, cocos2d::CCEvent *event) {
         CCScrollLayerExt::ccTouchMoved(touch, event);
         m_touchMoved = true;
-        auto touchPoint = cocos2d::CCDirector::sharedDirector()->convertToGL(touch->getLocationInView());
+        auto touchPoint = utils::get<cocos2d::CCDirector>()->convertToGL(touch->getLocationInView());
         if (touch == m_touchStart) {
             m_touchPosition2 = m_touchPosition2 - touchPoint;
         }
@@ -60,8 +64,8 @@ namespace eclipse::gui::cocos {
         }
     }
     void ScrollLayer::claimTouch(cocos2d::CCTouch* touch) {
-        auto touchDispatcher = cocos2d::CCDirector::sharedDirector()->getTouchDispatcher();
-        auto handler = (cocos2d::CCTargetedTouchHandler *)touchDispatcher->findHandler(this);		
+        auto touchDispatcher = utils::get<cocos2d::CCDirector>()->getTouchDispatcher();
+        auto handler = static_cast<cocos2d::CCTargetedTouchHandler *>(touchDispatcher->findHandler(this));
         if (handler) {
             cocos2d::CCSet* claimedTouches = handler->getClaimedTouches();
             if (!claimedTouches->containsObject(touch)) {
@@ -75,7 +79,7 @@ namespace eclipse::gui::cocos {
         set->addObject(touch);
         set->autorelease();
         m_cancellingTouches = true;
-        auto touchDispather = cocos2d::CCDirector::sharedDirector()->getTouchDispatcher();
+        auto touchDispather = utils::get<cocos2d::CCDirector>()->getTouchDispatcher();
         touchDispather->touchesCancelled(set, event);
         m_cancellingTouches = false;
         claimTouch(touch);
@@ -110,25 +114,45 @@ namespace eclipse::gui::cocos {
 
         this->setMouseEnabled(true);
         this->setTouchEnabled(true);
+        this->setUserFlag("alk.better-touch-prio/steals-touch");
+
+        utils::get<cocos2d::CCTouchDispatcher>()->registerForcePrio(this, 2, 0);
+    }
+
+    ScrollLayer::~ScrollLayer() {
+        utils::get<cocos2d::CCTouchDispatcher>()->unregisterForcePrio(this);
     }
 
     void ScrollLayer::visit() {
+        int previousRect[4];
+        bool previousScissor = glIsEnabled(GL_SCISSOR_TEST);
+
         if (m_cutContent && this->isVisible()) {
-            glEnable(GL_SCISSOR_TEST);
-                
+            if (previousScissor) {
+                glGetIntegerv(GL_SCISSOR_BOX, previousRect);
+            }
+            else {
+                glEnable(GL_SCISSOR_TEST);
+            }
+
             if (this->getParent()) {
                 auto const bottomLeft = this->convertToWorldSpace(ccp(0, 0));
                 auto const topRight = this->convertToWorldSpace(this->getContentSize());
                 cocos2d::CCSize const size = topRight - bottomLeft;
 
-                cocos2d::CCEGLView::get()->setScissorInPoints(bottomLeft.x, bottomLeft.y, size.width, size.height);
+                utils::get<cocos2d::CCEGLView>()->setScissorInPoints(bottomLeft.x, bottomLeft.y, size.width, size.height);
             }
         }
 
         CCNode::visit();
 
         if (m_cutContent && this->isVisible()) {
-            glDisable(GL_SCISSOR_TEST);
+            if (previousScissor) {
+                glScissor(previousRect[0], previousRect[1], previousRect[2], previousRect[3]);
+            }
+            else {
+                glDisable(GL_SCISSOR_TEST);
+            }
         }
     }
 
@@ -139,27 +163,14 @@ namespace eclipse::gui::cocos {
     ScrollLayer* ScrollLayer::create(cocos2d::CCRect const& rect, bool scroll, bool vertical) {
         auto ret = new ScrollLayer(rect, scroll, vertical);
         ret->autorelease();
+
         return ret;
     }
     ScrollLayer* ScrollLayer::create(cocos2d::CCSize const& size, bool scroll, bool vertical) {
         return ScrollLayer::create({ 0, 0, size.width, size.height }, scroll, vertical);
     }
-    void ScrollLayer::fixTouchPrio() {
-        auto oldThis = this;
-        if (auto delegate = geode::cast::typeinfo_cast<CCTouchDelegate*>(this)) {
-            if (auto handler = cocos2d::CCTouchDispatcher::get()->findHandler(delegate)) {
-                geode::Loader::get()->queueInMainThread([this, handler, delegate, oldThis]() {
-                    if (oldThis != nullptr && handler != nullptr && delegate != nullptr) {
-                        if (auto dispatcher = cocos2d::CCTouchDispatcher::get()) {
-                            dispatcher->setPriority(handler->m_nPriority - 2, delegate);
-                        }
-                    }
-                });
-            }
-        }
-    }
     void ScrollLayer::touchFinish(cocos2d::CCTouch* touch) {
-        auto touchPoint = cocos2d::CCDirector::sharedDirector()->convertToGL(touch->getLocationInView());
+        auto touchPoint = utils::get<cocos2d::CCDirector>()->convertToGL(touch->getLocationInView());
         if (touch == this->m_touchStart) {
             //auto pvVar1 = (CCMenuItemSpriteExtra *)itemForTouch((CCTouch *)this);
             auto pvVar1 = nullptr;
@@ -168,5 +179,9 @@ namespace eclipse::gui::cocos {
         }
         m_touchStartPosition2 = m_touchPosition2;
         m_touchMoved = false;
+    }
+
+    void ScrollLayer::registerWithTouchDispatcher() {
+        utils::get<cocos2d::CCDirector>()->getTouchDispatcher()->addPrioTargetedDelegate(this, -500, false);
     }
 }

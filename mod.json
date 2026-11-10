@@ -6,33 +6,41 @@
 		"android": "2.2091",
 		"ios": "2.2091"
 	},
-	"version": "v1.0.0-beta.5",
+	"version": "v1.9.4",
 	"id": "eclipse.eclipse-menu",
 	"name": "Eclipse",
 	"links": {
+		"homepage": "https://eclipse.menu",
 		"source": "https://github.com/EclipseMenu/EclipseMenu",
-        "community": "https://discord.gg/NnpwFRDMND"
+		"community": "https://discord.gg/NnpwFRDMND"
 	},
 	"api": { "include": [ "include/*.hpp" ] },
-	"tags": ["cheats", "gameplay", "utility", "customization", "interface"],
-	"developers": ["Eclipse Team", "ninXout", "Prevter", "maxnu", "Firee", "SpaghettDev"],
+	"tags": ["cheat", "gameplay", "utility", "customization", "interface"],
+	"developers": ["Eclipse Team", "ninXout", "prevter", "maxnu", "Firee", "SpaghettDev"],
 	"description": "A next-generation mod menu for Geometry Dash.",
 	"early-load": true,
-	"incompatibilities": {
-		"prevter.openhack": { "version": "*", "breaking": false },
-		"maxnu.gd_mega_overlay": { "version": "*", "breaking": false },
-		"ninxout.crystal_client": { "version": "*", "breaking": false }
-	},
 	"resources": {
 		"files": [
 			"resources/Blur/*.glsl",
 			"resources/Fonts/*.ttf",
 			"resources/Licenses/*.txt",
-			"resources/Themes/*.json"
+			"resources/Themes/*.json",
+			"resources/translations/*.json",
+			"resources/BitmapFonts/font_default*"
 		],
 		"sprites": [
 			"resources/ECLIPSE-android.png"
-		]
+		],
+		"spritesheets": {
+			"emojis": [ "resources/Emojis/*.png" ],
+			"UISheet": [ "resources/UISheet/*.png" ]
+		}
+	},
+	"dependencies": {
+		"dankmeme.globed2": {
+			"version": ">=2.1.4",
+			"required": false
+		}
 	},
 	"settings": {
 		"legacy-render": {
@@ -46,6 +54,24 @@
 			"name": "Reset theme?",
 			"description": "Reset the theme to the default one.",
 			"default": "Reset"
+		},
+		"menu-keybind": {
+			"type": "custom:keybind",
+			"name": "Menu Keybind",
+			"description": "The keybind to open the Eclipse menu.",
+			"platforms": ["win", "mac"]
+		},
+		"menu-style": {
+			"name": "Menu Style",
+			"description": "Choose the style of the Eclipse menu.",
+			"type": "string",
+			"one-of": ["ImGui", "Cocos"],
+			"default": {
+				"win": "ImGui",
+				"mac": "ImGui",
+				"android": "Cocos",
+				"ios": "Cocos"
+			}
 		}
 	}
 }

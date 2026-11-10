@@ -8,7 +8,7 @@ namespace eclipse::gui::blur {
         GLuint fragment = 0;
         GLuint program = 0;
 
-        geode::Result<std::string> compile(const std::filesystem::path& vertexPath, const std::filesystem::path& fragmentPath);
+        geode::Result<std::string> compile(asp::fs::PathView vertexPath, asp::fs::PathView fragmentPath);
         geode::Result<std::string> link();
         void cleanup();
     };
@@ -25,5 +25,7 @@ namespace eclipse::gui::blur {
 
     void init();
     void update(float dt);
+    void toggle(bool enabled);
+    void cleanup(); // cleans up the shader and framebuffer objects (useful when reloading opengl context)
 }
 

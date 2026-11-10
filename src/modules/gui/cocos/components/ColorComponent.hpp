@@ -1,65 +1,50 @@
 #pragma once
 #include "BaseComponentNode.hpp"
-#include "Geode/ui/ColorPickPopup.hpp"
-#include <modules/gui/cocos/popup/options-popup.hpp>
+
+#include <Geode/ui/ColorPickPopup.hpp>
+#include <modules/gui/cocos/nodes/color-picker.hpp>
+#include <modules/gui/components/color.hpp>
 
 namespace eclipse::gui::cocos {
     class ColorComponentNode : public BaseComponentNode<ColorComponentNode, cocos2d::CCMenu, ColorComponent, float> {
     protected:
-        ColorChannelSprite* m_colorSprite = nullptr;
-        CCMenuItemSpriteExtra* m_colorBtn = nullptr;
-        cocos2d::CCLabelBMFont* m_label = nullptr;
+        ColorPicker* m_colorBtn = nullptr;
+        TranslatedLabel* m_label = nullptr;
         CCMenuItemSpriteExtra* m_infoButton = nullptr;
 
-        // Geode 6: ColorPickPopupDelegate dihapus, diganti callback di ColorPickPopup::setCallback
-        void updateColor(cocos2d::ccColor4B const& color) {
-            auto colorValue = eclipse::gui::Color::fromCCColor3B(geode::cocos::to3B(color));
-            m_colorSprite->setColor(geode::cocos::to3B(color));
-            m_component->setValue(colorValue);
-            m_component->triggerCallback(colorValue);
-        };
-
     public:
-        bool init(float width) override {
+        bool init(float width) {
             if (!CCMenu::init()) return false;
 
             this->setID(fmt::format("color-{}"_spr, m_component->getId()));
             this->setContentSize({ width, 28.f });
 
-            // definitely not copied from geode
-            m_colorSprite = ColorChannelSprite::create();
-            m_colorSprite->setScale(0.65F);
-            m_colorBtn = geode::cocos::CCMenuItemExt::createSpriteExtra(m_colorSprite, [this](auto) {
-                /**/
-                auto popup = geode::ColorPickPopup::create(m_component->getValue().toCCColor3B());
-                // Ref menjaga node tetap hidup selama popup warna masih terbuka
-                popup->setCallback([self = geode::Ref<ColorComponentNode>(this)](cocos2d::ccColor4B const& color) {
-                    self->updateColor(color);
-                });
-                popup->show();
+            m_colorBtn = ColorPicker::create(m_component->getValue(), m_component->hasOpacity(), [this](auto color) {
+                m_component->setValue(color);
+                m_component->triggerCallback(color);
             });
 
-            m_colorBtn->setAnchorPoint({ 0.5, 0.5f });
-            m_colorSprite->setColor(m_component->getValue().toCCColor3B());
             this->addChildAtPosition(m_colorBtn, geode::Anchor::Left, { 15.f, 0.f });
 
             auto labelSize = width - 35.f;
             auto offset = 0.f;
 
             if (!m_component->getDescription().empty()) {
-                m_infoButton = geode::cocos::CCMenuItemExt::createSpriteExtraWithFrameName("GJ_infoIcon_001.png", 0.5f, [this](auto) {
-                    FLAlertLayer::create(
-                        m_component->getTitle().c_str(), m_component->getDescription().c_str(), "OK"
-                    )->show();
-                });
+                auto spr = cocos2d::CCSprite::createWithSpriteFrameName("info.png"_spr);
+                spr->setScale(0.35f);
+                m_infoButton = CCMenuItemSpriteExtra::create(
+                    spr, this,
+                    menu_selector(BaseComponentNode::openDescriptionPopup)
+                );
                 m_infoButton->setAnchorPoint({ 0.5, 0.5f });
+                m_infoButton->setColor(ThemeManager::get()->getCheckboxCheckmarkColor().toCCColor3B());
                 this->addChildAtPosition(m_infoButton, geode::Anchor::Right, { offset - 10.f, 0.f });
                 labelSize -= 15.f;
             }
 
-            m_label = cocos2d::CCLabelBMFont::create(m_component->getTitle().c_str(), "bigFont.fnt");
+            m_label = TranslatedLabel::create(m_component->getTitle());
             m_label->setAnchorPoint({0, 0.5f});
-            m_label->limitLabelWidth(labelSize, 0.6f, 0.25f);
+            m_label->limitLabelWidth(labelSize, 1.f, 0.25f);
             this->addChildAtPosition(m_label, geode::Anchor::Left, { 30.f, 0.f });
 
             return true;

@@ -1,16 +1,24 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/button.hpp>
+#include <modules/gui/components/combo.hpp>
+#include <modules/gui/components/input-float.hpp>
+#include <modules/gui/components/label-settings.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
+#include <modules/i18n/translations.hpp>
 
-#include <modules/labels/variables.hpp>
 #include <modules/labels/setting.hpp>
+#include <modules/labels/variables.hpp>
 
-#include <Geode/modify/UILayer.hpp>
 #include <Geode/modify/PlayerObject.hpp>
 #include <Geode/modify/PlayLayer.hpp>
+#include <Geode/modify/UILayer.hpp>
+#include <modules/gui/cocos/cocos.hpp>
+
+#include "Label.hpp"
 
 namespace eclipse::hacks::Labels {
-
     static std::vector<labels::LabelSettings> s_labels;
 
     time_t getTimestamp() {
@@ -21,6 +29,7 @@ namespace eclipse::hacks::Labels {
 
     // timestamps, total clicks (reset on death)
     using ClickInfo = std::pair<std::deque<time_t>, size_t>;
+
     struct ClickStorage {
         ClickInfo jumpClicks;
         ClickInfo leftClicks;
@@ -36,7 +45,7 @@ namespace eclipse::hacks::Labels {
         }
 
         void cleanup() {
-            const auto now = getTimestamp();
+            auto const now = getTimestamp();
             auto removeOld = [now](ClickInfo& info) {
                 while (!info.first.empty() && now - info.first.front() > 1000) {
                     info.first.pop_front();
@@ -62,7 +71,7 @@ namespace eclipse::hacks::Labels {
             reset();
         }
 
-        void addClick(const PlayerButton btn) {
+        void addClick(PlayerButton const btn) {
             ClickInfo* clickInfo;
             switch (btn) {
                 case PlayerButton::Jump:
@@ -74,41 +83,32 @@ namespace eclipse::hacks::Labels {
                 case PlayerButton::Right:
                     clickInfo = &rightClicks;
                     break;
-                default:
-                    return;
+                default: return;
             }
 
             clickInfo->first.push_back(getTimestamp());
             clickInfo->second++;
         }
 
-        int getCPS(const PlayerButton btn) const {
+        int getCPS(PlayerButton const btn) const {
             switch (btn) {
-                case PlayerButton::Jump:
-                    return jumpClicks.first.size();
-                case PlayerButton::Left:
-                    return leftClicks.first.size();
-                case PlayerButton::Right:
-                    return rightClicks.first.size();
-                default:
-                    return 0;
+                case PlayerButton::Jump: return jumpClicks.first.size();
+                case PlayerButton::Left: return leftClicks.first.size();
+                case PlayerButton::Right: return rightClicks.first.size();
+                default: return 0;
             }
         }
 
-        int getMaxCPS(const PlayerButton btn) const {
+        int getMaxCPS(PlayerButton const btn) const {
             switch (btn) {
-                case PlayerButton::Jump:
-                    return jumpMaxCPS;
-                case PlayerButton::Left:
-                    return leftMaxCPS;
-                case PlayerButton::Right:
-                    return rightMaxCPS;
-                default:
-                    return 0;
+                case PlayerButton::Jump: return jumpMaxCPS;
+                case PlayerButton::Left: return leftMaxCPS;
+                case PlayerButton::Right: return rightMaxCPS;
+                default: return 0;
             }
         }
 
-        void updateMaxCPS(const PlayerButton btn) {
+        void updateMaxCPS(PlayerButton const btn) {
             auto cps = getCPS(btn);
             switch (btn) {
                 case PlayerButton::Jump:
@@ -124,19 +124,16 @@ namespace eclipse::hacks::Labels {
             }
         }
 
-        int getClicks(const PlayerButton btn) const {
+        int getClicks(PlayerButton const btn) const {
             switch (btn) {
-                case PlayerButton::Jump:
-                    return jumpClicks.second;
-                case PlayerButton::Left:
-                    return leftClicks.second;
-                case PlayerButton::Right:
-                    return rightClicks.second;
-                default:
-                    return 0;
+                case PlayerButton::Jump: return jumpClicks.second;
+                case PlayerButton::Left: return leftClicks.second;
+                case PlayerButton::Right: return rightClicks.second;
+                default: return 0;
             }
         }
     };
+
     static ClickStorage s_clicksP1;
     static ClickStorage s_clicksP2;
 
@@ -144,11 +141,11 @@ namespace eclipse::hacks::Labels {
         bool pushButton(PlayerButton btn) {
             bool result = PlayerObject::pushButton(btn);
 
-            const auto* gjbgl = GJBaseGameLayer::get();
+            auto const* gjbgl = utils::get<GJBaseGameLayer>();
             if (!gjbgl) return result;
 
-            const bool isP1 = this == gjbgl->m_player1;
-            const bool isP2 = this == gjbgl->m_player2;
+            bool const isP1 = this == gjbgl->m_player1;
+            bool const isP2 = this == gjbgl->m_player2;
 
             if (isP1)
                 s_clicksP1.addClick(btn);
@@ -160,8 +157,8 @@ namespace eclipse::hacks::Labels {
     };
 
     class $modify(LabelsPLHook, PlayLayer) {
-        bool init(GJGameLevel* level, bool unk1) {
-            if (!PlayLayer::init(level, unk1)) return false;
+        bool init(GJGameLevel* level, bool dontCreateObjects) {
+            if (!PlayLayer::init(level, dontCreateObjects)) return false;
 
             // removes the testmode label (thank you mat for this :D)
             if (this->getChildrenCount()) {
@@ -189,168 +186,258 @@ namespace eclipse::hacks::Labels {
         struct Fields {
             cocos2d::CCNode* m_mainContainer;
             std::array<LabelsContainer*, 9> m_containers;
+            std::vector<SmartLabel*> m_absoluteLabels;
+            bool m_isEditor = false;
         };
 
         void createLabels() {
+            auto* fields = m_fields.self();
+
             // Create the containers
             auto alignment = LabelsContainer::Alignment::TopLeft;
-            for (auto& container : m_fields->m_containers) {
+            for (auto& container : fields->m_containers) {
                 container = LabelsContainer::create(alignment);
                 container->setID(fmt::format("label-container-{}", static_cast<int>(alignment)));
-                m_fields->m_mainContainer->addChild(container);
+                fields->m_mainContainer->addChild(container);
                 alignment = static_cast<LabelsContainer::Alignment>(static_cast<int>(alignment) + 1);
             }
 
             // Add the cheat indicator
             {
                 auto* cheatIndicator = SmartLabel::create(".", "bigFont.fnt");
+                if (!cheatIndicator) {
+                    geode::log::error("Failed to create cheat indicator label");
+                    return;
+                }
                 cheatIndicator->setHeightMultiplier(0.37f);
                 cheatIndicator->setID("cheat-indicator"_spr);
-                auto* container = m_fields->m_containers[config::get<int>("labels.cheat-indicator.alignment", 0)];
-                container->addLabel(cheatIndicator, [](SmartLabel* label) {
-                    bool visible = config::get<bool>("labels.cheat-indicator.visible", false);
-
-                    if (!visible /* || (showOnlyCheating && !(isCheating || hasTripped)) */) {
-                        label->setVisible(false);
-                        return;
-                    }
-
-                    bool isCheating = config::getTemp("hasCheats", false);
-                    bool hasTripped = config::getTemp("trippedSafeMode", false);
-                    // bool showOnlyCheating = config::get<bool>("labels.cheat-indicator.only-cheating", false);
-
-                    label->setVisible(true);
-                    label->setScale(config::get<float>("labels.cheat-indicator.scale", 0.5f));
-                    label->setOpacity(static_cast<GLubyte>(config::get<float>("labels.cheat-indicator.opacity", 0.35f) * 255));
-
-                    // Cheating - Red, Tripped - Orange, Normal - Green
-                    auto color = isCheating ? gui::Color::RED : hasTripped ? gui::Color { 0.72f, 0.37f, 0.f } : gui::Color::GREEN;
-                    label->setColor(color.toCCColor3B());
-                });
+                auto* container = fields->m_containers[config::get<int>("labels.cheat-indicator.alignment", 0)];
+                container->addLabel(cheatIndicator);
             }
 
             // Add the labels
             {
                 size_t i = 0;
+                auto winSize = utils::get<cocos2d::CCDirector>()->getWinSize();
                 for (auto& setting : s_labels) {
+                    if (!setting.visible && !setting.hasEvents()) continue; // Skip invisible labels
+
                     auto label = SmartLabel::create(setting.text, setting.font);
                     label->setID(fmt::format("label-{}", i++));
-                    auto* container = m_fields->m_containers[static_cast<int>(setting.alignment)];
-                    container->addLabel(label, [&setting](SmartLabel* label) {
-                        label->setScript(setting.text);
-                        label->setFntFile(setting.font.c_str());
-                        label->setScale(setting.scale);
-                        label->setColor(setting.color.toCCColor3B());
-                        label->setOpacity(static_cast<GLubyte>(setting.color.a * 255));
-                        label->setVisible(setting.visible);
-                    });
+                    label->setScale(setting.scale);
+                    label->setColor(setting.color.toCCColor3B());
+                    label->setOpacity(setting.color.getAlphaByte());
+                    label->setVisible(setting.visible);
+                    label->setAlignment(setting.fontAlignment);
+                    label->setSettings(&setting);
+
+                    if (setting.absolutePosition) {
+                        auto offset = setting.offset;
+                        switch (setting.alignment) {
+                            case LabelsContainer::Alignment::TopLeft:
+                                label->setPosition(offset.x, winSize.height - offset.y);
+                                label->setAnchorPoint({0, 1});
+                                break;
+                            case LabelsContainer::Alignment::TopCenter:
+                                label->setPosition(winSize.width / 2 + offset.x, winSize.height - offset.y);
+                                label->setAnchorPoint({0.5, 1});
+                                break;
+                            case LabelsContainer::Alignment::TopRight:
+                                label->setPosition(winSize.width - offset.x, winSize.height - offset.y);
+                                label->setAnchorPoint({1, 1});
+                                break;
+                            case LabelsContainer::Alignment::CenterLeft:
+                                label->setPosition(offset.x, winSize.height / 2 - offset.y);
+                                label->setAnchorPoint({0, 0.5});
+                                break;
+                            case LabelsContainer::Alignment::Center:
+                                label->setPosition(winSize.width / 2 + offset.x, winSize.height / 2 - offset.y);
+                                label->setAnchorPoint({0.5, 0.5});
+                                break;
+                            case LabelsContainer::Alignment::CenterRight:
+                                label->setPosition(winSize.width - offset.x, winSize.height / 2 - offset.y);
+                                label->setAnchorPoint({1, 0.5});
+                                break;
+                            case LabelsContainer::Alignment::BottomLeft:
+                                label->setPosition(offset.x, offset.y);
+                                label->setAnchorPoint({0, 0});
+                                break;
+                            case LabelsContainer::Alignment::BottomCenter:
+                                label->setPosition(winSize.width / 2 + offset.x, offset.y);
+                                label->setAnchorPoint({0.5, 0});
+                                break;
+                            case LabelsContainer::Alignment::BottomRight:
+                                label->setPosition(winSize.width - offset.x, offset.y);
+                                label->setAnchorPoint({1, 0});
+                                break;
+                        }
+
+                        fields->m_absoluteLabels.push_back(label);
+                        fields->m_mainContainer->addChild(label);
+                    } else {
+                        fields->m_containers[static_cast<int>(setting.alignment)]->addLabel(label);
+                    }
                 }
             }
         }
 
         void realignContainers(bool recreate = false) {
+            auto fields = m_fields.self();
             if (recreate) {
-                m_fields->m_mainContainer->removeAllChildren();
+                fields->m_mainContainer->removeAllChildren();
+                fields->m_absoluteLabels.clear();
                 createLabels();
             }
 
             updateLabels(0.f);
-            for (auto& container : m_fields->m_containers) {
+            for (auto* container : m_fields->m_containers) {
                 container->updateLayout(false);
             }
         }
 
         void updateLabels(float) {
-            bool visible = config::get<bool>("labels.visible", true);
-            if (visible) labels::VariableManager::get().refetch();
-            for (auto& container : m_fields->m_containers) {
-                container->setVisible(visible);
+            auto visible = config::get<"labels.visible", bool>(true);
+            auto showInEditor = config::get<"labels.show-in-editor", bool>();
+
+            auto fields = m_fields.self();
+            bool actualVisibility = visible && (showInEditor || !fields->m_isEditor);
+
+            if (actualVisibility) labels::VariableManager::get().refetch();
+
+            for (auto& container : fields->m_containers) {
+                container->setVisible(actualVisibility);
                 container->update();
+            }
+            for (auto label : fields->m_absoluteLabels) {
+                label->setVisible(actualVisibility);
+                if (actualVisibility) label->update();
             }
         }
 
         bool init(GJBaseGameLayer* bgl) {
             if (!UILayer::init(bgl)) return false;
 
-            m_fields->m_mainContainer = cocos2d::CCNode::create();
-            m_fields->m_mainContainer->setID("label-containers"_spr);
+            auto fields = m_fields.self();
+            fields->m_isEditor = geode::cast::typeinfo_cast<LevelEditorLayer*>(bgl) != nullptr;
+            fields->m_mainContainer = cocos2d::CCNode::create();
+            fields->m_mainContainer->setID("label-containers"_spr);
 
             createLabels();
 
             // Update layouts for containers
-            geode::queueInMainThread([this]{
+            geode::queueInMainThread([this] {
                 updateLabels(0.f);
                 for (auto& container : m_fields->m_containers) {
                     container->updateLayout(false);
                 }
             });
 
-            this->addChild(m_fields->m_mainContainer, 1000);
+            this->addChild(fields->m_mainContainer, 1000);
             this->schedule(schedule_selector(LabelsUILHook::updateLabels));
 
             return true;
         }
     };
 
-    class Labels : public hack::Hack {
+    class $hack(Labels) {
         static void updateLabels(bool recreate = false) {
-            auto* gjbgl = GJBaseGameLayer::get();
-            if (!gjbgl) return;
-
-            auto* layer = gjbgl->m_uiLayer;
+            auto* layer = utils::get<UILayer>();
             if (!layer) return;
 
             auto* labelsLayer = reinterpret_cast<LabelsUILHook*>(layer);
             labelsLayer->realignContainers(recreate);
         }
 
+        static void refreshCocosUI() {
+            if (auto cocos = gui::cocos::CocosRenderer::get()) {
+                cocos->refreshPage();
+            }
+        }
+
+        static std::vector<labels::LabelSettings> const DEFAULT_LABELS;
+
         void init() override {
-            auto tab = gui::MenuTab::find("Labels");
+            auto tab = gui::MenuTab::find("tab.labels");
             config::setIfEmpty("labels.visible", true);
             config::setIfEmpty("labels.cheat-indicator.endscreen", true);
             config::setIfEmpty("labels.cheat-indicator.scale", 0.5f);
             config::setIfEmpty("labels.cheat-indicator.opacity", 0.35f);
 
-            s_labels = config::get<std::vector<labels::LabelSettings>>("labels", {
-                {"Testmode", "{isTestMode ?? 'Testmode'}", false},
-                {"Attempt", "Attempt {attempt}", false},
-                {"Percentage", "{isPlatformer ? time : progress + '%'}", false},
-                {"Level Time", "{time}", false},
-                {"Best Run", "Best run: {runFrom}-{bestRun}%", false},
-                {"Clock", "{clock}", false},
-                {"FPS", "FPS: {round(fps)}", false},
-                {"CPS", "{cps}/{clicks}/{maxCps} CPS", false}, // TODO: Add click trigger
-                {"Noclip Accuracy", "{ noclip ?? 'Accuracy: ' + noclipAccuracy + '%'}", false}, // TODO: Add death trigger
-                {"Noclip Deaths", "{ noclip ?? 'Deaths: ' + noclipDeaths}", false},
+            s_labels = config::get<std::vector<labels::LabelSettings>>("labels", DEFAULT_LABELS);
+
+            tab->addToggle("labels.visible")
+               ->callback([](bool) { updateLabels(); })
+               ->setDescription()
+               ->handleKeybinds();
+            tab->addToggle("labels.show-in-editor")
+               ->callback([](bool) { updateLabels(); })
+               ->setDescription()
+               ->handleKeybinds();
+            tab->addToggle("labels.cheat-indicator.visible")
+               ->callback([](bool) { updateLabels(); })
+               ->setDescription()
+               ->handleKeybinds()
+               ->addOptions([](auto options) {
+                   options->addToggle("labels.cheat-indicator.endscreen")
+                          ->setDescription();
+                   options->addToggle("labels.cheat-indicator.only-cheating")
+                          ->setDescription();
+                   options->addInputFloat("labels.cheat-indicator.scale", 0.1f, 2.f, "%.1f")
+                          ->setDescription()
+                          ->callback([](float) { updateLabels(); });
+                   options->addInputFloat("labels.cheat-indicator.opacity", 0.f, 1.f, "%.2f")
+                          ->setDescription();
+                   options->addCombo("labels.cheat-indicator.alignment", {
+                              i18n::get_("labels.alignment.top-left"),
+                              i18n::get_("labels.alignment.top-center"),
+                              i18n::get_("labels.alignment.top-right"),
+                              i18n::get_("labels.alignment.center-left"),
+                              i18n::get_("labels.alignment.center"),
+                              i18n::get_("labels.alignment.center-right"),
+                              i18n::get_("labels.alignment.bottom-left"),
+                              i18n::get_("labels.alignment.bottom-center"),
+                              i18n::get_("labels.alignment.bottom-right"),
+                          }, 2
+                      )->callback([](int) { updateLabels(true); })
+                      ->setDescription();
+               });
+            tab->addButton("labels.import")->callback([this] {
+                geode::utils::file::FilePickOptions::Filter filter;
+                filter.description = "Eclipse Label (*.ecl)";
+                filter.files.insert("*.ecl");
+
+                geode::async::spawn(
+                    geode::utils::file::pick(
+                        geode::utils::file::PickMode::OpenFile,
+                        {geode::Mod::get()->getSaveDir(), {std::move(filter)}}
+                    ),
+                    [this](geode::utils::file::PickResult res) {
+                        if (!res) return;
+                        auto pathOpt = std::move(res).unwrapOr(std::nullopt);
+                        if (!pathOpt.has_value()) return;
+
+                        auto path = std::move(pathOpt).value();
+                        if (!path.exists()) return;
+
+                        gui::Engine::queueAfterDrawing([this, path = std::move(path)] {
+                            auto res = geode::utils::file::readFromJson<labels::LabelSettings>(path);
+                            if (!res) {
+                                return Popup::create(
+                                    i18n::get_("labels.import-failed"),
+                                    i18n::get_("labels.import-failed.msg")
+                                );
+                            }
+
+                            s_labels.emplace_back(std::move(res).unwrap());
+                            config::set("labels", s_labels);
+                            updateLabels(true);
+                            createLabelComponent();
+                        });
+                    }
+                );
             });
-
-            tab->addToggle("Show Labels", "labels.visible")
-                ->setDescription("Toggles the visibility of the labels.")
-                ->handleKeybinds();
-            tab->addToggle("Cheat Indicator", "labels.cheat-indicator.visible")
-                ->callback([](bool) { updateLabels(); })
-                ->setDescription("Shows a red indicator if you have any cheats enabled.")
-                ->handleKeybinds()
-                ->addOptions([](std::shared_ptr<gui::MenuTab> options) {
-                    options->addToggle("Show on Endscreen", "labels.cheat-indicator.endscreen")
-                        ->setDescription("Shows the cheat indicator on the level end screen.");
-                    // options->addToggle("Show only Cheating", "labels.cheat-indicator.only-cheating")
-                    //     ->setDescription("Hides the cheat indicator if you're not cheating.");
-                    options->addInputFloat("Scale", "labels.cheat-indicator.scale", 0.1f, 2.f, "%.1f")
-                        ->setDescription("The scale of the cheat indicator.")
-                        ->callback([](float) { updateLabels(); });
-                    options->addInputFloat("Opacity", "labels.cheat-indicator.opacity", 0.f, 1.f, "%.2f")
-                        ->setDescription("The opacity of the cheat indicator.");
-                    options->addCombo("Alignment", "labels.cheat-indicator.alignment", {
-                        "Top Left", "Top Center", "Top Right",
-                        "Center Left", "Center", "Center Right",
-                        "Bottom Left", "Bottom Center", "Bottom Right"
-                    }, 2)->callback([](int) { updateLabels(true); })
-                         ->setDescription("The alignment of the cheat indicator.");
-                });
-
-            tab->addButton("Add New")->callback([this]{
-                gui::Engine::queueAfterDrawing([&](){
+            tab->addButton("labels.add-new")->callback([this] {
+                gui::Engine::queueAfterDrawing([this] {
                     labels::LabelSettings newSetting;
                     if (!s_labels.empty()) {
                         // Copy some settings from existing labels
@@ -367,6 +454,24 @@ namespace eclipse::hacks::Labels {
                     createLabelComponent();
                 });
             });
+            std::vector<std::string> presets;
+            presets.reserve(DEFAULT_LABELS.size());
+            for (auto const& preset : DEFAULT_LABELS) {
+                presets.push_back(preset.name);
+            }
+            tab->addCombo("labels.presets", presets, 0)
+               ->callback([this](int value) {
+                   if (value < 0 || value >= DEFAULT_LABELS.size()) return;
+                   gui::Engine::queueAfterDrawing([this, value] {
+                       auto preset = DEFAULT_LABELS[value];
+                       preset.id = labels::LabelSettings::instanceCount++;
+                       preset.visible = true;
+                       s_labels.push_back(std::move(preset));
+                       config::set("labels", s_labels);
+                       updateLabels(true);
+                       createLabelComponent();
+                   });
+               });
             createLabelComponent();
         }
 
@@ -379,61 +484,61 @@ namespace eclipse::hacks::Labels {
             // player 1
             {
                 s_clicksP1.cleanup();
-                const auto jumpTotal = s_clicksP1.getClicks(PlayerButton::Jump);
-                const auto leftTotal = s_clicksP1.getClicks(PlayerButton::Left);
-                const auto rightTotal = s_clicksP1.getClicks(PlayerButton::Right);
-                const auto jumpCPS = s_clicksP1.getCPS(PlayerButton::Jump);
-                const auto leftCPS = s_clicksP1.getCPS(PlayerButton::Left);
-                const auto rightCPS = s_clicksP1.getCPS(PlayerButton::Right);
-                const auto maxJumpCPS = s_clicksP1.getMaxCPS(PlayerButton::Jump);
-                const auto maxLeftCPS = s_clicksP1.getMaxCPS(PlayerButton::Left);
-                const auto maxRightCPS = s_clicksP1.getMaxCPS(PlayerButton::Right);
-                manager.setVariable("cps1", rift::Value::from(jumpCPS));
-                manager.setVariable("cps2", rift::Value::from(leftCPS));
-                manager.setVariable("cps3", rift::Value::from(rightCPS));
-                manager.setVariable("clicks1", rift::Value::from(jumpTotal));
-                manager.setVariable("clicks2", rift::Value::from(leftTotal));
-                manager.setVariable("clicks3", rift::Value::from(rightTotal));
-                manager.setVariable("maxCps1", rift::Value::from(maxJumpCPS));
-                manager.setVariable("maxCps2", rift::Value::from(maxLeftCPS));
-                manager.setVariable("maxCps3", rift::Value::from(maxRightCPS));
-                manager.setVariable("cps", rift::Value::from(jumpCPS + leftCPS + rightCPS));
-                manager.setVariable("clicks", rift::Value::from(jumpTotal + leftTotal + rightTotal));
-                manager.setVariable("maxCps", rift::Value::from(maxJumpCPS + maxLeftCPS + maxRightCPS));
+                auto const jumpTotal = s_clicksP1.getClicks(PlayerButton::Jump);
+                auto const leftTotal = s_clicksP1.getClicks(PlayerButton::Left);
+                auto const rightTotal = s_clicksP1.getClicks(PlayerButton::Right);
+                auto const jumpCPS = s_clicksP1.getCPS(PlayerButton::Jump);
+                auto const leftCPS = s_clicksP1.getCPS(PlayerButton::Left);
+                auto const rightCPS = s_clicksP1.getCPS(PlayerButton::Right);
+                auto const maxJumpCPS = s_clicksP1.getMaxCPS(PlayerButton::Jump);
+                auto const maxLeftCPS = s_clicksP1.getMaxCPS(PlayerButton::Left);
+                auto const maxRightCPS = s_clicksP1.getMaxCPS(PlayerButton::Right);
+                manager.setVariable("cps1", jumpCPS);
+                manager.setVariable("cps2", leftCPS);
+                manager.setVariable("cps3", rightCPS);
+                manager.setVariable("clicks1", jumpTotal);
+                manager.setVariable("clicks2", leftTotal);
+                manager.setVariable("clicks3", rightTotal);
+                manager.setVariable("maxCps1", maxJumpCPS);
+                manager.setVariable("maxCps2", maxLeftCPS);
+                manager.setVariable("maxCps3", maxRightCPS);
+                manager.setVariable("cps", jumpCPS + leftCPS + rightCPS);
+                manager.setVariable("clicks", jumpTotal + leftTotal + rightTotal);
+                manager.setVariable("maxCps", maxJumpCPS + maxLeftCPS + maxRightCPS);
             }
 
             // player 2
             {
                 s_clicksP2.cleanup();
-                const auto jumpTotal = s_clicksP2.getClicks(PlayerButton::Jump);
-                const auto leftTotal = s_clicksP2.getClicks(PlayerButton::Left);
-                const auto rightTotal = s_clicksP2.getClicks(PlayerButton::Right);
-                const auto jumpCPS = s_clicksP2.getCPS(PlayerButton::Jump);
-                const auto leftCPS = s_clicksP2.getCPS(PlayerButton::Left);
-                const auto rightCPS = s_clicksP2.getCPS(PlayerButton::Right);
-                const auto maxJumpCPS = s_clicksP2.getMaxCPS(PlayerButton::Jump);
-                const auto maxLeftCPS = s_clicksP2.getMaxCPS(PlayerButton::Left);
-                const auto maxRightCPS = s_clicksP2.getMaxCPS(PlayerButton::Right);
-                manager.setVariable("cps1P2", rift::Value::from(jumpCPS));
-                manager.setVariable("cps2P2", rift::Value::from(leftCPS));
-                manager.setVariable("cps3P2", rift::Value::from(rightCPS));
-                manager.setVariable("clicks1P2", rift::Value::from(jumpTotal));
-                manager.setVariable("clicks2P2", rift::Value::from(leftTotal));
-                manager.setVariable("clicks3P2", rift::Value::from(rightTotal));
-                manager.setVariable("maxCps1P2", rift::Value::from(maxJumpCPS));
-                manager.setVariable("maxCps2P2", rift::Value::from(maxLeftCPS));
-                manager.setVariable("maxCps3P2", rift::Value::from(maxRightCPS));
-                manager.setVariable("cpsP2", rift::Value::from(jumpCPS + leftCPS + rightCPS));
-                manager.setVariable("clicksP2", rift::Value::from(jumpTotal + leftTotal + rightTotal));
-                manager.setVariable("maxCpsP2", rift::Value::from(maxJumpCPS + maxLeftCPS + maxRightCPS));
+                auto const jumpTotal = s_clicksP2.getClicks(PlayerButton::Jump);
+                auto const leftTotal = s_clicksP2.getClicks(PlayerButton::Left);
+                auto const rightTotal = s_clicksP2.getClicks(PlayerButton::Right);
+                auto const jumpCPS = s_clicksP2.getCPS(PlayerButton::Jump);
+                auto const leftCPS = s_clicksP2.getCPS(PlayerButton::Left);
+                auto const rightCPS = s_clicksP2.getCPS(PlayerButton::Right);
+                auto const maxJumpCPS = s_clicksP2.getMaxCPS(PlayerButton::Jump);
+                auto const maxLeftCPS = s_clicksP2.getMaxCPS(PlayerButton::Left);
+                auto const maxRightCPS = s_clicksP2.getMaxCPS(PlayerButton::Right);
+                manager.setVariable("cps1P2", jumpCPS);
+                manager.setVariable("cps2P2", leftCPS);
+                manager.setVariable("cps3P2", rightCPS);
+                manager.setVariable("clicks1P2", jumpTotal);
+                manager.setVariable("clicks2P2", leftTotal);
+                manager.setVariable("clicks3P2", rightTotal);
+                manager.setVariable("maxCps1P2", maxJumpCPS);
+                manager.setVariable("maxCps2P2", maxLeftCPS);
+                manager.setVariable("maxCps3P2", maxRightCPS);
+                manager.setVariable("cpsP2", jumpCPS + leftCPS + rightCPS);
+                manager.setVariable("clicksP2", jumpTotal + leftTotal + rightTotal);
+                manager.setVariable("maxCpsP2", maxJumpCPS + maxLeftCPS + maxRightCPS);
             }
         }
 
-        [[nodiscard]] const char* getId() const override { return "Labels"; }
+        [[nodiscard]] char const* getId() const override { return "Labels"; }
 
         void createLabelComponent() {
-            auto tab = gui::MenuTab::find("Labels");
-            for (const auto& toggle : m_labelToggles) {
+            auto tab = gui::MenuTab::find("tab.labels");
+            for (auto toggle : m_labelToggles) {
                 tab->removeComponent(toggle);
             }
 
@@ -441,55 +546,121 @@ namespace eclipse::hacks::Labels {
             for (auto& setting : s_labels) {
                 auto toggle = tab->addLabelSetting(&setting);
                 toggle->deleteCallback([this, &setting] {
-                    gui::Engine::queueAfterDrawing([&](){
-                        auto it = std::ranges::find_if(s_labels, [&setting](const labels::LabelSettings& s) {
-                            return s.id == setting.id;
-                        });
+                          Popup::create(
+                              i18n::get_("labels.delete-prompt"),
+                              i18n::get_("labels.delete-prompt.msg"),
+                              i18n::get_("common.yes"),
+                              i18n::get_("common.no"),
+                              [this, &setting](bool yes) {
+                                  if (!yes) return;
+                                  gui::Engine::queueAfterDrawing(
+                                      [&] {
+                                          auto it = std::ranges::find_if(
+                                              s_labels, [&setting](labels::LabelSettings const& s) {
+                                                  return s.id == setting.id;
+                                              }
+                                          );
 
-                        if (it == s_labels.end()) return;
+                                          if (it == s_labels.end()) return;
 
-                        s_labels.erase(it);
-                        config::set("labels", s_labels);
-                        updateLabels(true);
-                        createLabelComponent();
-                    });
-                })
-                ->editCallback([]{
-                    config::set("labels", s_labels);
-                    updateLabels(true);
-                })
-                ->moveCallback([this, &setting](bool up) {
-                    auto it = std::ranges::find_if(s_labels, [&setting](const labels::LabelSettings& s) {
-                        return s.id == setting.id;
-                    });
+                                          s_labels.erase(it);
+                                          config::set("labels", s_labels);
+                                          updateLabels(true);
+                                          createLabelComponent();
+                                      }
+                                  );
+                              }
+                          );
+                      })
+                      ->editCallback([] {
+                          config::set("labels", s_labels);
+                          updateLabels(true);
+                      })
+                      ->exportCallback([&setting] {
+                          setting.promptSave();
+                      })
+                      ->moveCallback([this, &setting](bool up) {
+                          auto it = std::ranges::find_if(
+                              s_labels, [&setting](labels::LabelSettings const& s) {
+                                  return s.id == setting.id;
+                              }
+                          );
 
-                    if (it == s_labels.end())
-                        return; // should never happen but just in case
-                    if ((up && it == s_labels.begin()) || (!up && it == s_labels.end() - 1))
-                        return; // index out of bounds
+                          if (it == s_labels.end())
+                              return; // should never happen but just in case
+                          if ((up && it == s_labels.begin()) || (!up && it == s_labels.end() - 1))
+                              return; // index out of bounds
 
-                    // swap the elements
-                    auto index = std::distance(s_labels.begin(), it);
-                    auto newIndex = up ? index - 1 : index + 1;
-                    std::iter_swap(it, s_labels.begin() + newIndex);
+                          // swap the elements
+                          auto index = std::distance(s_labels.begin(), it);
+                          auto newIndex = up ? index - 1 : index + 1;
+                          std::iter_swap(it, s_labels.begin() + newIndex);
 
-                    // update the config
-                    config::set("labels", s_labels);
-                    updateLabels(true);
+                          // update the config
+                          config::set("labels", s_labels);
+                          updateLabels(true);
 
-                    // refresh ui
-                    gui::Engine::queueAfterDrawing([this]{
-                        createLabelComponent();
-                    });
-                });
+                          // refresh ui
+                          gui::Engine::queueAfterDrawing([this] {
+                              createLabelComponent();
+                          });
+                      })
+                      ->handleKeybinds();
 
                 m_labelToggles.push_back(toggle);
             }
+
+            refreshCocosUI();
         }
 
-        std::vector<std::shared_ptr<gui::LabelSettingsComponent>> m_labelToggles;
-
+        std::vector<gui::LabelSettingsComponent*> m_labelToggles;
     };
+
+    std::vector<labels::LabelSettings> const Labels::DEFAULT_LABELS = {
+        {"FPS", "FPS: {round(fps)}", false},
+        {"Testmode", "{isPracticeMode ? emojis.practice + 'Practice' : isTestMode ?? emojis.startPos + 'Testmode'}", false},
+        {"Run From", "{!isPlatformer && (isPracticeMode || isTestMode) ?? 'From: ' + floor(runStart) + '%'}", false},
+        {"Attempt", "Attempt {attempt}", false},
+        {"Percentage", "{isPlatformer ? time : progress + '%'}", false},
+        {"Level Time", "{time}", false},
+        {"Best Run", "Best run: {runFrom}-{bestRun}%", false},
+        {"Clock", "{clock}", false},
+        {
+            "CPS", "{cps}/{clicks}/{maxCps} CPS", false,
+            false, 0.35f, gui::Color(1.f, 1.f, 1.f, 0.3f),
+            "bigFont.fnt", LabelsContainer::Alignment::TopLeft,
+            BMFontAlignment::Left, {0, 0}, {{
+                true, labels::LabelEvent::Type::OnButtonHold,
+                "", std::nullopt, std::nullopt,
+                gui::Color(0, 1, 0), 0.6f, std::nullopt,
+                0.f, 0.f, 0.1f
+            }}
+        },
+        {
+            "Noclip Accuracy", "{ noclip ?? $'Accuracy: {noclipAccuracy}%'}", false,
+            false, 0.35f, gui::Color(1.f, 1.f, 1.f, 0.3f),
+            "bigFont.fnt", LabelsContainer::Alignment::TopLeft,
+            BMFontAlignment::Left, {0, 0}, {{
+                true, labels::LabelEvent::Type::OnNoclipDeath,
+                "", std::nullopt, std::nullopt,
+                gui::Color(1, 0, 0), 0.6f, std::nullopt,
+                0.f, 0.f, 0.1f
+            }}
+        },
+        {
+            "Noclip Deaths", "{ noclip ?? 'Deaths: ' + noclipDeaths}", false,
+            false, 0.35f, gui::Color(1.f, 1.f, 1.f, 0.3f),
+            "bigFont.fnt", LabelsContainer::Alignment::TopLeft,
+            BMFontAlignment::Left, {0, 0}, {{
+                true, labels::LabelEvent::Type::OnNoclipDeath,
+                "", std::nullopt, std::nullopt,
+                gui::Color(1, 0, 0), 0.6f, std::nullopt,
+                0.f, 0.f, 0.1f
+            }}
+        },
+    };
+
+
 
     REGISTER_HACK(Labels)
 }

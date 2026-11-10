@@ -9,7 +9,7 @@ namespace eclipse::gui::animation {
         auto modeIndex = static_cast<size_t>(mode);
 
         // Check if not out-of-bounds
-        if (easingIndex > 10 || modeIndex > 2)
+        if (easingIndex > std::size(EASING_FUNCTIONS) - 1 || modeIndex > std::size(EASING_FUNCTIONS[0]) - 1)
             return easing::linear;
 
         return EASING_FUNCTIONS[easingIndex][modeIndex];
@@ -150,7 +150,7 @@ namespace eclipse::gui::animation {
             if (t == 0.0 || t == 1.0)
                 return t;
 
-            const double c4 = (2 * std::numbers::pi) / 3;
+            double const c4 = (2 * std::numbers::pi) / 3;
             return -pow(2.0, 10.0 * t - 10.0) * sin((t * 10.0 - 10.75) * c4);
         }
 
@@ -158,7 +158,7 @@ namespace eclipse::gui::animation {
             if (t == 0.0 || t == 1.0)
                 return t;
 
-            const double c4 = (2 * std::numbers::pi) / 3;
+            double const c4 = (2 * std::numbers::pi) / 3;
             return pow(2.0, -10.0 * t) * sin((t * 10.0 - 0.75) * c4) + 1.0;
         }
 
@@ -179,8 +179,8 @@ namespace eclipse::gui::animation {
         }
 
         double easeOutBounce(double t) {
-            const double n1 = 7.5625;
-            const double d1 = 2.75;
+            double const n1 = 7.5625;
+            double const d1 = 2.75;
 
             if (t < 1.0 / d1)
                 return n1 * t * t;
@@ -203,4 +203,30 @@ namespace eclipse::gui::animation {
             return (1.0 + easeOutBounce(2.0 * t - 1.0)) / 2.0;
         }
     }
+}
+
+geode::Result<eclipse::gui::animation::Easing> matjson::Serialize<eclipse::gui::animation::Easing>::fromJson(
+    Value const& value
+) {
+    GEODE_UNWRAP_INTO(auto n, value.asUInt());
+    return geode::Ok(static_cast<eclipse::gui::animation::Easing>(n));
+}
+
+matjson::Value matjson::Serialize<eclipse::gui::animation::Easing>::toJson(
+    eclipse::gui::animation::Easing const& easing
+) {
+    return static_cast<unsigned int>(easing);
+}
+
+geode::Result<eclipse::gui::animation::EasingMode> matjson::Serialize<eclipse::gui::animation::EasingMode>::fromJson(
+    Value const& value
+) {
+    GEODE_UNWRAP_INTO(auto n, value.asUInt());
+    return geode::Ok(static_cast<eclipse::gui::animation::EasingMode>(n));
+}
+
+matjson::Value matjson::Serialize<eclipse::gui::animation::EasingMode>::toJson(
+    eclipse::gui::animation::EasingMode const& mode
+) {
+    return static_cast<unsigned int>(mode);
 }

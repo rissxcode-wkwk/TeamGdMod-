@@ -1,27 +1,27 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/GameObject.hpp>
-#include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/LevelEditorLayer.hpp>
 #include <Geode/modify/OBB2D.hpp>
+#include <Geode/modify/PlayLayer.hpp>
 
 namespace eclipse::hacks::Level {
-
     static GameObject* s_rotatedGameObject = nullptr;
     static std::deque<GameObject*> s_affectedGameObjects;
 
     float getMultiplier(GameObject* gameObject) {
-        if (!GJBaseGameLayer::get())
+        if (!utils::get<GJBaseGameLayer>())
             return 1.f;
 
-        if ((gameObject == GJBaseGameLayer::get()->m_player1 || gameObject == GJBaseGameLayer::get()->m_player2))
-            return config::get<float>("level.hitbox_multiplier.player", 1.f);
-        else if (gameObject->m_objectType == GameObjectType::Hazard || gameObject->m_objectType == GameObjectType::AnimatedHazard)
-            return config::get<float>("level.hitbox_multiplier.hazard", 1.f);
-        else if (gameObject->m_objectType == GameObjectType::Solid || gameObject->m_objectType == GameObjectType::Slope)
-            return config::get<float>("level.hitbox_multiplier.solid", 1.f);
+        if ((gameObject == utils::get<GJBaseGameLayer>()->m_player1 || gameObject == utils::get<GJBaseGameLayer>()->m_player2))
+            return config::get<double>("level.hitbox_multiplier.player", 1.f);
+        if (gameObject->m_objectType == GameObjectType::Hazard || gameObject->m_objectType == GameObjectType::AnimatedHazard)
+            return config::get<double>("level.hitbox_multiplier.hazard", 1.f);
+        if (gameObject->m_objectType == GameObjectType::Solid || gameObject->m_objectType == GameObjectType::Slope)
+            return config::get<double>("level.hitbox_multiplier.solid", 1.f);
 
         return 1.f;
     }
@@ -65,35 +65,34 @@ namespace eclipse::hacks::Level {
         s_rotatedGameObject = nullptr;
     }
 
-    class HitboxMultiplier : public hack::Hack {
+    class $hack(HitboxMultiplier) {
         void init() override {
-            auto tab = gui::MenuTab::find("Level");
+            auto tab = gui::MenuTab::find("tab.level");
 
             config::setIfEmpty("level.hitbox_multiplier", false);
             config::setIfEmpty("level.hitbox_multiplier.player", 1.f);
             config::setIfEmpty("level.hitbox_multiplier.solid", 1.f);
             config::setIfEmpty("level.hitbox_multiplier.hazard", 1.f);
 
-            tab->addToggle("Hitbox Multiplier", "level.hitbox_multiplier")
-                ->handleKeybinds()
-                ->callback([](bool){forceHitboxRecalculation();})
-                ->addOptions([] (std::shared_ptr<gui::MenuTab> options) {
-                    options->addInputFloat("Player Multiplier", "level.hitbox_multiplier.player", 0.01f, 10.f, "%.2fx");
-                    options->addInputFloat("Solid Multiplier", "level.hitbox_multiplier.solid", 0.01f, 10.f, "%.2fx");
-                    options->addInputFloat("Hazard Multiplier", "level.hitbox_multiplier.hazard", 0.01f, 10.f, "%.2fx");
-                });
+            tab->addToggle("level.hitbox_multiplier")->handleKeybinds()->setDescription()
+               ->callback([](bool) { forceHitboxRecalculation(); })
+               ->addOptions([](auto options) {
+                   options->addInputFloat("level.hitbox_multiplier.player", 0.f, 10.f, "%.2fx");
+                   options->addInputFloat("level.hitbox_multiplier.solid", 0.f, 10.f, "%.2fx");
+                   options->addInputFloat("level.hitbox_multiplier.hazard", 0.f, 10.f, "%.2fx");
+               });
         }
 
-        [[nodiscard]] bool isCheating() override { return config::get<bool>("level.hitbox_multiplier", false); }
+        [[nodiscard]] bool isCheating() const override { return config::get<"level.hitbox_multiplier", bool>(); }
         [[nodiscard]] const char* getId() const override { return "Hitbox Multiplier"; }
     };
 
     REGISTER_HACK(HitboxMultiplier)
 
     class $modify(HitboxMultiplierPLHook, PlayLayer) {
-        bool init(GJGameLevel* level, bool unk) {
+        bool init(GJGameLevel* level, bool dontCreateObjects) {
             reset();
-            return PlayLayer::init(level, unk);
+            return PlayLayer::init(level, dontCreateObjects);
         }
 
         void resetLevel() {
@@ -123,7 +122,7 @@ namespace eclipse::hacks::Level {
 
     class $modify(HitboxMultiplierOBB2DHook, OBB2D) {
         void calculateWithCenter(cocos2d::CCPoint center, float width, float heigth, float rotation) {
-            if (!GJBaseGameLayer::get() || !config::get<bool>("level.hitbox_multiplier", false) || !s_rotatedGameObject) {
+            if (!s_rotatedGameObject || !utils::get<GJBaseGameLayer>() || !config::get<bool>("level.hitbox_multiplier", false)) {
                 s_rotatedGameObject = nullptr;
                 return OBB2D::calculateWithCenter(center, width, heigth, rotation);
             }
@@ -132,7 +131,7 @@ namespace eclipse::hacks::Level {
 
             float multiplier = getMultiplier(s_rotatedGameObject);
             OBB2D::calculateWithCenter(center, width * multiplier, heigth * multiplier, rotation);
-            
+
             s_rotatedGameObject = nullptr;
         }
     };

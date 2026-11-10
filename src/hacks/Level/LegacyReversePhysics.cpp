@@ -1,49 +1,48 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
-#include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/LevelSettingsObject.hpp>
+#include <Geode/modify/PlayLayer.hpp>
 
 namespace eclipse::hacks::Level {
-
     class $modify(LegacyPhysicsPlayLayer, PlayLayer) {
         struct Fields {
             bool originalFixGravityVal = false;
         };
 
         void toggleFixGravityBugState(bool newState) {
-            m_levelSettings->m_fixGravityBug = newState ? false : m_fields->originalFixGravityVal; 
+            m_levelSettings->m_fixGravityBug = newState ? false : m_fields->originalFixGravityVal;
         }
 
-        bool init(GJGameLevel *level, bool useReplay) {
-            if (!PlayLayer::init(level, useReplay)) return false;
+        bool init(GJGameLevel* level, bool dontCreateObjects) {
+            if (!PlayLayer::init(level, dontCreateObjects)) return false;
             m_fields->originalFixGravityVal = m_levelSettings->m_fixGravityBug;
             if (config::get<bool>("level.legacyreversephysics", false))
                 m_levelSettings->m_fixGravityBug = false;
             return true;
         }
     };
-    
-    class LegacyReversePhysics : public hack::Hack {
-        void init() override {
-            auto tab = gui::MenuTab::find("Level");
 
-            tab->addToggle("Legacy Reverse Physics", "level.legacyreversephysics")
-                ->handleKeybinds()
-                ->setDescription("Forces old upside down physics among other old physics changes.")
-                ->callback([](bool newState){
-                    if (auto pl = PlayLayer::get()) {
-                        static_cast<LegacyPhysicsPlayLayer*>(pl)->toggleFixGravityBugState(newState);
-                    }
-                });
+    class $hack(LegacyReversePhysics) {
+        void init() override {
+            auto tab = gui::MenuTab::find("tab.level");
+
+            tab->addToggle("level.legacyreversephysics")->handleKeybinds()->setDescription()
+               ->callback([](bool newState) {
+                   if (auto pl = utils::get<PlayLayer>()) {
+                       static_cast<LegacyPhysicsPlayLayer*>(pl)->toggleFixGravityBugState(newState);
+                   }
+               });
         }
 
         //player would be cheating only if level is new physics and legacy physics is active
         //otherwise the hack being on doesn't matter
-        [[nodiscard]] bool isCheating() override {
-            if (!config::get<bool>("level.legacyreversephysics", false)) return false;
-            auto pl = PlayLayer::get();
+        [[nodiscard]] bool isCheating() const override {
+            auto legacyPhysics = config::get<"level.legacyreversephysics", bool>();
+            if (!legacyPhysics) return false;
+            auto pl = utils::get<PlayLayer>();
             if (!pl) return false;
 
             return static_cast<LegacyPhysicsPlayLayer*>(pl)->m_fields->originalFixGravityVal;

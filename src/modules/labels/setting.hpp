@@ -1,13 +1,21 @@
 #pragma once
 #include <hacks/Labels/LabelContainer.hpp>
+#include <modules/gui/color.hpp>
+#include "events.hpp"
+
+enum class BMFontAlignment;
 
 namespace eclipse::labels {
     using LabelsContainer = hacks::Labels::LabelsContainer;
 
-    const std::array<const char*, 9> alignmentNames = {
+    inline static std::array alignmentNames = {
         "Top Left", "Top Center", "Top Right",
         "Center Left", "Center", "Center Right",
         "Bottom Left", "Bottom Center", "Bottom Right"
+    };
+
+    inline static std::array fontAlignmentNames = {
+        "Left", "Center", "Right"
     };
 
     constexpr std::array fontFiles = {
@@ -26,7 +34,7 @@ namespace eclipse::labels {
         "gjFont46.fnt", "gjFont47.fnt", "gjFont48.fnt", "gjFont49.fnt",
         "gjFont50.fnt", "gjFont51.fnt", "gjFont52.fnt", "gjFont53.fnt",
         "gjFont54.fnt", "gjFont55.fnt", "gjFont56.fnt", "gjFont57.fnt",
-        "gjFont58.fnt", "gjFont59.fnt",
+        "gjFont58.fnt", "gjFont59.fnt", "font_default.fnt"_spr
     };
 
     constexpr std::array fontNames = {
@@ -45,10 +53,10 @@ namespace eclipse::labels {
         "Foul Fiend", "Nandaka Western", "Evil Empire", "Comical Cartoon",
         "Carton Six", "aAssassinNinja", "Public Pixel", "New Walt Disney UI",
         "Random 5", "Crafting Lesson", "Game Of Squids", "Monster Game",
-        "Lo-Sumires", "Gewtymol",
+        "Lo-Sumires", "Gewtymol", "Rubik"
     };
 
-    inline int32_t getFontIndex(const std::string& font) {
+    inline int32_t getFontIndex(std::string_view font) {
         auto it = std::ranges::find(fontFiles, font);
         size_t index = it == fontFiles.end() ? 0 : std::distance(fontFiles.begin(), it);
         return static_cast<int32_t>(index);
@@ -58,16 +66,39 @@ namespace eclipse::labels {
     struct LabelSettings {
         static size_t instanceCount; // used to generate unique IDs
 
+        ~LabelSettings() {
+            // release all current related events
+            EventManager::get().removeEvents(this);
+        }
+
         std::string name;
         std::string text;
         bool visible = true;
+        bool absolutePosition = false;
         float scale = 0.35f;
         gui::Color color = gui::Color(1.f, 1.f, 1.f, 0.3f);
         std::string font = "bigFont.fnt";
         LabelsContainer::Alignment alignment = LabelsContainer::Alignment::TopLeft;
+        BMFontAlignment fontAlignment = static_cast<BMFontAlignment>(0);
+        cocos2d::CCPoint offset = {0, 0};
+        std::vector<LabelEvent> events;
         size_t id = instanceCount++;
-    };
 
-    void from_json(const nlohmann::json& json, LabelSettings& settings);
-    void to_json(nlohmann::json& json, const LabelSettings& settings);
+        Event::EventState processEvents() const;
+        bool hasEvents() const;
+
+        void promptSave() const;
+    };
 }
+
+template <>
+struct matjson::Serialize<eclipse::labels::LabelSettings> {
+    static Value toJson(eclipse::labels::LabelSettings const& settings);
+    static geode::Result<eclipse::labels::LabelSettings> fromJson(Value const& value);
+};
+
+template <>
+struct matjson::Serialize<eclipse::labels::LabelEvent> {
+    static Value toJson(eclipse::labels::LabelEvent const& event);
+    static geode::Result<eclipse::labels::LabelEvent> fromJson(Value const& value);
+};

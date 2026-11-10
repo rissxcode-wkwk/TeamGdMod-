@@ -1,22 +1,20 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
-#include <Geode/modify/PlayLayer.hpp>
-#include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/GameObject.hpp>
+#include <Geode/modify/GJBaseGameLayer.hpp>
+#include <Geode/modify/PlayLayer.hpp>
 
 namespace eclipse::hacks::Level {
-
-    class ShowTriggers : public hack::Hack {
+    class $hack(ShowTriggers) {
         void init() override {
-            auto tab = gui::MenuTab::find("Level");
-            tab->addToggle("Show Triggers", "level.showtriggers")
-                ->handleKeybinds()
-                ->setDescription("Renders triggers during gameplay");
+            auto tab = gui::MenuTab::find("tab.level");
+            tab->addToggle("level.showtriggers")->handleKeybinds()->setDescription();
         }
 
-        [[nodiscard]] bool isCheating() override { return config::get<bool>("level.showtriggers", false); }
+        [[nodiscard]] bool isCheating() const override { return config::get<"level.showtriggers", bool>(); }
         [[nodiscard]] const char* getId() const override { return "Show Triggers"; }
     };
 
@@ -25,7 +23,7 @@ namespace eclipse::hacks::Level {
     // :(
     // GameObject->m_objectType is set during GameObject::customSetup()
     // so we have to check the object ID manually instead
-    constexpr std::array<int, 131> triggerIds = {
+    static const std::unordered_set<int> triggerIds = {
         22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 55, 56,
         57, 58, 59, 105, 744, 899, 900, 901, 915, 1006, 1007,
         1049, 1268, 1346, 1347, 1520, 1585, 1595, 1611, 1612, 1613,
@@ -47,9 +45,7 @@ namespace eclipse::hacks::Level {
         void customSetup() override {
             bool editorEnabled = this->m_editorEnabled;
             int id = this->m_objectID;
-            this->m_editorEnabled = editorEnabled || std::ranges::any_of(triggerIds, [id](int id2) {
-                return id == id2;
-            });
+            this->m_editorEnabled = editorEnabled || triggerIds.contains(id);
 
             GameObject::customSetup();
             this->m_editorEnabled = editorEnabled;
@@ -66,7 +62,7 @@ namespace eclipse::hacks::Level {
             /*
              * // original code
              * if (m_objectID == 3613 || m_objectID == 3662
-             *  || obj->getType(obj) == Modifier && (static_cast<int>(obj->m_classType) != 1 || !obj->m_isTouchTriggered) && obj->m_objectID != 2063) {
+             *  || obj->getType(obj) == Modifier && (obj->m_unk4D0 != 1 || !obj->m_isTouchTriggered) && obj->m_objectID != 2063) {
              *     obj->m_outerSectionIndex = -1;
              * } else {
              *     this->addToSection(this, obj);
@@ -75,7 +71,7 @@ namespace eclipse::hacks::Level {
             bool isTrigger = obj->m_objectType == GameObjectType::Modifier;
             bool idsCheck = obj->m_objectID == 3613 || obj->m_objectID == 3662;
             if (isTrigger && !idsCheck && config::get<bool>("level.showtriggers", false)) {
-                if ((static_cast<int>(obj->m_classType) != 1 || !static_cast<EffectGameObject*>(obj)->m_isTouchTriggered) && obj->m_objectID != 2063) {
+                if ((obj->m_classType != GameObjectClassType::Effect || !static_cast<EffectGameObject*>(obj)->m_isTouchTriggered) && obj->m_objectID != 2063) {
                     s_lastEditedTrigger = obj; // this will queue the trigger to be added to the section
                     s_originalSectionIndex = obj->m_outerSectionIndex;
                 }

@@ -1,18 +1,15 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/PlayLayer.hpp>
 
 namespace eclipse::hacks::Level {
-
-    class MatchLabelFonts : public hack::Hack {
+    class $hack(MatchLabelFonts) {
         void init() override {
-            auto tab = gui::MenuTab::find("Level");
-
-            tab->addToggle("Match Percent/Time Fonts", "level.matchlabelfonts")
-                ->setDescription("Matches the level percentage/level time UI element's font with the font used in a level. (Created by RayDeeUx)")
-                ->handleKeybinds();
+            auto tab = gui::MenuTab::find("tab.level");
+            tab->addToggle("level.matchlabelfonts")->setDescription()->handleKeybinds();
         }
 
         [[nodiscard]] const char* getId() const override { return "Match Percent/Time Fonts"; }
@@ -27,8 +24,8 @@ namespace eclipse::hacks::Level {
 
         bool shouldMatchLabelFonts() const {
             return m_attemptLabel && m_percentageLabel &&
-                m_percentageLabel->getFntFile() == s_bigFontName &&
-                m_attemptLabel->getFntFile() != s_bigFontName;
+                   m_percentageLabel->getFntFile() == s_bigFontName &&
+                   m_attemptLabel->getFntFile() != s_bigFontName;
         }
 
         void updateProgressbar() {
@@ -45,5 +42,4 @@ namespace eclipse::hacks::Level {
                 m_percentageLabel->setFntFile(m_attemptLabel->getFntFile());
         }
     };
-
 }

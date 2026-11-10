@@ -1,18 +1,15 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/EffectGameObject.hpp>
 
 namespace eclipse::hacks::Level {
-
-    class MuteLevelSFX : public hack::Hack {
+    class $hack(MuteLevelSFX) {
         void init() override {
-            auto tab = gui::MenuTab::find("Level");
-
-            tab->addToggle("Mute Level SFX", "level.mutelevelsfx")
-                ->setDescription("Disables SFX/Edit SFX triggers. (Created by RayDeeUx)")
-                ->handleKeybinds();
+            auto tab = gui::MenuTab::find("tab.level");
+            tab->addToggle("level.mutelevelsfx")->setDescription()->handleKeybinds();
         }
 
         [[nodiscard]] const char* getId() const override { return "Mute Level SFX"; }
@@ -24,7 +21,7 @@ namespace eclipse::hacks::Level {
         ADD_HOOKS_DELEGATE("level.mutelevelsfx")
 
         void triggerObject(GJBaseGameLayer* gjbgl, int p1, std::vector<int> const* p2) override {
-            if (!PlayLayer::get() || (this->m_objectID != 3602 && this->m_objectID != 3603))
+            if (!utils::get<PlayLayer>() || (this->m_objectID != 3602 && this->m_objectID != 3603))
                 return EffectGameObject::triggerObject(gjbgl, p1, p2);
         }
     };

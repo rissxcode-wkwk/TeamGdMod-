@@ -1,19 +1,16 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/OptionsLayer.hpp>
 #include <Geode/modify/PauseLayer.hpp>
 
 namespace eclipse::hacks::Bypass {
-
-    class AllowLowVolume : public hack::Hack {
+    class $hack(AllowLowVolume) {
         void init() override {
-            auto tab = gui::MenuTab::find("Bypass");
-
-            tab->addToggle("Allow Low Volume", "bypass.allowlowvolume")
-                ->handleKeybinds()
-                ->setDescription("Allows setting the volume lower than 3%.");
+            auto tab = gui::MenuTab::find("tab.bypass");
+            tab->addToggle("bypass.allowlowvolume")->handleKeybinds()->setDescription();
         }
 
         [[nodiscard]] const char* getId() const override { return "Allow Low Volume"; }
@@ -21,7 +18,7 @@ namespace eclipse::hacks::Bypass {
 
     REGISTER_HACK(AllowLowVolume)
 
-#define GET_SLIDER(sender) geode::cast::typeinfo_cast<SliderThumb*>(sender); if (!slider) return
+    #define GET_SLIDER(sender) geode::cast::typeinfo_cast<SliderThumb*>(sender); if (!slider) return
 
     class $modify(AllowLowVolumeOLHook, OptionsLayer) {
         ALL_DELEGATES_AND_SAFE_PRIO("bypass.allowlowvolume")
@@ -29,17 +26,17 @@ namespace eclipse::hacks::Bypass {
         void musicSliderChanged(cocos2d::CCObject* sender) {
             auto slider = GET_SLIDER(sender);
             auto value = slider->getValue();
-            auto* audioEngine = FMODAudioEngine::get();
+            auto* audioEngine = utils::get<FMODAudioEngine>();
             float originalVolume = audioEngine->getBackgroundMusicVolume();
             audioEngine->setBackgroundMusicVolume(value);
             if (originalVolume <= 0.f && value > 0.f)
-                GameManager::get()->playMenuMusic();
+                utils::get<GameManager>()->playMenuMusic();
         }
 
         void sfxSliderChanged(cocos2d::CCObject* sender) {
             auto slider = GET_SLIDER(sender);
             auto value = slider->getValue();
-            FMODAudioEngine::get()->setEffectsVolume(value);
+            utils::get<FMODAudioEngine>()->setEffectsVolume(value);
         }
     };
 
@@ -49,16 +46,16 @@ namespace eclipse::hacks::Bypass {
         void musicSliderChanged(cocos2d::CCObject* sender) {
             auto slider = GET_SLIDER(sender);
             auto value = slider->getValue();
-            FMODAudioEngine::get()->setBackgroundMusicVolume(value);
+            utils::get<FMODAudioEngine>()->setBackgroundMusicVolume(value);
         }
 
-// Function is merged with the one in OptionsLayer on Windows
-#if !(defined(GEODE_IS_WINDOWS) && GEODE_COMP_GD_VERSION == 22060)
+        // Function is merged with the one in OptionsLayer on Windows
+        #if !(defined(GEODE_IS_WINDOWS) && GEODE_COMP_GD_VERSION == 22060)
         void sfxSliderChanged(cocos2d::CCObject* sender) {
             auto slider = GET_SLIDER(sender);
             auto value = slider->getValue();
-            FMODAudioEngine::get()->setEffectsVolume(value);
+            utils::get<FMODAudioEngine>()->setEffectsVolume(value);
         }
-#endif
+        #endif
     };
 }

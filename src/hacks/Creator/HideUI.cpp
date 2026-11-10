@@ -1,18 +1,16 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/EditorUI.hpp>
 
 namespace eclipse::hacks::Creator {
 
-    class HideUI : public hack::Hack {
+    class $hack(HideUI) {
         void init() override {
-            auto tab = gui::MenuTab::find("Creator");
-
-            tab->addToggle("Hide UI", "creator.hideui")
-                ->handleKeybinds()
-                ->setDescription("Hides the UI in the editor.");
+            auto tab = gui::MenuTab::find("tab.creator");
+            tab->addToggle("creator.hideui")->handleKeybinds()->setDescription();
         }
 
         [[nodiscard]] const char* getId() const override { return "Hide UI"; }

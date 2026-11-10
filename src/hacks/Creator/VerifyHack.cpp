@@ -1,18 +1,15 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/EditLevelLayer.hpp>
 
 namespace eclipse::hacks::Bypass {
-
-    class VerifyHack : public hack::Hack {
+    class $hack(VerifyHack) {
         void init() override {
-            auto tab = gui::MenuTab::find("Creator");
-
-            tab->addToggle("Verify Bypass", "bypass.verifyhack")
-                ->handleKeybinds()
-                ->setDescription("Automatically verifies levels for you.");
+            auto tab = gui::MenuTab::find("tab.creator");
+            tab->addToggle("bypass.verifyhack")->handleKeybinds()->setDescription();
         }
 
         [[nodiscard]] const char* getId() const override { return "Verify Bypass"; }

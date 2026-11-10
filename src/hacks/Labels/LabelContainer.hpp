@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Label.hpp"
-
 namespace eclipse::hacks::Labels {
+
+    class SmartLabel;
 
     /// @brief Class that contains multiple labels and can manage them.
     class LabelsContainer : public cocos2d::CCNode {
@@ -28,8 +28,7 @@ namespace eclipse::hacks::Labels {
 
         /// @brief Add a label to the container.
         /// @param label The label to add.
-        /// @param update Custom update function.
-        void addLabel(SmartLabel* label, const std::function<void(SmartLabel*)>& update);
+        void addLabel(SmartLabel* label);
 
         /// @brief Remove a label from the container.
         /// @param label The label to remove.
@@ -37,6 +36,9 @@ namespace eclipse::hacks::Labels {
 
         /// @brief Update all labels in the container.
         void update();
+
+        /// @brief Invalidate the container. This will mark it as dirty and update it after update is finished.
+        void invalidate() { m_dirty = true; }
 
         /// @brief Set the alignment of the container.
         /// @param alignment The alignment to set.
@@ -54,8 +56,12 @@ namespace eclipse::hacks::Labels {
         void updatePosition();
 
     private:
-        std::vector<std::pair<SmartLabel*, std::function<void(SmartLabel*)>>> m_labels;
+        /// @brief Performs a layout update.
+        void recalculateLayout();
+
+        std::vector<SmartLabel*> m_labels;
         Alignment m_alignment = Alignment::TopLeft;
+        bool m_dirty = false;
     };
 
 }

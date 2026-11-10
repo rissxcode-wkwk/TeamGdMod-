@@ -1,35 +1,44 @@
 cmake_minimum_required(VERSION 3.21)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
+    set(IOS TRUE)
+    set(CMAKE_OSX_ARCHITECTURES "arm64")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0")
+    add_definitions(-DGLES_SILENCE_DEPRECATION)
+else()
+    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+endif()
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 project(EclipseMenu VERSION 1.0.0 LANGUAGES CXX)
 
-set(MACOS_SOURCES "")
-if (APPLE)
-  enable_language(OBJCXX)
-  set(MACOS_SOURCES src/modules/keybinds/mouse/macos.mm)
+# Sources
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
+
+# Configure for GitHub Actions builds
+if (DEFINED ENV{GITHUB_ACTIONS})
+  # Enable LTO for smaller binaries
+  set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE GITHUB_ACTIONS)
+  message(STATUS "GitHub Actions build detected")
+  set(ECLIPSE_DISABLE_INCREMENTAL_LINK ON)
+  set(ECLIPSE_ENABLE_UNITY_BUILD ON)
 endif()
 
-# Sources
-file(GLOB_RECURSE SOURCES src/*.cpp)
-add_library(${PROJECT_NAME} SHARED ${SOURCES} ${MACOS_SOURCES})
-
-# Enable LTO for smaller binaries
-set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+if (ECLIPSE_ENABLE_UNITY_BUILD)
+  message(STATUS "Enabling unity build")
+  set_target_properties(
+    ${PROJECT_NAME} PROPERTIES
+    UNITY_BUILD ON
+    UNITY_BUILD_UNIQUE_ID "GEODE_UNITY_NS_ID"
+  )
+endif()
 
 # Make sure we can include headers from src
-# third_party/rift = pengganti lokal library RIFT (repo asli EclipseMenu/rift sudah tidak tersedia)
-target_include_directories(${PROJECT_NAME} PRIVATE src include third_party/rift)
-
-# Geode v6 mengurangi include transitif, jadi header standar di-include paksa
-if (MSVC)
-  target_compile_options(${PROJECT_NAME} PRIVATE /FI${CMAKE_CURRENT_LIST_DIR}/src/modules/utils/std-includes.hpp)
-else()
-  target_compile_options(${PROJECT_NAME} PRIVATE -include ${CMAKE_CURRENT_LIST_DIR}/src/modules/utils/std-includes.hpp)
-endif()
+target_include_directories(${PROJECT_NAME} PRIVATE src include)
 
 # Get the latest abbreviated commit hash of the working branch
 execute_process(
@@ -46,12 +55,30 @@ if (WIN32)
   target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
 
   # Export all symbols for better debugging
-  set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+  # UPD: this bloats the binary size, so it's disabled for now
+  # (also it doesn't work for every crashlog anyways)
+  # set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
+  # Disable incremental linking if requested
+  if (DEFINED ECLIPSE_DISABLE_INCREMENTAL_LINK)
+    message(STATUS "Disabling incremental linking")
+    if (MSVC)
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /INCREMENTAL:NO")
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /INCREMENTAL:NO")
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-incremental:no")
+      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-incremental:no")
+    endif()
+  endif()
 endif()
 
-# macOS specific settings
-if (APPLE)
-  set_source_files_properties(${MACOS_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+# Debug macro
+if (NOT DEFINED ENV{GITHUB_ACTIONS})
+  target_compile_definitions(
+    ${PROJECT_NAME} PRIVATE
+      $<$<CONFIG:Debug>:ECLIPSE_DEBUG_BUILD>
+      $<$<CONFIG:RelWithDebInfo>:ECLIPSE_DEBUG_BUILD>
+  )
 endif()
 
 # Add Geode
@@ -64,6 +91,7 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
 # Libraries
 include(${CMAKE_SOURCE_DIR}/cmake/IncludeLibs.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/Translations.cmake)
 target_link_libraries(${PROJECT_NAME} third_party)
 
 # Setup Geode

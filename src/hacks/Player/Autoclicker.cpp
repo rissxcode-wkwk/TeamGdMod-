@@ -1,31 +1,31 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/GJBaseGameLayer.hpp>
 
 namespace eclipse::hacks::Player {
-
-    class AutoClicker : public hack::Hack {
+    class $hack(AutoClicker) {
         void init() override {
-            auto tab = gui::MenuTab::find("Player");
+            auto tab = gui::MenuTab::find("tab.player");
 
             config::setIfEmpty<bool>("player.autoclick.p1", true);
             config::setIfEmpty<bool>("player.autoclick.p2", true);
             config::setIfEmpty<int>("player.autoclick.intervalrelease", 1);
 
-            tab->addToggle("AutoClicker", "player.autoclick")
-                ->handleKeybinds()
-                ->setDescription("Clicks periodically when playing levels. Applies to both the level editor and actual levels.")
-                ->addOptions([](std::shared_ptr<gui::MenuTab> options) {
-                    options->addToggle("Player 1", "player.autoclick.p1");
-                    options->addToggle("Player 2", "player.autoclick.p2");
-                    options->addInputInt("Hold Interval", "player.autoclick.intervalhold", 1, 1000);
-                    options->addInputInt("Release Interval", "player.autoclick.intervalrelease", 1, 1000);
-                });
+            tab->addToggle("player.autoclick")
+               ->handleKeybinds()
+               ->setDescription()
+               ->addOptions([](auto options) {
+                   options->addToggle("player.autoclick.p1");
+                   options->addToggle("player.autoclick.p2");
+                   options->addInputInt("player.autoclick.intervalhold", 1, 1000);
+                   options->addInputInt("player.autoclick.intervalrelease", 1, 1000);
+               });
         }
 
-        [[nodiscard]] bool isCheating() override { return config::get<bool>("player.autoclick", false); }
+        [[nodiscard]] bool isCheating() const override { return config::get<"player.autoclick", bool>(); }
         [[nodiscard]] const char* getId() const override { return "Auto Clicker"; }
     };
 
@@ -39,19 +39,30 @@ namespace eclipse::hacks::Player {
 
         ADD_HOOKS_DELEGATE("player.autoclick")
 
-        void processCommands(float dt, bool isHalfTick, bool isLastTick) {
-            GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
+        void updateAutoClicker() {
+            auto clickInterval = config::get<"player.autoclick.intervalhold", int>(1);
+            auto releaseInterval = config::get<"player.autoclick.intervalrelease", int>(1);
+            auto fields = m_fields.self();
 
-            auto clickInterval = config::get<int>("player.autoclick.intervalhold", 1);
-            auto releaseInterval = config::get<int>("player.autoclick.intervalrelease", 1);
-            m_fields->timer++;
-            if ((m_fields->timer >= clickInterval && !m_fields->clicking) || (m_fields->timer >= releaseInterval && m_fields->clicking)) {
-                m_fields->clicking = !m_fields->clicking;
-                if (config::get<bool>("player.autoclick.p1")) this->handleButton(m_fields->clicking, 1, true);
-                if (config::get<bool>("player.autoclick.p2")) this->handleButton(m_fields->clicking, 1, false);
-                m_fields->timer = 0.f;
+            fields->timer++;
+            if ((fields->timer >= clickInterval && !fields->clicking) || (fields->timer >= releaseInterval && fields->clicking)) {
+                fields->clicking = !fields->clicking;
+                if (config::get<"player.autoclick.p1", bool>(false)) this->handleButton(fields->clicking, 1, true);
+                if (config::get<"player.autoclick.p2", bool>(false)) this->handleButton(fields->clicking, 1, false);
+                fields->timer = 0.f;
             }
         }
-    };
 
+        #ifndef GEODE_IS_MACOS
+        void processCommands(float dt, bool isHalfTick, bool isLastTick) {
+            GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
+            this->updateAutoClicker();
+        }
+        #else
+        void processQueuedButtons(float dt, bool clearInputQueue) {
+            GJBaseGameLayer::processQueuedButtons(dt, clearInputQueue);
+            this->updateAutoClicker();
+        }
+        #endif
+    };
 }
