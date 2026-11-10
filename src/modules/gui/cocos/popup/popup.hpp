@@ -1,14 +1,16 @@
 #pragma once
 #include <modules/gui/gui.hpp>
+#include <Geode/ui/Popup.hpp>
 
 #include "content-view.hpp"
 #include "tab-menu.hpp"
 
 namespace eclipse::gui::cocos {
 
-    class Popup : public geode::Popup<Tabs const&> {
+    // Geode 6: geode::Popup bukan template lagi dan tidak punya setup(); inisialisasi lewat init().
+    class Popup : public geode::Popup {
     protected:
-        bool setup(Tabs const& tabs) override;
+        bool init(Tabs const& tabs);
         void onExit() override;
 
     public:
@@ -17,11 +19,13 @@ namespace eclipse::gui::cocos {
         void setActiveTab(int idx) const;
         void loadTab(const std::shared_ptr<MenuTab>& tab) const;
 
-        bool isAncestorOf(CCNode* node) const;
+        bool isAncestorOf(cocos2d::CCNode* node) const;
 
     private:
         TabMenu* m_tabMenu = nullptr;
 
+        // Geode 6: m_bgSprite sekarang NineSlice*, jadi background kita simpan terpisah
+        cocos2d::extension::CCScale9Sprite* m_mainBG = nullptr;
         cocos2d::extension::CCScale9Sprite* m_contentBG = nullptr;
         ContentView* m_contentMenu = nullptr;
 

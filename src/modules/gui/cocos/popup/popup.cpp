@@ -9,27 +9,31 @@
 
 namespace eclipse::gui::cocos {
 
-    bool Popup::setup(Tabs const& tabs) {
+    bool Popup::init(Tabs const& tabs) {
+        // Geode 6: init(lebar, tinggi) menggantikan initAnchored + setup
+        if (!geode::Popup::init(480.f, 280.f)) return false;
+
         const auto tm = ThemeManager::get();
         auto winSize = cocos2d::CCDirector::get()->getWinSize();
         this->setTitle("");
         m_buttonMenu->setContentSize(winSize);
         m_closeBtn->setPosition(20.f, winSize.height - 20.f);
-        m_bgSprite->removeMeAndCleanup();
+        // Background bawaan Geode disembunyikan (tidak dihapus, supaya tidak ada pointer menggantung)
+        m_bgSprite->setVisible(false);
 
         // The behind background for the entire popup to get the outline
         auto bgBehind = cocos2d::extension::CCScale9Sprite::create("square02b_001.png");
         bgBehind->setContentSize(m_mainLayer->getContentSize() * tm->getBorderSize());
-        m_bgSprite->setColor(tm->getBorderColor().toCCColor3B());
+        bgBehind->setColor(tm->getBorderColor().toCCColor3B());
         bgBehind->setID("bg-behind"_spr);
         m_mainLayer->addChildAtPosition(bgBehind, geode::Anchor::Center);
 
         // Background for the entire popup
-        m_bgSprite = cocos2d::extension::CCScale9Sprite::create("square02b_001.png");
-        m_bgSprite->setContentSize(m_mainLayer->getContentSize() - 3);
-        m_bgSprite->setColor(tm->getTitleBackgroundColor().toCCColor3B());
-        m_bgSprite->setID("main-bg"_spr);
-        m_mainLayer->addChildAtPosition(m_bgSprite, geode::Anchor::Center);
+        m_mainBG = cocos2d::extension::CCScale9Sprite::create("square02b_001.png");
+        m_mainBG->setContentSize(m_mainLayer->getContentSize() - 3);
+        m_mainBG->setColor(tm->getTitleBackgroundColor().toCCColor3B());
+        m_mainBG->setID("main-bg"_spr);
+        m_mainLayer->addChildAtPosition(m_mainBG, geode::Anchor::Center);
 
         // Background for content
         m_contentBG = cocos2d::extension::CCScale9Sprite::create("square02b_001.png");
@@ -62,7 +66,7 @@ namespace eclipse::gui::cocos {
 
     Popup* Popup::create(Tabs const& tabs) {
         auto ret = new Popup;
-        if (ret->initAnchored(480.f, 280.f, std::move(tabs))) {
+        if (ret->init(tabs)) {
             ret->autorelease();
             return ret;
         }
@@ -77,7 +81,7 @@ namespace eclipse::gui::cocos {
         m_contentMenu->setContent(tabs[idx]);
     }
 
-    bool Popup::isAncestorOf(CCNode* node) const {
+    bool Popup::isAncestorOf(cocos2d::CCNode* node) const {
         while (node) {
             if (node == this) return true;
             node = node->getParent();
@@ -87,7 +91,7 @@ namespace eclipse::gui::cocos {
     }
 
     void Popup::onExit() {
-        geode::Popup<Tabs const&>::onExit();
+        geode::Popup::onExit();
         CocosRenderer::get()->shutdown(true);
     }
 

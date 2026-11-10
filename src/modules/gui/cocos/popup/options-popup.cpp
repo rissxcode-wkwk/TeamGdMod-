@@ -7,24 +7,29 @@
 #include "content-view.hpp"
 
 namespace eclipse::gui::cocos {
-    bool OptionsPopup::setup(std::shared_ptr<MenuTab> const& tab) {
+    bool OptionsPopup::init(std::shared_ptr<MenuTab> const& tab) {
+        // Geode 6: init(lebar, tinggi) menggantikan initAnchored + setup
+        if (!geode::Popup::init(400.f, 240.f)) return false;
+
         const auto tm = ThemeManager::get();
         this->setTitle(tab->getTitle());
         m_title->setPositionY(225.f);
+        // Background bawaan Geode disembunyikan (tidak dihapus, supaya tidak ada pointer menggantung)
+        m_bgSprite->setVisible(false);
 
         // The behind background for the entire popup to get the outline
         auto bgBehind = cocos2d::extension::CCScale9Sprite::create("square02b_001.png");
         bgBehind->setContentSize(m_mainLayer->getContentSize() * tm->getBorderSize());
-        m_bgSprite->setColor(tm->getBorderColor().toCCColor3B());
+        bgBehind->setColor(tm->getBorderColor().toCCColor3B());
         bgBehind->setID("bg-behind"_spr);
         m_mainLayer->addChildAtPosition(bgBehind, geode::Anchor::Center);
 
         // Background for the entire popup
-        m_bgSprite = cocos2d::extension::CCScale9Sprite::create("square02b_001.png");
-        m_bgSprite->setContentSize(m_mainLayer->getContentSize() - 3);
-        m_bgSprite->setColor(tm->getTitleBackgroundColor().toCCColor3B());
-        m_bgSprite->setID("main-bg"_spr);
-        m_mainLayer->addChildAtPosition(m_bgSprite, geode::Anchor::Center);
+        m_mainBG = cocos2d::extension::CCScale9Sprite::create("square02b_001.png");
+        m_mainBG->setContentSize(m_mainLayer->getContentSize() - 3);
+        m_mainBG->setColor(tm->getTitleBackgroundColor().toCCColor3B());
+        m_mainBG->setID("main-bg"_spr);
+        m_mainLayer->addChildAtPosition(m_mainBG, geode::Anchor::Center);
 
         // Background for content
         m_contentBG = cocos2d::extension::CCScale9Sprite::create("square02b_001.png");
@@ -49,13 +54,13 @@ namespace eclipse::gui::cocos {
     }
 
     void OptionsPopup::onExit() {
-        Popup::onExit();
+        geode::Popup::onExit();
         CocosRenderer::get()->unregisterOptionsPopup(this);
     }
 
     OptionsPopup* OptionsPopup::create(std::shared_ptr<MenuTab> const& tab) {
         auto ret = new OptionsPopup;
-        if (ret->initAnchored(400.f, 240.f, std::move(tab))) {
+        if (ret->init(tab)) {
             ret->autorelease();
             return ret;
         }
