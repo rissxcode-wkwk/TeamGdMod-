@@ -64,10 +64,18 @@ namespace eclipse::hacks::Shortcuts {
                     level->m_normalPercent = 0;
                     level->m_newNormalPercent2 = 0;
                     level->m_orbCompletion = 0;
-                    level->m_54 = 0;
-                    level->m_k111 = 0;
+                    // GD 2.2091: m_54 dan m_k111 sudah dihapus dari GJGameLevel (m_54 kini m_songSize,
+                    // yang tidak boleh direset). Data rekor platformer sekarang dipecah ke beberapa field.
                     level->m_bestPoints = 0;
+                    level->m_ticksPoints = 0;
+                    level->m_clicksPoints = 0;
+                    level->m_coinsPoints = 0;
+                    level->m_inputsPoints.clear();
                     level->m_bestTime = 0;
+                    level->m_ticksTime = 0;
+                    level->m_clicksTime = 0;
+                    level->m_coinsTime = 0;
+                    level->m_inputsTime.clear();
 
                     /* // unsure if this is needed
                     level->m_isChkValid = 0;
