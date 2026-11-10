@@ -24,4 +24,4 @@ Geometry Dash **2.2091** dan Geode **6.0.0-alpha.1** (semua platform), jadi tida
   File: i18n/translations.cpp, hacks/Bot/Bot.cpp, gui/imgui/imgui.cpp, gui/imgui/components/theme.cpp,
   gui/cocos/components/DirectoryComboComponent.hpp.
 - `std::ranges::find(items, value)` di DirectoryComboComponent.hpp (vector<Path> vs PathView) tidak bisa dikompilasi;
-  diganti `find_if` yang membandingkan `item.view() == value.view()`.
+  diganti `find_if` yang membandingkan `item.view() == value` (PathView == PathView; `PathView::view()` mengembalikan string_view sehingga ambigu).

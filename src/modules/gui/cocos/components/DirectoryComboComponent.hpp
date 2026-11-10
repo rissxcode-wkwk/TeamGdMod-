@@ -99,9 +99,9 @@ namespace eclipse::gui::cocos {
             }
 
             auto value = m_component->getValue();
-            // Path == PathView tidak bisa dibandingkan langsung lewat std::ranges::find (Geode 6), bandingkan string view-nya
+            // Path == PathView tidak bisa dibandingkan langsung lewat std::ranges::find (Geode 6), bandingkan sebagai PathView
             m_index = std::ranges::find_if(items, [&](auto const& item) {
-                return item.view() == value.view();
+                return item.view() == value; // PathView == PathView
             }) - items.begin();
 
             updateLabel();
