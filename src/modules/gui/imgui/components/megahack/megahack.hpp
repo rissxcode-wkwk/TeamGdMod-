@@ -2,23 +2,21 @@
 #include <modules/gui/imgui/components/theme.hpp>
 
 namespace eclipse::gui::imgui::themes {
+    class Megahack final : public Theme {
+        bool checkbox(
+            std::string const& label, bool& value, bool isSearchedFor,
+            FunctionRef<void()> postDraw
+        ) const override;
+        bool checkboxWithSettings(
+            std::string const& label, bool& value, bool isSearchedFor,
+            FunctionRef<void()> callback,
+            FunctionRef<void()> postDraw,
+            std::string const& popupId
+        ) const override;
+        bool button(std::string const& text, bool isSearchedFor) const override;
 
-	class Megahack : public Theme {
+        ComponentTheme getTheme() const override { return ComponentTheme::MegaHack; }
+    };
 
-		bool checkbox(
-			const std::string &label, bool &value,
-			const std::function<void()> &postDraw
-		) const override;
-		bool checkboxWithSettings(
-			const std::string &label, bool &value,
-			const std::function<void()> &callback,
-			const std::function<void()> &postDraw,
-			const std::string& popupId
-		) const override;
-		bool button(const std::string &text) const override;
-
-		ComponentTheme getTheme() const override { return ComponentTheme::MegaHack; }
-	};
-
+    inline static constexpr Megahack MEGAHACK_THEME;
 }
-

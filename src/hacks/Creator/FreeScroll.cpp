@@ -1,18 +1,15 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/EditorUI.hpp>
 
 namespace eclipse::hacks::Creator {
-
-    class FreeScroll : public hack::Hack {
+    class $hack(FreeScroll) {
         void init() override {
-            auto tab = gui::MenuTab::find("Creator");
-
-            tab->addToggle("Free Scroll", "creator.freescroll")
-                ->handleKeybinds()
-                ->setDescription("Removes camera constraints in the level editor");
+            auto tab = gui::MenuTab::find("tab.creator");
+            tab->addToggle("creator.freescroll")->handleKeybinds()->setDescription();
         }
 
         [[nodiscard]] const char* getId() const override { return "Free Scroll"; }
@@ -28,7 +25,7 @@ namespace eclipse::hacks::Creator {
             // auto* objLayer = m_editorLayer->m_objectLayer;
             // auto pos = objLayer->getPosition();
             // objLayer->setPosition({0, 0});
-            // auto* director = cocos2d::CCDirector::sharedDirector();
+            // auto* director = utils::get<cocos2d::CCDirector>();
             // auto screenLeft = director->getScreenLeft();
             // auto screenTop = director->getScreenTop();
             // auto screenRight = director->getScreenRight();
@@ -46,5 +43,4 @@ namespace eclipse::hacks::Creator {
             // objLayer->setPosition({x, y});
         }
     };
-
 }

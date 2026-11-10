@@ -1,68 +1,50 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
+#ifndef GEODE_IS_MACOS
+// TODO: someone look at fixing this for imac
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
+#include <Geode/binding/GameManager.hpp>
 #include <Geode/modify/GameObject.hpp>
 #include <Geode/modify/GJBaseGameLayer.hpp>
-#include <Geode/binding/GameManager.hpp>
 
 namespace eclipse::hacks::Level {
+    void onChangeShowCoins(bool state) {
+        static cocos2d::CCObject* uncollectedSecretCoin = nullptr;
+        static cocos2d::CCObject* uncollectedUserCoin = nullptr;
 
-    namespace {
-        // Menyimpan objek asli untuk key -142 / -1329 pada satu dictionary animasi
-        struct CoinAnimBackup {
-            cocos2d::CCObject* secret = nullptr;
-            cocos2d::CCObject* user = nullptr;
-            bool saved = false;
-        };
+        auto* GM = utils::get<GameManager>();
 
-        void applyShowCoins(cocos2d::CCDictionary* dict, CoinAnimBackup& backup, bool state) {
-            if (!dict) return;
+        if (!uncollectedSecretCoin)
+            uncollectedSecretCoin = GM->m_mainFramesForAnimation->objectForKey(-142)->copy();
 
-            constexpr intptr_t kSecretCoin = 142;
-            constexpr intptr_t kUserCoin = 1329;
+        if (!uncollectedUserCoin)
+            uncollectedUserCoin = GM->m_mainFramesForAnimation->objectForKey(-1329)->copy();
 
-            if (!backup.saved) {
-                backup.secret = dict->objectForKey(-kSecretCoin);
-                backup.user = dict->objectForKey(-kUserCoin);
-                if (backup.secret) backup.secret->retain();
-                if (backup.user) backup.user->retain();
-                backup.saved = true;
-            }
+        if (state) {
+            uncollectedSecretCoin->retain();
+            uncollectedUserCoin->retain();
 
-            if (state) {
-                // pakai varian "sudah dikoleksi" yang sama dengan varian normal
-                if (auto* secret = dict->objectForKey(kSecretCoin)) dict->setObject(secret, -kSecretCoin);
-                if (auto* user = dict->objectForKey(kUserCoin)) dict->setObject(user, -kUserCoin);
-            } else {
-                if (backup.secret) dict->setObject(backup.secret, -kSecretCoin);
-                if (backup.user) dict->setObject(backup.user, -kUserCoin);
-            }
+            GM->m_mainFramesForAnimation->removeObjectForKey(-142);
+            GM->m_mainFramesForAnimation->removeObjectForKey(-1329);
+
+            GM->m_mainFramesForAnimation->setObject(GM->m_mainFramesForAnimation->objectForKey(142)->copy(), -142);
+            GM->m_mainFramesForAnimation->setObject(GM->m_mainFramesForAnimation->objectForKey(1329)->copy(), -1329);
+        } else if (uncollectedSecretCoin && uncollectedUserCoin) {
+            GM->m_mainFramesForAnimation->removeObjectForKey(-142);
+            GM->m_mainFramesForAnimation->removeObjectForKey(-1329);
+
+            GM->m_mainFramesForAnimation->setObject(uncollectedSecretCoin, -142);
+            GM->m_mainFramesForAnimation->setObject(uncollectedUserCoin, -1329);
         }
     }
 
-    void onChangeShowCoins(bool state) {
-        // Geode/GD 2.2091: m_unkAnimationDict sudah tidak ada, data animasi dipecah ke beberapa dictionary
-        static CoinAnimBackup mainFrames, detailFrames, frameTime, frames, defaults;
-
-        auto* GM = GameManager::sharedState();
-        if (!GM) return;
-
-        applyShowCoins(GM->m_mainFramesForAnimation, mainFrames, state);
-        applyShowCoins(GM->m_detailFramesForAnimation, detailFrames, state);
-        applyShowCoins(GM->m_frameTimeForAnimation, frameTime, state);
-        applyShowCoins(GM->m_framesForAnimation, frames, state);
-        applyShowCoins(GM->m_defaultFrames, defaults, state);
-    }
-
-    class AlwaysShowCoins : public hack::Hack {
+    class $hack(AlwaysShowCoins) {
         void init() override {
-            auto tab = gui::MenuTab::find("Level");
-
-            tab->addToggle("Always Show Coins", "level.alwaysshowcoins")
-                ->handleKeybinds()
-                ->setDescription("Always shows the uncollected variant of the coins.")
-                ->callback(onChangeShowCoins);
+            auto tab = gui::MenuTab::find("tab.level");
+            tab->addToggle("level.alwaysshowcoins")->handleKeybinds()->setDescription()
+               ->callback(onChangeShowCoins);
         }
 
         void lateInit() override {
@@ -96,3 +78,4 @@ namespace eclipse::hacks::Level {
         }
     };
 }
+#endif

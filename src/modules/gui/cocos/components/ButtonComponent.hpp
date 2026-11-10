@@ -1,5 +1,7 @@
 #pragma once
 #include "BaseComponentNode.hpp"
+
+#include <modules/gui/components/button.hpp>
 #include <modules/gui/theming/manager.hpp>
 
 namespace eclipse::gui::cocos {
@@ -9,18 +11,20 @@ namespace eclipse::gui::cocos {
             m_component->triggerCallback();
         }
 
-        bool init(float width) override {
-            const auto tm = ThemeManager::get();
+        bool init(float width) {
+            auto const tm = ThemeManager::get();
 
-            auto label = cocos2d::CCLabelBMFont::create(m_component->getTitle().c_str(), "bigFont.fnt");
-            auto bg = cocos2d::extension::CCScale9Sprite::create("square.png", { 0.0f, 0.0f, 80.0f, 80.0f });
-
-            bg->setContentSize({width * 0.9F, 28.F});
-            bg->setColor(tm->getButtonBackgroundColor().toCCColor3B());
-            label->setColor(tm->getButtonActivatedForeground().toCCColor3B());
-            label->setScale(0.5F);
-            bg->addChildAtPosition(label, geode::Anchor::Center);
+            auto label = TranslatedLabel::create(m_component->getTitle());
+            auto bg = geode::NineSlice::create("square.png", { 0.0f, 0.0f, 80.0f, 80.0f });
             if (!bg || !label) return false;
+
+            width *= 0.9f;
+
+            bg->setContentSize({width, 28.f});
+            bg->setColor(tm->getButtonBackgroundColor().toCCColor3B());
+            label->setColor(tm->getButtonForegroundColor().toCCColor3B());
+            // label->setScale(0.5F);
+            bg->addChildAtPosition(label, geode::Anchor::Center);
             if (!CCMenuItemSpriteExtra::init(
                 bg, nullptr, this,
                 menu_selector(ButtonComponentNode::toggled))
@@ -28,7 +32,7 @@ namespace eclipse::gui::cocos {
 
             this->setContentSize({ width, 28.f });
             bg->setPositionX(width / 2.f);
-            this->m_scaleMultiplier = 1.25f;
+            this->m_scaleMultiplier = 1.1f;
 
             this->setID(fmt::format("button-{}"_spr, m_component->getId()));
 

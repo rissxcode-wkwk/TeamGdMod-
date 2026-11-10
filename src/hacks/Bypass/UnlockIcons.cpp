@@ -1,16 +1,19 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/GameManager.hpp>
+#include <Geode/modify/GameStatsManager.hpp>
 
 namespace eclipse::hacks::Bypass {
-
-    class UnlockIcons : public hack::Hack {
+    class $hack(UnlockIcons) {
         void init() override {
-            auto tab = gui::MenuTab::find("Bypass");
+            auto tab = gui::MenuTab::find("tab.bypass");
 
-            tab->addToggle("Unlock Icons", "bypass.unlockicons")->handleKeybinds();
+            tab->addToggle("bypass.unlockicons")
+                ->handleKeybinds()
+                ->setDescription();
         }
 
         [[nodiscard]] const char* getId() const override { return "Unlock Icons"; }
@@ -22,18 +25,28 @@ namespace eclipse::hacks::Bypass {
         ENABLE_SAFE_HOOKS_ALL()
 
         bool isColorUnlocked(int key, UnlockType type) {
-            if (GameManager::isColorUnlocked(key, type))
-                return true;
+            if (GameManager::isColorUnlocked(key, type)) return true;
 
-            return config::get<bool>("bypass.unlockicons", false);
+            return config::get<"bypass.unlockicons", bool>(false);
         }
 
         bool isIconUnlocked(int key, IconType type) {
-            if (GameManager::isIconUnlocked(key, type))
-                return true;
+            if (GameManager::isIconUnlocked(key, type)) return true;
 
-            return config::get<bool>("bypass.unlockicons", false);
+            return config::get<"bypass.unlockicons", bool>(false);
         }
     };
 
+    class $modify(UnlockIconsGSMHook, GameStatsManager) {
+        ENABLE_SAFE_HOOKS_ALL()
+
+        bool isItemUnlocked(UnlockType type, int key) {
+            if (GameStatsManager::isItemUnlocked(type, key)) return true;
+
+            if (config::get<"bypass.unlockicons", bool>(false))
+                return type == UnlockType::GJItem && (key >= 18 && key <= 20);
+
+            return false;
+        }
+    };
 }

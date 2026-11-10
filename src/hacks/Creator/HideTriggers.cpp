@@ -1,21 +1,18 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
-#include <Geode/modify/LevelEditorLayer.hpp>
 #include <Geode/modify/EditorUI.hpp>
+#include <Geode/modify/LevelEditorLayer.hpp>
 
 namespace eclipse::hacks::Creator {
-
     static std::vector<GameObject*> s_editorTriggers;
 
-    class HideTriggers : public hack::Hack {
+    class $hack(HideTriggers) {
         void init() override {
-            auto tab = gui::MenuTab::find("Creator");
-
-            tab->addToggle("Hide Triggers", "creator.hidetriggers")
-                ->handleKeybinds()
-                ->setDescription("Hides all triggers while playtesting the level in editor.");
+            auto tab = gui::MenuTab::find("tab.creator");
+            tab->addToggle("creator.hidetriggers")->handleKeybinds()->setDescription();
         }
 
         [[nodiscard]] const char* getId() const override { return "Hide Triggers"; }
@@ -34,7 +31,7 @@ namespace eclipse::hacks::Creator {
         void onPlaytest(cocos2d::CCObject* sender) {
             EditorUI::onPlaytest(sender);
 
-            auto* editorLayer = LevelEditorLayer::get();
+            auto* editorLayer = utils::get<LevelEditorLayer>();
             if (!editorLayer) return;
 
             // Store all triggers

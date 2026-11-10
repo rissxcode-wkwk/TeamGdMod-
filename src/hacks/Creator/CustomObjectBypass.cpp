@@ -1,18 +1,15 @@
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <Geode/modify/EditorUI.hpp>
 
 namespace eclipse::hacks::Creator {
-
-    class CustomObjectBypass : public hack::Hack {
+    class $hack(CustomObjectBypass) {
         void init() override {
-            auto tab = gui::MenuTab::find("Creator");
-
-            tab->addToggle("Custom Object Bypass", "creator.customobjectbypass")
-                ->handleKeybinds()
-                ->setDescription("Allows you to go beyond the 1000 object limit for custom objects.");
+            auto tab = gui::MenuTab::find("tab.creator");
+            tab->addToggle("creator.customobjectbypass")->handleKeybinds()->setDescription();
         }
 
         [[nodiscard]] const char* getId() const override { return "Custom Object Bypass"; }
@@ -24,17 +21,19 @@ namespace eclipse::hacks::Creator {
         ALL_DELEGATES_AND_SAFE_PRIO("creator.customobjectbypass")
 
         void onNewCustomItem(CCObject* sender) {
-            if (auto gameManager = GameManager::sharedState()) {
-                cocos2d::CCArray* newSelectedObjs;
-                if (m_selectedObjects->count() == 0) {
-                    newSelectedObjs = cocos2d::CCArray::create();
-                    newSelectedObjs->addObject(m_selectedObject);
-                } else {
-                    newSelectedObjs = this->m_selectedObjects;
+            if (auto gameManager = utils::get<GameManager>()) {
+                if (m_selectedObjects != nullptr) {
+                    cocos2d::CCArray* newSelectedObjs;
+                    if (m_selectedObjects->count() == 0) {
+                        newSelectedObjs = cocos2d::CCArray::create();
+                        newSelectedObjs->addObject(m_selectedObject);
+                    } else {
+                        newSelectedObjs = this->m_selectedObjects;
+                    }
+                    gameManager->addNewCustomObject(copyObjects(newSelectedObjs, false, false));
+                    m_selectedObjectIndex = 0;
+                    reloadCustomItems();
                 }
-                gameManager->addNewCustomObject(copyObjects(newSelectedObjs, false, false));
-                m_selectedObjectIndex = 0;
-                reloadCustomItems();
             }
         }
     };

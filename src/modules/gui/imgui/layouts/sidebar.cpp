@@ -1,16 +1,22 @@
 #include "sidebar.hpp"
-#include <modules/gui/imgui/imgui.hpp>
 #include <modules/gui/gui.hpp>
+#include <modules/gui/components/base-component.hpp>
+#include <modules/gui/imgui/imgui.hpp>
 #include <modules/gui/theming/manager.hpp>
+#include <modules/i18n/translations.hpp>
 
 namespace eclipse::gui::imgui {
 
     void SidebarLayout::init() {
-        auto& tabs = Engine::get()->getTabs();
+        m_tabs.clear();
+
+        auto& tabs = Engine::get().getTabs();
+        m_tabs.reserve(tabs.size());
         for (auto& tab : tabs) {
-            m_tabs.emplace_back(tab->getTitle(), [tab] {
+            m_tabs.emplace_back(tab.getTitle(), [tab = &tab] {
                 for (auto& component : tab->getComponents()) {
-                    ImGuiRenderer::get()->visitComponent(component);
+                    if (component->getFlags() & ComponentFlags::DisableSidebar) continue;
+                    ImGuiRenderer::get()->visitComponent(component.get());
                 }
             });
         }
@@ -30,9 +36,10 @@ namespace eclipse::gui::imgui {
     }
 
     void SidebarLayout::draw() {
-        if (!Engine::get()->isToggled()) return;
+        if (!Engine::get().isToggled()) return;
 
-        auto scale = ThemeManager::get()->getGlobalScale();
+        auto tm = ThemeManager::get();
+        auto scale = tm->getGlobalScale();
         ImGuiStyle* style = &ImGui::GetStyle();
         style->WindowRounding = 15.f * scale;
 
@@ -42,13 +49,13 @@ namespace eclipse::gui::imgui {
                      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove);
         recalculateSize(true);
 
-        // Efek bayangan jendela (WindowShadowSize/ImGuiCol_WindowShadow) hanya ada di fork ImGui Eclipse,
-        // tidak ada di ImGui resmi v1.92.4, jadi dinonaktifkan.
+        style->Colors[ImGuiCol_WindowShadow] = ImVec4(0.f, 0.f, 0.f, 1.f);
+        style->WindowShadowSize = 50.f;
 
         // Logo (not really)
 
         ImGui::BeginGroup(); {
-            ImGui::BeginChild("Logo", ImVec2(188 * scale, 50 * scale));
+            ImGui::BeginChild("Logo", ImVec2(160 * scale, 50 * scale));
             ImGui::SameLine();
 
             ImGui::SetCursorPosY(11);
@@ -71,13 +78,13 @@ namespace eclipse::gui::imgui {
 
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10 * scale);
 
-        Tabs currentTabs = Engine::get()->getTabs();
+        auto& currentTabs = Engine::get().getTabs();
 
         for (int i = 0; i < currentTabs.size(); i++) {
-            std::string it = currentTabs[i]->getTitle().c_str();
+            std::string it = i18n::get_(currentTabs[i].getTitle());
             ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5, 0.5));
             ImGui::PushStyleColor(ImGuiCol_Button, m_selectedTab == i ? style->Colors[ImGuiCol_Button] : ImVec4(0, 0, 0, 0));
-            ImGui::PushStyleColor(ImGuiCol_Text, style->Colors[ImGuiCol_Text]);
+            ImGui::PushStyleColor(ImGuiCol_Text, currentTabs[i].isSearchedFor() ? static_cast<ImVec4>(tm->getSearchedColor()) : style->Colors[ImGuiCol_Text]);
             if (ImGui::Button(it.c_str(), ImVec2(160 * scale, 40 * scale))) {
                 m_selectedTab = i;
             }
@@ -107,8 +114,8 @@ namespace eclipse::gui::imgui {
         recalculateSize(false);
 
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
-		ImGui::BeginChild("modules-wrapper", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false);
-		ImGui::PopStyleColor();
+        ImGui::BeginChild("modules-wrapper", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y), false);
+        ImGui::PopStyleColor();
 
         // Render tabs
         for (int i = 0; i < m_tabs.size(); i++) {

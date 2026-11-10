@@ -1,24 +1,20 @@
-#include "Geode/binding/LevelTools.hpp"
-#include <modules/gui/gui.hpp>
-#include <modules/hack/hack.hpp>
 #include <modules/config/config.hpp>
+#include <modules/gui/gui.hpp>
+#include <modules/gui/components/toggle.hpp>
+#include <modules/hack/hack.hpp>
 
 #include <utility>
 
-#include <Geode/modify/PauseLayer.hpp>
-#include <Geode/modify/EditorUI.hpp>
 #include <Geode/modify/EditorPauseLayer.hpp>
+#include <Geode/modify/EditorUI.hpp>
 #include <Geode/modify/LevelTools.hpp>
+#include <Geode/modify/PauseLayer.hpp>
 
 namespace eclipse::hacks::Creator {
-
-    class LevelEdit : public hack::Hack {
+    class $hack(LevelEdit) {
         void init() override {
-            auto tab = gui::MenuTab::find("Creator");
-
-            tab->addToggle("Level Edit", "creator.leveledit")
-                ->handleKeybinds()
-                ->setDescription("Allows you to access the level editor from the pause menu in any level.");
+            auto tab = gui::MenuTab::find("tab.creator");
+            tab->addToggle("creator.leveledit")->handleKeybinds()->setDescription();
         }
 
         [[nodiscard]] const char* getId() const override { return "Level Edit"; }
@@ -30,7 +26,7 @@ namespace eclipse::hacks::Creator {
         ALL_DELEGATES_AND_SAFE_PRIO("creator.leveledit")
 
         void customSetup() override {
-            auto level = PlayLayer::get()->m_level;
+            auto level = utils::get<PlayLayer>()->m_level;
             auto levelType = level->m_levelType;
 
             level->m_levelType = GJLevelType::Editor;
@@ -38,8 +34,8 @@ namespace eclipse::hacks::Creator {
             level->m_levelType = levelType;
         }
 
-        void onEdit(cocos2d::CCObject* sender) {
-            auto level = PlayLayer::get()->m_level;
+        void onTryEdit(cocos2d::CCObject* sender) {
+            auto level = utils::get<PlayLayer>()->m_level;
             auto levelType = level->m_levelType;
 
             level->m_levelType = GJLevelType::Editor;
@@ -50,8 +46,10 @@ namespace eclipse::hacks::Creator {
 
     // 2.207 added "read-only" mode into editor
     // we want to disable it
-#if GEODE_COMP_GD_VERSION > 22070
+    #if GEODE_COMP_GD_VERSION > 22070
     class $modify(LevelEditEUIHook, EditorUI) {
+        ALL_DELEGATES_AND_SAFE_PRIO("creator.leveledit")
+
         void onSettings(CCObject* sender) {
             auto level = this->m_editorLayer->m_level;
             auto levelType = level->m_levelType;
@@ -62,6 +60,8 @@ namespace eclipse::hacks::Creator {
     };
 
     class $modify(LevelEditEPLHook, EditorPauseLayer) {
+        ALL_DELEGATES_AND_SAFE_PRIO("creator.leveledit")
+
         void customSetup() override {
             auto level = this->m_editorLayer->m_level;
             auto levelType = level->m_levelType;
@@ -70,10 +70,10 @@ namespace eclipse::hacks::Creator {
             level->m_levelType = levelType;
         }
     };
-#endif
+    #endif
 
-// due to some mysterious reason, this will crash in Debug mode
-#ifdef NDEBUG
+    // due to some mysterious reason, this will crash in Debug mode
+    #ifdef NDEBUG
     class $modify(LevelEditLTHook, LevelTools) {
         ENABLE_SAFE_HOOKS_ALL()
 
@@ -84,5 +84,5 @@ namespace eclipse::hacks::Creator {
             return config::get<bool>("creator.leveledit", false);
         }
     };
-#endif
+    #endif
 }

@@ -1,17 +1,18 @@
 #pragma once
 
+#include <functional.hpp>
 #include <Geode/Geode.hpp>
 
+#include <functional>
 #include <memory>
+#include <optional>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <unordered_map>
-#include <functional>
-#include <optional>
+#include <Geode/utils/Keyboard.hpp>
 
 namespace eclipse::keybinds {
-
-    enum class Keys {
+    enum class Keys : uint8_t {
         None,
 
         // Letters
@@ -46,6 +47,13 @@ namespace eclipse::keybinds {
         // Mouse buttons
         MouseLeft, MouseRight, MouseMiddle, MouseButton4, MouseButton5,
 
+        // Controller buttons
+        GamepadButtonA, GamepadButtonB, GamepadButtonX, GamepadButtonY,
+        GamepadButtonUp, GamepadButtonDown, GamepadButtonLeft, GamepadButtonRight,
+        GamepadButtonLeftBumper, GamepadButtonRightBumper,
+        GamepadButtonLeftTrigger,GamepadButtonRightTrigger,
+        GamepadButtonBack, GamepadButtonStart,
+
         // System keys
         MenuKey, LastKey,
 
@@ -58,24 +66,59 @@ namespace eclipse::keybinds {
 
     static constexpr int KEY_COUNT = static_cast<int>(Keys::LastKey);
 
+    struct KeybindProps {
+        Keys key;
+        geode::KeyboardModifier mods;
+
+        constexpr KeybindProps(Keys key = Keys::None, geode::KeyboardModifier mods = {}) noexcept
+            : key(key), mods(mods) {}
+
+        constexpr bool operator==(KeybindProps const& other) const noexcept {
+            return key == other.key && mods == other.mods;
+        }
+
+        constexpr bool operator==(Keys other) const noexcept {
+            return key == other;
+        }
+    };
+
+    struct KeyEvent {
+        double timestamp;
+        KeybindProps props;
+        bool down;
+    };
+
     /// @brief Convert a key to a string.
     /// @param key Key to convert.
     /// @return String representation of the key.
-    [[nodiscard]] std::string keyToString(Keys key);
+    [[nodiscard]] std::string keyToString(KeybindProps key);
 
     /// @brief Convert a string to a key.
     /// @param key String to convert.
     /// @return Key representation of the string.
-    [[nodiscard]] Keys stringToKey(const std::string& key);
+    [[nodiscard]] Keys stringToKey(std::string_view key);
 
     /// @brief Check if a key is currently being pressed.
     bool isKeyDown(Keys key);
 
+    /// @brief Check if a keybind is currently being pressed.
+    bool isKeyDown(KeybindProps key);
+
     /// @brief Check if a key was pressed this frame.
     bool isKeyPressed(Keys key);
 
+    /// @brief Check if a keybind was pressed this frame.
+    bool isKeyPressed(KeybindProps key);
+
     /// @brief Check if a key was released this frame.
     bool isKeyReleased(Keys key);
+
+    /// @brief Check if a keybind was released this frame.
+    bool isKeyReleased(KeybindProps key);
+
+    /// @brief Get the current modifiers state.
+    /// @return The current modifiers state.
+    geode::KeyboardModifier getCurrentModifiers();
 
     /// @brief A keybind that can be used to execute a callback when a key is pressed.
     class Keybind {
@@ -86,26 +129,26 @@ namespace eclipse::keybinds {
         /// @param title The title of the keybind.
         /// @param callback The callback to execute when the keybind is pressed.
         /// @param internal Whether the keybind is internal or not.
-        Keybind(Keys key, std::string id, std::string title, std::function<void(bool)> callback, bool internal = false)
-            : m_key(key), m_id(std::move(id)), m_title(std::move(title)), m_callback(std::move(callback)), m_internal(internal) {}
+        Keybind(KeybindProps key, std::string id, std::string title, Function<void(KeyEvent)>&& callback, bool internal = false)
+            : m_id(std::move(id)), m_title(std::move(title)), m_callback(std::move(callback)), m_key(key),
+              m_internal(internal) {}
+
+        Keybind(Keybind&&) = default;
+        Keybind& operator=(Keybind&&) = default;
+        Keybind(Keybind const&) = delete;
+        Keybind& operator=(Keybind const&) = delete;
 
         /// @brief Get the key of the keybind.
-        [[nodiscard]] Keys getKey() const { return m_key; }
+        [[nodiscard]] KeybindProps getKey() const { return m_key; }
 
         /// @brief Execute the keybind's callback with the given state.
-        void execute(bool down) const { m_callback(down); }
-
-        /// @brief Execute the pressed callback.
-        void push() const { execute(true); }
-
-        /// @brief Execute the released callback.
-        void release() const { execute(false); }
+        void execute(KeyEvent down) { m_callback(down); }
 
         /// @brief Get the ID of the keybind.
-        [[nodiscard]] const std::string& getId() const { return m_id; }
+        [[nodiscard]] std::string const& getId() const { return m_id; }
 
         /// @brief Get the title of the keybind.
-        [[nodiscard]] const std::string& getTitle() const { return m_title; }
+        [[nodiscard]] std::string const& getTitle() const { return m_title; }
 
         /// @brief Check if the keybind is initialized.
         [[nodiscard]] bool isInitialized() const { return m_initialized; }
@@ -117,13 +160,16 @@ namespace eclipse::keybinds {
         void setInitialized(bool initialized) { m_initialized = initialized; }
 
         /// @brief Set the key of the keybind.
-        void setKey(Keys key) { m_key = key; }
+        void setKey(KeybindProps key) { m_key = key; }
+
+        /// @brief Set the title of the keybind.
+        void setTitle(std::string title) { m_title = std::move(title); }
 
     private:
-        Keys m_key;
         std::string m_id;
         std::string m_title;
-        std::function<void(bool)> m_callback;
+        Function<void(KeyEvent)> m_callback;
+        KeybindProps m_key;
         bool m_initialized = false;
         bool m_internal = false;
     };
@@ -132,18 +178,26 @@ namespace eclipse::keybinds {
     class Manager {
     public:
         /// @brief Get the keybind manager.
-        static std::shared_ptr<Manager> get();
+        static Manager* get();
 
         /// @brief Register a keybind to the manager (in case the keybind will be later used)
         /// @param id The ID of the keybind.
         /// @param title The title of the keybind.
         /// @param callback The callback to execute when the keybind is pressed.
-        Keybind& registerKeybind(const std::string& id, const std::string& title, const std::function<void(bool)>& callback);
+        Keybind& registerKeybind(std::string id, std::string title, Function<void(KeyEvent)>&& callback);
 
         /// @brief Register a keybind without adding it to the keybinds UI tab. Useful for internal keybinds.
         /// @param id The ID of the keybind.
         /// @param callback The callback to execute when the keybind is pressed.
-        Keybind& addListener(const std::string& id, const std::function<void(bool)>& callback);
+        Keybind& addListener(std::string id, Function<void(KeyEvent)>&& callback);
+
+        /// @brief Register a global listener that will be called for every key event.
+        void registerGlobalListener(Function<bool(KeyEvent)>&& callback);
+
+        /// @brief Unregister a keybind from the manager. This will completely remove it from the configuration.
+        /// @param id The ID of the keybind.
+        /// @return Whether the keybind was successfully unregistered.
+        bool unregisterKeybind(std::string const& id);
 
         /// @brief Load keybinds from config.
         void init();
@@ -156,7 +210,7 @@ namespace eclipse::keybinds {
 
         /// @brief Get all keybinds.
         /// @return All keybinds.
-        [[nodiscard]] const std::vector<Keybind>& getKeybinds() const { return m_keybinds; }
+        [[nodiscard]] std::vector<Keybind> const& getKeybinds() const { return m_keybinds; }
 
         /// @brief Get a keybind by its ID.
         /// @param id The ID of the keybind.
@@ -170,24 +224,45 @@ namespace eclipse::keybinds {
 
         /// @brief Register a key press.
         /// @note This function is called from the key callback hook.
-        void registerKeyPress(Keys key);
+        void registerKeyPress(KeyEvent key);
 
         /// @brief Register a key release.
         /// @note This function is called from the key callback hook.
-        void registerKeyRelease(Keys key);
+        void registerKeyRelease(KeyEvent key);
+
+        /// @brief Get the unique ID for the menu keybind component.
+        [[nodiscard]] size_t getMenuKeybindUID() const { return m_menuKeybindUID; }
 
     private:
         std::vector<Keybind> m_keybinds;
+        std::vector<Function<bool(KeyEvent)>> m_globalListeners;
         std::unordered_map<Keys, bool> m_keyStates;
         std::unordered_map<Keys, bool> m_lastKeyStates;
+        size_t m_menuKeybindUID = 0;
         bool m_initialized = false;
 
-        Keybind& registerKeybindInternal(const std::string& id, const std::string& title, const std::function<void(bool)>& callback, bool internal);
+        Keybind& registerKeybindInternal(std::string id, std::string title, Function<void(KeyEvent)>&& callback, bool internal);
 
         friend bool isKeyDown(Keys key);
         friend bool isKeyPressed(Keys key);
         friend bool isKeyReleased(Keys key);
+        friend bool isKeyDown(KeybindProps key);
+        friend bool isKeyPressed(KeybindProps key);
+        friend bool isKeyReleased(KeybindProps key);
     };
-
-
 }
+
+template <>
+struct matjson::Serialize<eclipse::keybinds::KeybindProps> {
+    static Value toJson(eclipse::keybinds::KeybindProps const& key) {
+        return static_cast<int>(key.key) | (static_cast<int>(key.mods) << 8);
+    }
+
+    static geode::Result<eclipse::keybinds::KeybindProps> fromJson(Value const& value) {
+        GEODE_UNWRAP_INTO(int keyInt, value.as<int>());
+        eclipse::keybinds::KeybindProps props;
+        props.key = static_cast<eclipse::keybinds::Keys>(keyInt & 0xFF);
+        props.mods = (keyInt >> 8) & 0xFF;
+        return geode::Ok(props);
+    }
+};
