@@ -5,6 +5,7 @@
 #include <modules/labels/setting.hpp>
 #include <utils.hpp>
 #include <asp/fs/fs.hpp>
+#include <modules/utils/optional-helpers.hpp>
 
 namespace eclipse::i18n {
     using Map = geode::utils::StringMap<std::string>;
@@ -86,7 +87,7 @@ namespace eclipse::i18n {
         auto res2 = res.unwrap().as<Map>();
         if (res2.isErr()) return;
         g_fallback = std::move(res2.unwrap());
-        updateLanguageCode(g_fallback, it->path.filename().value_or({}));
+        updateLanguageCode(g_fallback, eclipse::utils::orEmpty(it->path.filename()));
     }
 
     bool setLanguage(std::string_view code) {
@@ -103,7 +104,7 @@ namespace eclipse::i18n {
         if (map.isErr()) return false;
 
         g_translations = std::move(map.unwrap());
-        updateLanguageCode(g_translations, it->path.filename().value_or({}));
+        updateLanguageCode(g_translations, eclipse::utils::orEmpty(it->path.filename()));
         config::setTemp<uint64_t>("language.index", std::distance(langs.begin(), it));
 
         // check if current fallback is the same as the new language
@@ -151,7 +152,7 @@ namespace eclipse::i18n {
 
         return LanguageMetadata{
             json["language-name"].asString().unwrapOrDefault(),
-            stringExtension(path.filename().value_or({})),
+            stringExtension(eclipse::utils::orEmpty(path.filename())),
             std::move(fallback),
             std::move(charset),
             path
@@ -181,7 +182,7 @@ namespace eclipse::i18n {
                 if (!item) continue;
                 auto& entry = item.unwrap();
 
-                auto filename = entry.path.filename().value_or({});
+                auto filename = eclipse::utils::orEmpty(entry.path.filename());
                 if (filename.size() < 10 || filename.view().substr(filename.size() - 10) != ".lang.json") continue;
 
                 auto code = filename.view().substr(0, filename.size() - 10);

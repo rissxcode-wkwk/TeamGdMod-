@@ -1,5 +1,6 @@
 #include <modules.hpp>
 #include <asp/fs/fs.hpp>
+#include <modules/utils/optional-helpers.hpp>
 #include <modules/bot/bot.hpp>
 #include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
@@ -100,7 +101,7 @@ namespace eclipse::hacks::Bot {
         auto replayPath = config::get<asp::fs::Path>("bot.selectedreplay", "temp");
 
         if (replayPath.exists()) {
-            auto name = replayPath.stem().value_or({});
+            auto name = eclipse::utils::orEmpty(replayPath.stem());
 
             return Popup::create(
                 i18n::get_("common.warning"),
@@ -122,7 +123,7 @@ namespace eclipse::hacks::Bot {
                     Popup::create(
                         i18n::get_("bot.saved"),
                         i18n::format(
-                            "bot.saved.msg", confirmReplayDirectory.stem().value_or({}), s_bot.getInputCount()
+                            "bot.saved.msg", eclipse::utils::orEmpty(confirmReplayDirectory.stem()), s_bot.getInputCount()
                         )
                     );
 
@@ -138,7 +139,7 @@ namespace eclipse::hacks::Bot {
         }
         Popup::create(
             i18n::get_("bot.saved"),
-            i18n::format("bot.saved.msg", replayPath.stem().value_or({}), s_bot.getInputCount())
+            i18n::format("bot.saved.msg", eclipse::utils::orEmpty(replayPath.stem()), s_bot.getInputCount())
         );
         config::set("bot.selectedreplay", replayPath);
     }
@@ -153,7 +154,7 @@ namespace eclipse::hacks::Bot {
         }
         Popup::create(
             i18n::get_("bot.loaded"),
-            i18n::format("bot.loaded.msg", replayPath.stem().value_or({}), s_bot.getInputCount())
+            i18n::format("bot.loaded.msg", eclipse::utils::orEmpty(replayPath.stem()), s_bot.getInputCount())
         );
     }
 
@@ -188,7 +189,8 @@ namespace eclipse::hacks::Bot {
                 i18n::get_("bot.delete-invalid.msg")
             );
         }
-        auto replayName = std::string(replayPath.filename().value_or({}).stem().value_or({}));
+        auto replayFilename = eclipse::utils::orEmpty(replayPath.filename());
+        auto replayName = std::string(eclipse::utils::orEmpty(replayFilename.stem()));
         Popup::create(
             i18n::get_("common.warning"),
             i18n::format("bot.confirm-delete", replayName),

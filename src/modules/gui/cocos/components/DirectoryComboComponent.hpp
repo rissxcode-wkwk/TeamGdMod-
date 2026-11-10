@@ -1,5 +1,6 @@
 #pragma once
 #include "BaseComponentNode.hpp"
+#include <modules/utils/optional-helpers.hpp>
 
 #include <modules/gui/components/filesystem-combo.hpp>
 
@@ -19,7 +20,7 @@ namespace eclipse::gui::cocos {
                 m_valueLabel->setString("");
                 return;
             }
-            m_valueLabel->setString(m_component->getItems()[m_index].filename().value_or({}));
+            m_valueLabel->setString(eclipse::utils::orEmpty(m_component->getItems()[m_index].filename()));
             m_valueLabel->limitLabelWidth(70.f, 1.5f, 0.25f);
         }
 
