@@ -18,23 +18,11 @@
 	"developers": ["Eclipse Team", "ninXout", "Prevter", "maxnu", "Firee", "SpaghettDev"],
 	"description": "A next-generation mod menu for Geometry Dash.",
 	"early-load": true,
-	"incompatibilities": [
-		{
-			"id": "prevter.openhack",
-			"version": "*",
-			"importance": "superseded"
-		},
-		{
-			"id": "maxnu.gd_mega_overlay",
-			"version": "*",
-			"importance": "superseded"
-		},
-		{
-			"id": "ninxout.crystal_client",
-			"version": "*",
-			"importance": "superseded"
-		}
-	],
+	"incompatibilities": {
+		"prevter.openhack": { "version": "*", "breaking": false },
+		"maxnu.gd_mega_overlay": { "version": "*", "breaking": false },
+		"ninxout.crystal_client": { "version": "*", "breaking": false }
+	},
 	"resources": {
 		"files": [
 			"resources/Blur/*.glsl",
@@ -46,13 +34,9 @@
 			"resources/ECLIPSE-android.png"
 		]
 	},
-	"dependencies": [
-        {
-            "id": "eclipse.ffmpeg-api",
-            "version": ">=1.0.0",
-            "importance": "required"
-        }
-	],
+	"dependencies": {
+		"eclipse.ffmpeg-api": ">=1.0.0"
+	},
 	"settings": {
 		"legacy-render": {
 			"name": "Use Legacy rendering",
