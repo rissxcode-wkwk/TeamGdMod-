@@ -25,6 +25,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Repo geode-sdk/bindings (branch main) sedang sering berubah. Pada 10 Nov 2026 sempat ada
+      # commit yang rusak (m_allObjectsToggler tidak dideklarasikan di LevelBrowserLayer 2.2091).
+      # Supaya build tidak ikut rusak setiap bindings berubah, bindings dikunci ke satu commit
+      # yang sudah terbukti konsisten. Geode membaca lokasinya dari env GEODE_BINDINGS_REPO_PATH.
+      - name: Kunci versi bindings Geode
+        run: |
+          git clone https://github.com/geode-sdk/bindings.git "$RUNNER_TEMP/bindings"
+          git -C "$RUNNER_TEMP/bindings" checkout 5db3b324c53cd8124efa7453131252bb78362c28
+          echo "GEODE_BINDINGS_REPO_PATH=$RUNNER_TEMP/bindings" >> "$GITHUB_ENV"
+
       - name: Build the mod
         uses: geode-sdk/build-geode-mod@main
         with:
