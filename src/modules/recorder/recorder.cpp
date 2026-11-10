@@ -69,11 +69,17 @@ namespace eclipse::recorder {
 
         std::filesystem::path tempPath = m_renderSettings.m_outputFile.parent_path() / "music.mp4";
 
-        ffmpeg::AudioMixer audioMixer;
-        audioMixer.mixVideoRaw(m_renderSettings.m_outputFile, data, tempPath, 44100);
+        // ffmpeg-api 1.2.2: AudioMixer sekarang kelas statis (konstruktor dihapus) dan
+        // mixVideoRaw hanya menerima 3 argumen (tanpa sample rate), mengembalikan Result.
+        auto res = ffmpeg::AudioMixer::mixVideoRaw(m_renderSettings.m_outputFile, data, tempPath);
+        if (res.isErr()) {
+            // Jangan hapus video asli kalau penggabungan audio gagal
+            geode::log::error("Failed to mix audio into video: {}", res.unwrapErr());
+            return;
+        }
 
         std::filesystem::remove(m_renderSettings.m_outputFile);
-        std::filesystem::rename(tempPath,m_renderSettings.m_outputFile);
+        std::filesystem::rename(tempPath, m_renderSettings.m_outputFile);
     }
 
     std::vector<std::string> Recorder::getAvailableCodecs() {
