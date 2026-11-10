@@ -357,13 +357,14 @@ namespace eclipse::keybinds {
             FIRST_PRIORITY("cocos2d::CCKeyboardDispatcher::dispatchKeyboardMSG");
         }
 
-        bool dispatchKeyboardMSG(cocos2d::enumKeyCodes key, bool down, bool idk) {
+        // GD 2.2091: dispatchKeyboardMSG sekarang punya 4 parameter (ditambah double di akhir)
+        bool dispatchKeyboardMSG(cocos2d::enumKeyCodes key, bool down, bool isRepeat, double timestamp) {
             if (down)
                 Manager::get()->registerKeyPress(convertCocosKey(key));
             else if (!down)
                 Manager::get()->registerKeyRelease(convertCocosKey(key));
 
-            return CCKeyboardDispatcher::dispatchKeyboardMSG(key, down, idk);
+            return CCKeyboardDispatcher::dispatchKeyboardMSG(key, down, isRepeat, timestamp);
         }
     };
 #endif
