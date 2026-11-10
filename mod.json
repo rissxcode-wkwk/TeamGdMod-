@@ -1,77 +1,83 @@
 {
-    "geode": "6.0.0-alpha.1",
-    "gd": {
-        "win": "2.2091",
-        "mac": "2.2091",
-        "android": "2.2091",
-        "ios": "2.2091"
-    },
-    "version": "v1.0.0-beta.5",
-    "id": "eclipse.eclipse-menu",
-    "name": "Eclipse",
-    "links": {
-        "source": "https://github.com/EclipseMenu/EclipseMenu",
-        "community": "https://discord.gg/NnpwFRDMND"
-    },
-    "api": {
-        "include": [
-            "include/*.hpp"
-        ]
-    },
-    "tags": [
-        "cheats",
-        "gameplay",
-        "utility",
-        "customization",
-        "interface"
-    ],
-    "developers": [
-        "Eclipse Team",
-        "ninXout",
-        "Prevter",
-        "maxnu",
-        "Firee",
-        "SpaghettDev"
-    ],
-    "description": "A next-generation mod menu for Geometry Dash.",
-    "early-load": true,
-    "incompatibilities": {
-        "prevter.openhack": {
-            "version": "*",
-            "breaking": false
-        },
-        "maxnu.gd_mega_overlay": {
-            "version": "*",
-            "breaking": false
-        },
-        "ninxout.crystal_client": {
-            "version": "*",
-            "breaking": false
-        }
-    },
-    "resources": {
-        "files": [
-            "resources/Blur/*.glsl",
-            "resources/Fonts/*.ttf",
-            "resources/Licenses/*.txt",
-            "resources/Themes/*.json"
-        ],
-        "sprites": [
-            "resources/ECLIPSE-android.png"
-        ]
-    },
-    "settings": {
-        "legacy-render": {
-            "name": "Use Legacy rendering",
-            "description": "Disables some newer OpenGL features, which can solve some rendering issues on older hardware (at the cost of performance).",
-            "type": "bool",
-            "default": false
-        },
-        "reset-theme": {
-            "type": "custom:custom-btn",
-            "name": "Reset theme?",
-            "description": "Reset the theme to the default one.",
-            "default": "Reset"
-        }
-    }
+"geode": "6.0.0-alpha.1",
+"gd": {
+"win": "2.2091",
+"mac": "2.2091",
+"android": "2.2091",
+"ios": "2.2091"
+},
+"version": "v1.0.0-beta.5",
+"id": "eclipse.eclipse-menu",
+"name": "Eclipse",
+"links": {
+"source": "https://github.com/EclipseMenu/EclipseMenu",
+"community": "https://discord.gg/NnpwFRDMND"
+},
+"api": {
+"include": [
+"include/.hpp"
+]
+},
+"tags": [
+"cheats",
+"gameplay",
+"utility",
+"customization",
+"interface"
+],
+"developers": [
+"Eclipse Team",
+"ninXout",
+"Prevter",
+"maxnu",
+"Firee",
+"SpaghettDev"
+],
+"description": "A next-generation mod menu for Geometry Dash.",
+"early-load": true,
+"incompatibilities": {
+"prevter.openhack": {
+"version": "",
+"breaking": false
+},
+"maxnu.gd_mega_overlay": {
+"version": "",
+"breaking": false
+},
+"ninxout.crystal_client": {
+"version": "",
+"breaking": false
+}
+},
+"resources": {
+"files": [
+"resources/Blur/.glsl",
+"resources/Fonts/.ttf",
+"resources/Licenses/.txt",
+"resources/Themes/.json"
+],
+"sprites": [
+"resources/ECLIPSE-android.png"
+]
+},
+"dependencies": {
+"eclipse.ffmpeg-api": {
+"version": ">=1.0.0",
+"required": false
+}
+},
+"settings": {
+"legacy-render": {
+"name": "Use Legacy rendering",
+"description": "Disables some newer OpenGL features, which can solve some rendering issues on older hardware (at the cost of performance).",
+"type": "bool",
+"default": false
+},
+"reset-theme": {
+"type": "custom:custom-btn",
+"name": "Reset theme?",
+"description": "Reset the theme to the default one.",
+"default": "Reset"
+}
+}
 }
