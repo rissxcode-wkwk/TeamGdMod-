@@ -22,3 +22,9 @@ Workflow memakai `sdk: given`, jadi versi SDK mengikuti `mod.json`.
   satu per satu dengan bindings 2.2091, dan RIFT lokal sudah dites. Kalau CI masih error, kirim lognya.
 - RIFT lokal mendukung sintaks di `LABELS.md` (variabel, operator, ternary, fungsi bawaan, `cfg()`).
 - Android32 tetap ada di workflow; kalau gagal, hapus entri `Android32` dari matrix.
+
+## Penghapusan fitur ffmpeg
+- Fitur **Internal Recorder** (satu-satunya yang butuh mod `eclipse.ffmpeg-api`) dihapus total:
+  folder `src/modules/recorder/` dan `src/hacks/Recorder/`, serta tab "Internal Recorder" di menu.
+- Blok `"dependencies": { "eclipse.ffmpeg-api": ... }` dihapus dari `mod.json`, jadi mod ini bisa
+  dimuat tanpa mod ffmpeg terpasang.

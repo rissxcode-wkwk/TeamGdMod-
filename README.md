@@ -49,7 +49,6 @@
 - Startpos Switcher (with Smart Smartpos!)
 - Fully Customizable Labels
 - Show Trajectory
-- Internal Recorder
 - Replay Bot
 - Keybinds
 - Theme Customizability (you can theme Eclipse Menu however you want!)
