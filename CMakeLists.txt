@@ -6,6 +6,7 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 project(ffmpeg-api VERSION 1.0.0)
+message(STATUS "ffmpeg-api CMake rev2 (Geode 6): deteksi ABI + cek library FFmpeg aktif")
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
@@ -112,6 +113,9 @@ else ()
         ${BZIP2_LIBRARY}
         "-lm -lbz2 -lz -liconv -pthread -framework Security -framework VideoToolbox -framework CoreFoundation -framework CoreMedia -framework CoreVideo -framework CoreServices -framework CoreAudio -framework AVFoundation -framework CoreGraphics -framework AudioToolbox -framework Metal -framework CoreImage -framework AppKit"
     ) # macos
+endif()
+if (NOT STATIC_LIBS)
+    message(FATAL_ERROR "Tidak ada library FFmpeg yang akan di-link (STATIC_LIBS kosong). Platform/ABI tidak terdeteksi.")
 endif()
 target_link_libraries(${PROJECT_NAME} ${STATIC_LIBS})
 
