@@ -1,38 +1,45 @@
-name: Build Eclipse (Android 64)
+name: Build FFmpeg API (Android 64)
 
 on:
   workflow_dispatch:
   push:
     branches:
       - "**"
-  pull_request:
-    branches:
-      - "**"
 
-# Izin tulis diperlukan supaya langkah 'Create rolling release' boleh membuat release di repo
 permissions:
   contents: write
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-        - name: Android64
-          os: ubuntu-latest
-          target: Android64
-
-    name: ${{ matrix.config.name }}
-    runs-on: ${{ matrix.config.os }}
+    name: Android64
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      # Repo geode-sdk/bindings (branch main) sedang sering berubah. Pada 10 Nov 2026 sempat ada
-      # commit yang rusak (m_allObjectsToggler tidak dideklarasikan di LevelBrowserLayer 2.2091).
-      # Supaya build tidak ikut rusak setiap bindings berubah, bindings dikunci ke satu commit
-      # yang sudah terbukti konsisten. Geode membaca lokasinya dari env GEODE_BINDINGS_REPO_PATH.
+      # Library FFmpeg dibangun dari source (butuh beberapa menit), lalu di-cache supaya build berikutnya cepat.
+      - name: Cache library FFmpeg
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: lib/arm64-v8a
+          key: ffmpeg-libs-android64-${{ hashFiles('scripts/build-ffmpeg-android.sh') }}
+
+      - name: Build library FFmpeg (Android arm64)
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: bash scripts/build-ffmpeg-android.sh
+
+      - name: Cek library FFmpeg
+        run: |
+          ls -la lib/arm64-v8a
+          test -f lib/arm64-v8a/libavcodec.a
+          test -f lib/arm64-v8a/libavformat.a
+          test -f lib/arm64-v8a/libavutil.a
+          test -f lib/arm64-v8a/libswresample.a
+          test -f lib/arm64-v8a/libswscale.a
+          test -f lib/arm64-v8a/libavfilter.a
+
+      # Bindings dikunci ke commit yang sama dengan build EclipseMenu supaya konsisten.
       - name: Kunci versi bindings Geode
         run: |
           git clone https://github.com/geode-sdk/bindings.git "$RUNNER_TEMP/bindings"
@@ -42,13 +49,10 @@ jobs:
       - name: Build the mod
         uses: geode-sdk/build-geode-mod@main
         with:
-          # sdk 'given' = pakai versi Geode dari mod.json ("geode": "6.0.0-alpha.1"),
-          # supaya SDK yang terpasang selalu cocok dengan mod.json (bukan alpha/nightly acak)
+          # 'given' = versi Geode dibaca dari mod.json ("geode": "6.0.0-alpha.1"), terbukti jalan di log CI.
           sdk: given
           combine: true
-          export-pdb: true
-          target: ${{ matrix.config.target }}
-          build-config: ${{ matrix.config.build-type || 'Release' }}
+          target: Android64
 
   package:
     name: Package builds
@@ -63,37 +67,3 @@ jobs:
         with:
           name: Geode Build
           path: ${{ steps.build.outputs.build-output }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ${{ github.workspace }}/bin
-          merge-multiple: true
-
-      - name: Create rolling release
-        uses: andelf/nightly-release@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: rolling-release
-          prerelease: true
-          name: 'Rolling Release'
-          body: |
-            This is the latest build of the mod for commit ${{ github.sha }} (${{ github.event.head_commit.message }}).
-            
-            ## IMPORTANT NOTICE FOR PEOPLE:
-            
-            Whatever you do, DO NOT download this expecting support from the Eclipse devs.
-            This is my own modification of Eclipse and is not affiliated nor endorsed by the project.
-            I will only provide support for my own changes, not any changes made by the Eclipse devs.
-
-            ## Supported Platforms Of This Build:
-
-            1. Android 64-bit
-
-            Target: Geometry Dash 2.2091 + Geode 6.0.0-alpha.1 (kompatibel dengan Geode 6.0.0).
-          files: |
-            ${{ github.workspace }}/bin/eclipse.eclipse-menu.geode
-            ${{ github.workspace }}/bin/eclipse.eclipse-menu.pdb
-
-            
