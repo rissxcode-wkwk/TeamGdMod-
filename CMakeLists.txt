@@ -49,19 +49,32 @@ if (WIN32)
         ${CMAKE_SOURCE_DIR}/lib/bcrypt.lib
         ${CMAKE_SOURCE_DIR}/lib/strmiids.lib
     ) # windows
-elseif (ANDROID) 
-    if (ANDROID_ABI STREQUAL "arm64-v8a")
+elseif (ANDROID)
+    # ANDROID_ABI belum tentu diset oleh toolchain Geode 6, jadi deteksi dengan beberapa cara.
+    set(FFMPEG_ABI "${ANDROID_ABI}")
+    if (NOT FFMPEG_ABI)
+        set(FFMPEG_ABI "${CMAKE_ANDROID_ARCH_ABI}")
+    endif()
+    if (NOT FFMPEG_ABI AND CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+        set(FFMPEG_ABI "arm64-v8a")
+    endif()
+    message(STATUS "FFmpeg: ANDROID_ABI='${ANDROID_ABI}', ABI yang dipakai='${FFMPEG_ABI}'")
+    if (FFMPEG_ABI STREQUAL "arm64-v8a")
         # Library FFmpeg dibangun oleh scripts/build-ffmpeg-android.sh ke lib/arm64-v8a.
         # Yang dipakai hanya library yang benar-benar ada, jadi build tanpa x265/aom/vpx tetap jalan.
         set(FFMPEG_LIB_DIR ${CMAKE_SOURCE_DIR}/lib/arm64-v8a)
+        if (NOT EXISTS ${FFMPEG_LIB_DIR}/libavcodec.a)
+            message(FATAL_ERROR "libavcodec.a tidak ditemukan di ${FFMPEG_LIB_DIR}. Jalankan scripts/build-ffmpeg-android.sh dulu.")
+        endif()
         set(STATIC_LIBS -Wl,--start-group)
         foreach(ffmpeg_lib avformat avcodec avfilter swscale swresample postproc avutil x264 x265 aom vpx)
             if (EXISTS ${FFMPEG_LIB_DIR}/lib${ffmpeg_lib}.a)
+                message(STATUS "FFmpeg: link lib${ffmpeg_lib}.a")
                 list(APPEND STATIC_LIBS ${FFMPEG_LIB_DIR}/lib${ffmpeg_lib}.a)
             endif()
         endforeach()
         list(APPEND STATIC_LIBS -Wl,--end-group android mediandk log z)
-    elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
+    elseif(FFMPEG_ABI STREQUAL "armeabi-v7a")
         add_definitions(-D__USE_FILE_OFFSET64)
         add_definitions(-DANDROID_PLATFORM=24)
         set(STATIC_LIBS
@@ -80,6 +93,8 @@ elseif (ANDROID)
             mediandk
             log
         ) # android
+    else()
+        message(FATAL_ERROR "ABI Android tidak didukung/terdeteksi: '${FFMPEG_ABI}'")
     endif()
 else ()
     find_package(BZIP2 REQUIRED)
