@@ -1,4 +1,3 @@
-#include <modules/utils/platform-compat.hpp>
 #include "DownloadPopup.hpp"
 
 #include <modules/gui/cocos/nodes/FallbackBMFont.hpp>
@@ -113,7 +112,7 @@ namespace eclipse::i18n {
         auto menu = cocos2d::CCMenu::create();
         menu->setID("menu"_spr);
         menu->addChild(btn);
-        ECLIPSE_ALIGN_H(menu, 10.f);
+        menu->alignItemsHorizontallyWithPadding(10.f);
         m_mainLayer->addChildAtPosition(menu, geode::Anchor::Bottom, {0, 25});
     }
 

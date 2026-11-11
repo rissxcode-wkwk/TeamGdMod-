@@ -18,12 +18,7 @@ namespace eclipse::hacks::Bypass {
 
     REGISTER_HACK(AllowLowVolume)
 
-    // typeinfo SliderThumb tidak ada di macOS -> pakai static_cast
-    #if defined(__APPLE__)
-    #define GET_SLIDER(sender) static_cast<SliderThumb*>(sender); if (!slider) return
-    #else
     #define GET_SLIDER(sender) geode::cast::typeinfo_cast<SliderThumb*>(sender); if (!slider) return
-    #endif
 
     class $modify(AllowLowVolumeOLHook, OptionsLayer) {
         ALL_DELEGATES_AND_SAFE_PRIO("bypass.allowlowvolume")

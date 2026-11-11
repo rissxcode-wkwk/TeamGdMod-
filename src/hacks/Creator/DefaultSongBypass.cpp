@@ -34,11 +34,6 @@ namespace eclipse::hacks::Creator {
         }
     };
 
-    #if defined(__APPLE__)
-    #pragma message("ECLIPSE v4: DefaultSongBypass MSL hook dimatikan di macOS")
-    #endif
-    // GameLevelManager::getIntForKey/setIntForKey tidak punya alamat di macOS
-    #if !defined(__APPLE__)
     class $modify(DefaultSongBypassMSLHook, MoreSearchLayer) {
         ALL_DELEGATES_AND_SAFE_PRIO("creator.defaultsongbypass")
 
@@ -58,5 +53,4 @@ namespace eclipse::hacks::Creator {
             this->updateAudioLabel();
         }
     };
-    #endif
 }

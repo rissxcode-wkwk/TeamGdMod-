@@ -101,9 +101,7 @@ namespace eclipse::hacks::Creator {
                 m_changedValueX = xValue;
                 m_changedValueY = yValue;
                 std::invoke(labelFunc, this, roundedValue);
-                #if !defined(__APPLE__) // GJScaleControl::sliderChanged tidak punya alamat di macOS
                 this->sliderChanged(slider->getThumb());
-                #endif
 
                 if (m_delegate) {
                     std::invoke(delegateFunc, m_delegate, xValue, yValue, m_scaleLocked);
