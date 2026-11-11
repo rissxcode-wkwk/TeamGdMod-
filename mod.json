@@ -1,0 +1,24 @@
+{
+    "geode": "6.0.0-alpha.1",
+    "gd": {
+        "win": "2.2091",
+        "android": "2.2091",
+        "mac": "2.2091",
+        "ios": "2.2091"
+    },
+    "api": {
+        "include": [
+            "include/*.hpp"
+        ]
+    },
+    "id": "eclipse.ffmpeg-api",
+    "name": "FFmpeg API",
+    "version": "v2.1.0",
+    "developers": ["Eclipse Team", "maxnu", "Prevter"],
+    "description": "Interaction with FFmpeg made easy",
+    "tags": ["utility", "offline", "developer", "api"],
+    "links": {
+        "source": "https://github.com/EclipseMenu/ffmpeg-api",
+        "community": "https://discord.gg/NnpwFRDMND"
+    }
+}
