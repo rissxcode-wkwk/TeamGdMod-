@@ -47,6 +47,8 @@ namespace eclipse::hacks::Creator {
     // 2.207 added "read-only" mode into editor
     // we want to disable it
     #if GEODE_COMP_GD_VERSION > 22070
+    // EditorUI::onSettings belum punya alamat di bindings macOS
+    #ifndef GEODE_IS_MACOS
     class $modify(LevelEditEUIHook, EditorUI) {
         ALL_DELEGATES_AND_SAFE_PRIO("creator.leveledit")
 
@@ -58,6 +60,7 @@ namespace eclipse::hacks::Creator {
             level->m_levelType = levelType;
         }
     };
+    #endif
 
     class $modify(LevelEditEPLHook, EditorPauseLayer) {
         ALL_DELEGATES_AND_SAFE_PRIO("creator.leveledit")

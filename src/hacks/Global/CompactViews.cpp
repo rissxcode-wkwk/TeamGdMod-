@@ -48,6 +48,8 @@ namespace eclipse::hacks::Global {
     };
 
     class $modify(CompactLevelsCommentsLCHook, LevelCell) {
+        // LevelCell::onClick belum punya alamat di bindings macOS
+        #ifndef GEODE_IS_MACOS
         void onClick(CCObject* sender) {
             // get the "view" button to work with compact mode in "my levels"
             if (this->m_level->m_levelType == GJLevelType::Editor && config::get<bool>("global.compacteditorlevels", false))
@@ -57,6 +59,7 @@ namespace eclipse::hacks::Global {
             else
                 LevelCell::onClick(sender);
         }
+        #endif
 
         void loadLocalLevelCell() {
             LevelCell::loadLocalLevelCell();
