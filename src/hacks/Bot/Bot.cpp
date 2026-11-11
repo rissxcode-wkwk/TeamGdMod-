@@ -36,8 +36,11 @@ namespace eclipse::hacks::Bot {
                 defaultValue = pl->m_level->m_levelName;
             } else if (auto* lil = scene->getChildByType<LevelInfoLayer>(0)) {
                 defaultValue = lil->m_level->m_levelName;
+            #if !(defined(__APPLE__) && defined(__x86_64__))
+            // typeinfo EditLevelLayer belum ada alamat Intel (x86_64) di bindings macOS
             } else if (auto* lil = scene->getChildByType<EditLevelLayer>(0)) {
                 defaultValue = lil->m_levelName;
+            #endif
             } else if (auto* lil = scene->getChildByType<LevelEditorLayer>(0)) {
                 defaultValue = lil->m_level->m_levelName;
             } else if (auto* lil = scene->getChildByType<LevelSelectLayer>(0)) {

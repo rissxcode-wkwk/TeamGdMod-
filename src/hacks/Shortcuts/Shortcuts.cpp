@@ -1,3 +1,4 @@
+#include <modules/utils/platform-compat.hpp>
 #include <modules/chatbot/ui/ChatboxPopup.hpp>
 #include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
@@ -13,6 +14,8 @@ struct ToggleDevToolsEvent : geode::Event<ToggleDevToolsEvent, bool()> {
 namespace eclipse::hacks::Shortcuts {
     class $hack(Shortcuts) {
         static void openSettings() {
+            // OptionsLayer::create belum punya alamat Intel (x86_64) di bindings macOS
+            #if !(defined(__APPLE__) && defined(__x86_64__))
             if (auto* options = OptionsLayer::create()) {
                 auto scene = utils::get<cocos2d::CCScene>();
                 if (!scene) return;
@@ -20,6 +23,7 @@ namespace eclipse::hacks::Shortcuts {
                 scene->addChild(options, zOrder + 1);
                 options->showLayer(false);
             }
+            #endif
         }
 
         static void openGraphicSettings() {
@@ -239,7 +243,7 @@ namespace eclipse::hacks::Shortcuts {
                 auto level = glm->getMainLevel(i, true);
                 if (gsm->hasCompletedMainLevel(i)) {
                     for (auto ix = 0; ix < 3; ix++) {
-                        if (gsm->hasSecretCoin(level->getCoinKey(ix + 1))) {
+                        if (ECLIPSE_HAS_SECRET_COIN(gsm, level->getCoinKey(ix + 1))) {
                             secretCoins++;
                         }
                     }
@@ -277,13 +281,13 @@ namespace eclipse::hacks::Shortcuts {
                     newSecretCoins += 1;
                 }
             }
-            if (gsm->hasSecretCoin("secret04")) {
+            if (ECLIPSE_HAS_SECRET_COIN(gsm, "secret04")) {
                 newSecretCoins++;
             }
-            if (gsm->hasSecretCoin("secret06")) {
+            if (ECLIPSE_HAS_SECRET_COIN(gsm, "secret06")) {
                 newSecretCoins++;
             }
-            if (gsm->hasSecretCoin("secretB03")) {
+            if (ECLIPSE_HAS_SECRET_COIN(gsm, "secretB03")) {
                 newSecretCoins++;
             }
             if (gsm->getStat("8") == newSecretCoins) return Popup::create(i18n::get_("common.info"), i18n::get_("shortcuts.recount-secret-coins.nochange"));

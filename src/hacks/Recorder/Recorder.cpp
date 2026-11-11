@@ -95,7 +95,10 @@ namespace eclipse::hacks::Recorder {
         }
 
         // refresh the ui objects
+        // GJBaseGameLayer::positionUIObjects belum punya alamat Intel (x86_64) di bindings macOS
+        #if !(defined(__APPLE__) && defined(__x86_64__))
         pl->positionUIObjects();
+        #endif
     }
 
     inline void trimString(std::string& str) {

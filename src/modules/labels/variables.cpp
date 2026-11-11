@@ -1,3 +1,4 @@
+#include <modules/utils/platform-compat.hpp>
 #include "variables.hpp"
 #include <utils.hpp>
 #include <modules/config/config.hpp>
@@ -482,7 +483,13 @@ namespace eclipse::labels {
         if (str == s_lastStr) return s_lastDecoded;
         s_lastStr = str;
         if (str.empty()) return s_lastDecoded = "";
-        s_lastDecoded = cocos2d::ZipUtils::base64URLDecode(str);
+        s_lastDecoded = 
+#if defined(__APPLE__)
+            eclipse::utils::compat::base64UrlDecode(str)
+#else
+            cocos2d::ZipUtils::base64URLDecode(str)
+#endif
+        ;
         return s_lastDecoded;
     }
 
@@ -669,7 +676,7 @@ namespace eclipse::labels {
             bool saved = false;
 
             if (gameLayer->m_level->m_levelType == GJLevelType::Main) {
-                saved = utils::get<GameStatsManager>()->hasSecretCoin(coinKey);
+                saved = ECLIPSE_HAS_SECRET_COIN(utils::get<GameStatsManager>(), coinKey);
             } else {
                 saved = utils::get<GameStatsManager>()->hasUserCoin(coinKey);
             }
