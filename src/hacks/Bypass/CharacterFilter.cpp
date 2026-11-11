@@ -23,13 +23,13 @@ namespace eclipse::hacks::Bypass {
         ADD_HOOKS_DELEGATE("bypass.charfilter")
 
         void updateLabel(std::string str) {
-            this->setAllowedChars(
+            eclipse::utils::compat::setAllowedChars(this, std::string(
                 "abcdefghijklmnopqrstuvwxyz"
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                 "0123456789!@#$%^&*()-=_+"
                 "`~[]{}/?.>,<\\|;:'\""
                 " "
-            );
+            ));
 
             CCTextInputNode::updateLabel(std::move(str));
         }

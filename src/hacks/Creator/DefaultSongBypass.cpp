@@ -34,6 +34,8 @@ namespace eclipse::hacks::Creator {
         }
     };
 
+    // GameLevelManager::getIntForKey/setIntForKey tidak punya alamat di macOS
+    #if !defined(__APPLE__)
     class $modify(DefaultSongBypassMSLHook, MoreSearchLayer) {
         ALL_DELEGATES_AND_SAFE_PRIO("creator.defaultsongbypass")
 
@@ -53,4 +55,5 @@ namespace eclipse::hacks::Creator {
             this->updateAudioLabel();
         }
     };
+    #endif
 }

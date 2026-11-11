@@ -19,6 +19,17 @@
 #include <modules.hpp>
 #include <ranges>
 
+namespace {
+    // FLAlertLayer::create (overload 9 argumen) tidak punya alamat di macOS -> pakai createQuickPopup
+    FLAlertLayer* eclipseMakeAlert(char const* title, std::string const& message) {
+#if defined(__APPLE__)
+        return geode::createQuickPopup(title, message, "OK", nullptr, [](auto, bool) {}, false);
+#else
+        return FLAlertLayer::create(nullptr, title, message, "OK", nullptr, 400, true, 0, 1);
+#endif
+    }
+}
+
 namespace eclipse::hacks::Global {
     enum class SafeModeState {
         Normal,   // no cheats detected
@@ -87,11 +98,7 @@ namespace eclipse::hacks::Global {
             if (!s_trippedLastAttempt && !hasCheats())
                 return;
 
-            FLAlertLayer::create(
-                nullptr,
-                "Cheats Detected", message, "OK",
-                nullptr, 400, true, 0, 1
-            )->show();
+            eclipseMakeAlert("Cheats Detected", message)->show();
         }
 
         void init() override {
@@ -302,16 +309,13 @@ namespace eclipse::hacks::Global {
 
         FLAlertLayer* popup;
         if (s_attemptCheats.empty() ) {
-            popup = FLAlertLayer::create(
-                nullptr,
+            popup = eclipseMakeAlert(
                 "Safe Mode (Eclipse)",
                 "<cr>Progress saving is disabled.</c>\n\n"
-                "<cy>Safe Mode is enabled. Progress will NOT be saved for any attempts until you disable Safe Mode.</c>",
-                "OK", nullptr, 400, true, 0, 1
+                "<cy>Safe Mode is enabled. Progress will NOT be saved for any attempts until you disable Safe Mode.</c>"
             );
         } else {
-            popup = FLAlertLayer::create(
-                nullptr,
+            popup = eclipseMakeAlert(
                 "Safe Mode (Eclipse)",
                 fmt::format(
                     "<cr>Progress saving is disabled.</c>\n\n"
@@ -319,8 +323,7 @@ namespace eclipse::hacks::Global {
                     "\n\n<cy>Active cheats ({}):</c>\n{}",
                     s_attemptCheats.size(),
                     AutoSafeMode::constructMessage()
-                ), "OK",
-                nullptr, 400, true, 0, 1
+                )
             );
         }
 
@@ -361,8 +364,7 @@ namespace eclipse::hacks::Global {
             return false;
         }
 
-        auto popup = FLAlertLayer::create(
-            nullptr,
+        auto popup = eclipseMakeAlert(
             "Auto-Safe Mode (Eclipse)",
             fmt::format(
                 "<cr>Progress saving is disabled.</c>\n\n"
@@ -371,8 +373,7 @@ namespace eclipse::hacks::Global {
                 "<cy>Active cheats ({}):</c>\n{}",
                 s_attemptCheats.size(),
                 AutoSafeMode::constructMessage()
-            ), "OK",
-            nullptr, 400, true, 0, 1
+            )
         );
 
         if (popup->m_scrollingLayer) {

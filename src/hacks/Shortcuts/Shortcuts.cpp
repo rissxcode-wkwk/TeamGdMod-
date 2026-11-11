@@ -1,3 +1,4 @@
+#include <modules/utils/platform-compat.hpp>
 #include <modules/chatbot/ui/ChatboxPopup.hpp>
 #include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
@@ -239,7 +240,7 @@ namespace eclipse::hacks::Shortcuts {
                 auto level = glm->getMainLevel(i, true);
                 if (gsm->hasCompletedMainLevel(i)) {
                     for (auto ix = 0; ix < 3; ix++) {
-                        if (gsm->hasSecretCoin(level->getCoinKey(ix + 1))) {
+                        if (eclipse::utils::compat::hasSecretCoin(gsm, level->getCoinKey(ix + 1))) {
                             secretCoins++;
                         }
                     }
@@ -277,13 +278,13 @@ namespace eclipse::hacks::Shortcuts {
                     newSecretCoins += 1;
                 }
             }
-            if (gsm->hasSecretCoin("secret04")) {
+            if (eclipse::utils::compat::hasSecretCoin(gsm, "secret04")) {
                 newSecretCoins++;
             }
-            if (gsm->hasSecretCoin("secret06")) {
+            if (eclipse::utils::compat::hasSecretCoin(gsm, "secret06")) {
                 newSecretCoins++;
             }
-            if (gsm->hasSecretCoin("secretB03")) {
+            if (eclipse::utils::compat::hasSecretCoin(gsm, "secretB03")) {
                 newSecretCoins++;
             }
             if (gsm->getStat("8") == newSecretCoins) return Popup::create(i18n::get_("common.info"), i18n::get_("shortcuts.recount-secret-coins.nochange"));

@@ -1,4 +1,5 @@
 #pragma once
+#include <modules/utils/platform-compat.hpp>
 #include <modules/gui/cocos/nodes/CCMenuItemExt.hpp>
 
 #include "BaseComponentNode.hpp"
@@ -57,7 +58,7 @@ namespace eclipse::gui::cocos {
 
             m_textInput = geode::TextInput::create(120, m_component->getTitle().c_str(), "font_default.fnt"_spr);
             m_textInput->setAnchorPoint({ 0.5f, 0.5f });
-            m_textInput->getInputNode()->setAllowedChars(".0123456789");
+            eclipse::utils::compat::setAllowedChars(m_textInput->getInputNode(), ".0123456789");
             m_textInput->setDelegate(this);
             m_textInput->setString(fmt::to_string(m_component->getValue()));
             m_textInput->setScale(0.85f);
