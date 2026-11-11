@@ -2,6 +2,35 @@
 #include "modules/utils/SingletonCache.hpp"
 #include <Geode/binding/PlayerObject.hpp>
 
+#include <map>
+#include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
+
+// Bindings GD 2.2091 untuk desktop (Windows/macOS) tidak punya sebagian member PlayerObject
+// (mis. m_ringRelatedSet, m_jumpPadRelated). Makro di bawah hanya menyalin member kalau memang ada
+// dan bisa di-assign; kalau tidak ada, barisnya dilewati (tidak error saat kompilasi).
+#define ECLIPSE_SAVE_FIELD(field) \
+    [&](auto* _p) { if constexpr (requires { field = _p->field; }) { field = _p->field; } }(player)
+#define ECLIPSE_LOAD_FIELD(field) \
+    [&](auto* _p) { if constexpr (requires { _p->field = field; }) { _p->field = field; } }(player)
+
+namespace eclipse::utils {
+    /// Menyalin map. Kalau tipe nilainya tidak bisa di-copy-assign (mis. GameObjectPhysics di bindings baru),
+    /// map dibangun ulang elemen per elemen lalu di-move; kalau copy pun tidak bisa, dilewati.
+    template <typename Dst, typename Src>
+    void copyMapSafely(Dst& dst, Src const& src) {
+        using Value = typename Src::mapped_type;
+        if constexpr (std::is_copy_assignable_v<Value>) {
+            dst = src;
+        } else if constexpr (std::is_copy_constructible_v<Value>) {
+            Dst tmp;
+            for (auto const& kv : src) tmp.emplace(kv.first, kv.second);
+            dst = std::move(tmp);
+        }
+    }
+}
+
 using namespace geode::prelude;
 
 namespace eclipse::utils {
@@ -21,7 +50,7 @@ namespace eclipse::utils {
             m_unk3380 = playLayer->m_unk3380;
 
             #ifndef GEODE_IS_ANDROID
-            m_gameObjectPhysics = playLayer->m_gameState.m_gameObjectPhysics;
+            copyMapSafely(m_gameObjectPhysics, playLayer->m_gameState.m_gameObjectPhysics);
             #endif
         }
 
@@ -38,7 +67,7 @@ namespace eclipse::utils {
             playLayer->m_unk3380 = m_unk3380;
 
             #ifndef GEODE_IS_ANDROID
-            playLayer->m_gameState.m_gameObjectPhysics = m_gameObjectPhysics;
+            copyMapSafely(playLayer->m_gameState.m_gameObjectPhysics, m_gameObjectPhysics);
             #endif
         }
 
@@ -317,15 +346,15 @@ namespace eclipse::utils {
 
             #ifndef GEODE_IS_ANDROID
 
-            m_rotateObjectsRelated = player->m_rotateObjectsRelated; // unordered_map<int, GJPointDouble>
-            m_potentialSlopeMap = player->m_potentialSlopeMap;       // unordered_map<int, GameObject*>
-            m_ringRelatedSet = player->m_ringRelatedSet;             // unordered_set<int>
-            m_touchedRings = player->m_touchedRings;                 // unordered_set<int>
+            ECLIPSE_SAVE_FIELD(m_rotateObjectsRelated); // unordered_map<int, GJPointDouble>
+            ECLIPSE_SAVE_FIELD(m_potentialSlopeMap);       // unordered_map<int, GameObject*>
+            ECLIPSE_SAVE_FIELD(m_ringRelatedSet);             // unordered_set<int>
+            ECLIPSE_SAVE_FIELD(m_touchedRings);                 // unordered_set<int>
 
-            m_jumpPadRelated = player->m_jumpPadRelated;             // map<int, bool>
-            m_playerFollowFloats = player->m_playerFollowFloats;     // vector<float>
+            ECLIPSE_SAVE_FIELD(m_jumpPadRelated);             // map<int, bool>
+            ECLIPSE_SAVE_FIELD(m_playerFollowFloats);     // vector<float>
 
-            m_currentRobotAnimation = player->m_currentRobotAnimation;
+            ECLIPSE_SAVE_FIELD(m_currentRobotAnimation);
 
             for (int i = 0; i < player->m_touchingRings->count(); i++)
                 m_touchingRings.push_back(player->m_touchingRings->objectAtIndex(i));
@@ -588,15 +617,15 @@ namespace eclipse::utils {
 
             #ifndef GEODE_IS_ANDROID
 
-            player->m_rotateObjectsRelated = m_rotateObjectsRelated;
-            player->m_potentialSlopeMap = m_potentialSlopeMap;
-            player->m_ringRelatedSet = m_ringRelatedSet;
-            player->m_touchedRings = m_touchedRings;
+            ECLIPSE_LOAD_FIELD(m_rotateObjectsRelated);
+            ECLIPSE_LOAD_FIELD(m_potentialSlopeMap);
+            ECLIPSE_LOAD_FIELD(m_ringRelatedSet);
+            ECLIPSE_LOAD_FIELD(m_touchedRings);
 
-            player->m_jumpPadRelated = m_jumpPadRelated;
-            player->m_playerFollowFloats = m_playerFollowFloats;
+            ECLIPSE_LOAD_FIELD(m_jumpPadRelated);
+            ECLIPSE_LOAD_FIELD(m_playerFollowFloats);
 
-            player->m_currentRobotAnimation = m_currentRobotAnimation;
+            ECLIPSE_LOAD_FIELD(m_currentRobotAnimation);
 
             player->m_touchingRings->removeAllObjects();
             for (CCObject* obj : m_touchingRings)

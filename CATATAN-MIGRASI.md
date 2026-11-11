@@ -52,3 +52,11 @@ Geometry Dash **2.2091** dan Geode **6.0.0-alpha.1** (semua platform), jadi tida
 - Kunci terjemahan combo posisi disamakan dengan translations.cpp (`middle-left/center/right`, sebelumnya `center-*`).
 - File: src/hacks/Labels/Labels.cpp, src/hacks/Labels/Label.cpp. Belum dikompilasi di sini.
 - Workflow: `.github/workflows/build-all.yml` (Windows, macOS, Android32, Android64) menggantikan `android64.yml`.
+
+## Perbaikan build Windows & macOS (11 Nov 2026)
+- `src/modules/utils/GameCheckpoint.hpp`: bindings 2.2091 desktop tidak punya `PlayerObject::m_ringRelatedSet` dan
+  `m_jumpPadRelated` (error di PracticeFix.cpp). Semua member khusus-desktop kini disalin lewat makro
+  `ECLIPSE_SAVE_FIELD` / `ECLIPSE_LOAD_FIELD` yang melewati member yang tidak ada.
+- `GameObjectPhysics` tidak bisa di-copy-assign di bindings ini (error `std::list ... _Assign_cast` di MSVC STL);
+  `m_gameObjectPhysics` disalin lewat `copyMapSafely` (assign -> copy elemen -> dilewati).
+- Efek: di desktop, state ring/jump pad pada checkpoint PracticeFix hanya dipulihkan kalau member-nya ada di bindings.
