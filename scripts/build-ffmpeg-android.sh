@@ -39,6 +39,9 @@ echo "== FFmpeg ($FFMPEG_REF)"
 if [ ! -d ffmpeg ]; then git clone --depth 1 -b "$FFMPEG_REF" https://github.com/FFmpeg/FFmpeg.git ffmpeg; fi
 pushd ffmpeg >/dev/null
 export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
+# PENTING: -fvisibility=hidden membuat simbol FFmpeg (mis. ff_tx_tab_*) tidak preemptible.
+# Tanpa ini, kode asm NEON (tx_float_neon.S) yang memakai adrp/add gagal di-link ke .so
+# dengan error "relocation R_AARCH64_ADR_PREL_PG_HI21 cannot be used against symbol ... recompile with -fPIC".
 ./configure \
     --prefix="$PREFIX" \
     --enable-cross-compile --target-os=android --arch=aarch64 --cpu=armv8-a \
@@ -49,7 +52,7 @@ export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
     --disable-programs --disable-doc --disable-debug --disable-avdevice \
     --enable-gpl --enable-version3 --enable-libx264 \
     --enable-zlib --enable-jni --enable-mediacodec --enable-neon --enable-asm \
-    --extra-cflags="-I$PREFIX/include -fPIC -O3" \
+    --extra-cflags="-I$PREFIX/include -fPIC -fvisibility=hidden -O3" \
     --extra-ldflags="-L$PREFIX/lib"
 make -j"$(nproc)"
 make install

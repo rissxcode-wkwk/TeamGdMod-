@@ -75,6 +75,9 @@ elseif (ANDROID)
             endif()
         endforeach()
         list(APPEND STATIC_LIBS -Wl,--end-group android mediandk log z)
+        # Pengaman tambahan: simbol yang didefinisikan di dalam .so di-bind secara lokal,
+        # sehingga relokasi adrp/add dari asm NEON FFmpeg tidak ditolak linker.
+        target_link_options(${PROJECT_NAME} PRIVATE -Wl,-Bsymbolic)
     elseif(FFMPEG_ABI STREQUAL "armeabi-v7a")
         add_definitions(-D__USE_FILE_OFFSET64)
         add_definitions(-DANDROID_PLATFORM=24)
