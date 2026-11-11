@@ -1,4 +1,4 @@
-name: Build Eclipse (Android 64)
+name: Build Eclipse (Windows, macOS, Android 32/64)
 
 on:
   workflow_dispatch:
@@ -16,9 +16,21 @@ permissions:
 jobs:
   build:
     strategy:
-      fail-fast: false
+      fail-fast: false   # satu platform gagal tidak membatalkan platform lain
       matrix:
         config:
+        - name: Windows
+          os: windows-latest
+          build-type: RelWithDebInfo
+
+        - name: macOS
+          os: macos-latest
+
+        - name: Android32
+          os: ubuntu-latest
+          target: Android32
+          min-sdk: 24
+
         - name: Android64
           os: ubuntu-latest
           target: Android64
@@ -29,11 +41,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Repo geode-sdk/bindings (branch main) sedang sering berubah. Pada 10 Nov 2026 sempat ada
-      # commit yang rusak (m_allObjectsToggler tidak dideklarasikan di LevelBrowserLayer 2.2091).
-      # Supaya build tidak ikut rusak setiap bindings berubah, bindings dikunci ke satu commit
-      # yang sudah terbukti konsisten. Geode membaca lokasinya dari env GEODE_BINDINGS_REPO_PATH.
+      # Bindings dikunci ke satu commit yang konsisten (main sering berubah/rusak).
       - name: Kunci versi bindings Geode
+        shell: bash
         run: |
           git clone https://github.com/geode-sdk/bindings.git "$RUNNER_TEMP/bindings"
           git -C "$RUNNER_TEMP/bindings" checkout 5db3b324c53cd8124efa7453131252bb78362c28
@@ -42,12 +52,11 @@ jobs:
       - name: Build the mod
         uses: geode-sdk/build-geode-mod@main
         with:
-          # sdk 'given' = pakai versi Geode dari mod.json ("geode": "6.0.0-alpha.1"),
-          # supaya SDK yang terpasang selalu cocok dengan mod.json (bukan alpha/nightly acak)
-          sdk: given
+          sdk: given   # pakai versi Geode dari mod.json
           combine: true
           export-pdb: true
           target: ${{ matrix.config.target }}
+          android-min-sdk: ${{ matrix.config.min-sdk || 23 }}
           build-config: ${{ matrix.config.build-type || 'Release' }}
 
   package:
@@ -70,7 +79,11 @@ jobs:
           path: ${{ github.workspace }}/bin
           merge-multiple: true
 
+      - name: Cek file hasil build
+        run: ls -la "${{ github.workspace }}/bin"
+
       - name: Create rolling release
+        if: github.event_name != 'pull_request'
         uses: andelf/nightly-release@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -79,21 +92,22 @@ jobs:
           prerelease: true
           name: 'Rolling Release'
           body: |
-            This is the latest build of the mod for commit ${{ github.sha }} (${{ github.event.head_commit.message }}).
-            
-            ## IMPORTANT NOTICE FOR PEOPLE:
-            
-            Whatever you do, DO NOT download this expecting support from the Eclipse devs.
-            This is my own modification of Eclipse and is not affiliated nor endorsed by the project.
-            I will only provide support for my own changes, not any changes made by the Eclipse devs.
+            Build terbaru mod untuk commit ${{ github.sha }} (${{ github.event.head_commit.message }}).
 
-            ## Supported Platforms Of This Build:
+            ## PENTING:
 
-            1. Android 64-bit
+            Jangan download ini dengan harapan mendapat dukungan dari dev Eclipse.
+            Ini modifikasi pribadi dan tidak berafiliasi/didukung oleh proyek Eclipse.
 
-            Target: Geometry Dash 2.2091 + Geode 6.0.0-alpha.1 (kompatibel dengan Geode 6.0.0).
+            ## Platform pada build ini:
+
+            1. Windows
+            2. macOS
+            3. Android 32-bit
+            4. Android 64-bit
+
+            Target: Geometry Dash 2.2091 + Geode 6.0.0-alpha.1.
+            Untuk fitur Internal Recorder, pasang juga mod eclipse.ffmpeg-api (lihat release "ffmpeg-api Rolling Release").
           files: |
-            ${{ github.workspace }}/bin/eclipse.eclipse-menu.geode
-            ${{ github.workspace }}/bin/eclipse.eclipse-menu.pdb
-
-            
+            ${{ github.workspace }}/bin/*.geode
+            ${{ github.workspace }}/bin/*.pdb
