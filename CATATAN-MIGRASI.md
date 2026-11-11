@@ -42,3 +42,13 @@ Geometry Dash **2.2091** dan Geode **6.0.0-alpha.1** (semua platform), jadi tida
 - Dependensi `eclipse.ffmpeg-api` di mod.json tetap opsional. Untuk merekam, pasang mod `eclipse.ffmpeg-api` versi Geode 6
   (zip terpisah: ffmpeg-api-Geode6.zip, v2.1.0) di game, bersama Eclipse.
 - Semua perbaikan build di atas (orEmpty, find_if, adaptif bindings) tetap berlaku.
+
+## Perbaikan Cheat Indicator (11 Nov 2026)
+- Posisi: default alignment di pembuatan label (0 = kiri atas) berbeda dengan default combo di menu (2 = kanan atas),
+  jadi menu menampilkan satu posisi tapi indikator muncul di posisi lain. Sekarang keduanya 2 dan nilai dibatasi 0..8.
+- Tidak terlihat: nilai bawaan lama (skala 0.5, opasitas 0.35) membuat titik "." hampir tak terlihat di HP. Default baru
+  skala 1.5 / opasitas 0.8; pengguna yang masih memakai nilai bawaan lama dimigrasi otomatis sekali
+  (flag `labels.cheat-indicator.migrated`). Rentang skala dinaikkan sampai 5. Opasitas kini langsung ter-update.
+- Kunci terjemahan combo posisi disamakan dengan translations.cpp (`middle-left/center/right`, sebelumnya `center-*`).
+- File: src/hacks/Labels/Labels.cpp, src/hacks/Labels/Label.cpp. Belum dikompilasi di sini.
+- Workflow: `.github/workflows/build-all.yml` (Windows, macOS, Android32, Android64) menggantikan `android64.yml`.

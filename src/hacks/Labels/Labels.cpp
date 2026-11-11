@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cmath>
 #include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
 #include <modules/gui/components/button.hpp>
@@ -211,7 +213,9 @@ namespace eclipse::hacks::Labels {
                 }
                 cheatIndicator->setHeightMultiplier(0.37f);
                 cheatIndicator->setID("cheat-indicator"_spr);
-                auto* container = fields->m_containers[config::get<int>("labels.cheat-indicator.alignment", 0)];
+                // Default 2 (kanan atas) harus sama dengan default combo di menu; dibatasi 0..8 supaya tidak keluar array.
+                int indicatorAlignment = std::clamp(config::get<int>("labels.cheat-indicator.alignment", 2), 0, 8);
+                auto* container = fields->m_containers[indicatorAlignment];
                 container->addLabel(cheatIndicator);
             }
 
@@ -360,8 +364,19 @@ namespace eclipse::hacks::Labels {
             auto tab = gui::MenuTab::find("tab.labels");
             config::setIfEmpty("labels.visible", true);
             config::setIfEmpty("labels.cheat-indicator.endscreen", true);
-            config::setIfEmpty("labels.cheat-indicator.scale", 0.5f);
-            config::setIfEmpty("labels.cheat-indicator.opacity", 0.35f);
+            config::setIfEmpty("labels.cheat-indicator.scale", 1.5f);
+            config::setIfEmpty("labels.cheat-indicator.opacity", 0.8f);
+            config::setIfEmpty("labels.cheat-indicator.alignment", 2);
+            // Migrasi sekali: nilai bawaan lama (skala 0.5, opasitas 0.35) membuat titik hampir tak terlihat di HP.
+            if (!config::get<bool>("labels.cheat-indicator.migrated", false)) {
+                auto oldScale = config::get<"labels.cheat-indicator.scale", double>(1.5);
+                auto oldOpacity = config::get<"labels.cheat-indicator.opacity", double>(0.8);
+                if (std::abs(oldScale - 0.5) < 0.001 && std::abs(oldOpacity - 0.35) < 0.001) {
+                    config::set<double>("labels.cheat-indicator.scale", 1.5);
+                    config::set<double>("labels.cheat-indicator.opacity", 0.8);
+                }
+                config::set<bool>("labels.cheat-indicator.migrated", true);
+            }
 
             s_labels = config::get<std::vector<labels::LabelSettings>>("labels", DEFAULT_LABELS);
 
@@ -382,18 +397,19 @@ namespace eclipse::hacks::Labels {
                           ->setDescription();
                    options->addToggle("labels.cheat-indicator.only-cheating")
                           ->setDescription();
-                   options->addInputFloat("labels.cheat-indicator.scale", 0.1f, 2.f, "%.1f")
+                   options->addInputFloat("labels.cheat-indicator.scale", 0.1f, 5.f, "%.1f")
                           ->setDescription()
                           ->callback([](float) { updateLabels(); });
                    options->addInputFloat("labels.cheat-indicator.opacity", 0.f, 1.f, "%.2f")
-                          ->setDescription();
+                          ->setDescription()
+                          ->callback([](float) { updateLabels(); });
                    options->addCombo("labels.cheat-indicator.alignment", {
                               i18n::get_("labels.alignment.top-left"),
                               i18n::get_("labels.alignment.top-center"),
                               i18n::get_("labels.alignment.top-right"),
-                              i18n::get_("labels.alignment.center-left"),
-                              i18n::get_("labels.alignment.center"),
-                              i18n::get_("labels.alignment.center-right"),
+                              i18n::get_("labels.alignment.middle-left"),
+                              i18n::get_("labels.alignment.middle-center"),
+                              i18n::get_("labels.alignment.middle-right"),
                               i18n::get_("labels.alignment.bottom-left"),
                               i18n::get_("labels.alignment.bottom-center"),
                               i18n::get_("labels.alignment.bottom-right"),
