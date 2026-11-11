@@ -76,7 +76,7 @@ namespace eclipse::gui::cocos {
             buttonsMenu->addChild(btn2);
         }
 
-        eclipse::utils::compat::alignHorizontally(buttonsMenu, 10.f);
+        ECLIPSE_ALIGN_H(buttonsMenu, 10.f);
         m_mainLayer->addChildAtPosition(buttonsMenu, geode::Anchor::Bottom, { 0.f, 30.f });
 
         return true;

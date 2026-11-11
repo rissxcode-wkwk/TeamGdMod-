@@ -1,3 +1,4 @@
+#include <modules/utils/platform-compat.hpp>
 #include <modules/config/config.hpp>
 #include <modules/gui/gui.hpp>
 #include <modules/gui/components/toggle.hpp>
@@ -23,13 +24,13 @@ namespace eclipse::hacks::Bypass {
         ADD_HOOKS_DELEGATE("bypass.charfilter")
 
         void updateLabel(std::string str) {
-            eclipse::utils::compat::setAllowedChars(this, std::string(
+            ECLIPSE_SET_ALLOWED_CHARS(this,
                 "abcdefghijklmnopqrstuvwxyz"
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                 "0123456789!@#$%^&*()-=_+"
                 "`~[]{}/?.>,<\\|;:'\""
                 " "
-            ));
+            );
 
             CCTextInputNode::updateLabel(std::move(str));
         }

@@ -113,7 +113,7 @@ namespace eclipse::i18n {
         auto menu = cocos2d::CCMenu::create();
         menu->setID("menu"_spr);
         menu->addChild(btn);
-        eclipse::utils::compat::alignHorizontally(menu, 10.f);
+        ECLIPSE_ALIGN_H(menu, 10.f);
         m_mainLayer->addChildAtPosition(menu, geode::Anchor::Bottom, {0, 25});
     }
 

@@ -19,16 +19,13 @@
 #include <modules.hpp>
 #include <ranges>
 
-namespace {
-    // FLAlertLayer::create (overload 9 argumen) tidak punya alamat di macOS -> pakai createQuickPopup
-    FLAlertLayer* eclipseMakeAlert(char const* title, std::string const& message) {
+// FLAlertLayer::create (overload 9 argumen) tidak punya alamat di macOS -> pakai createQuickPopup.
+// Di platform lain makro ini meluas ke panggilan asli.
 #if defined(__APPLE__)
-        return geode::createQuickPopup(title, message, "OK", nullptr, [](auto, bool) {}, false);
+    #define ECLIPSE_FL_ALERT(title, desc) geode::createQuickPopup(title, desc, "OK", nullptr, [](auto, bool) {}, false)
 #else
-        return FLAlertLayer::create(nullptr, title, message, "OK", nullptr, 400, true, 0, 1);
+    #define ECLIPSE_FL_ALERT(title, desc) FLAlertLayer::create(nullptr, title, desc, "OK", nullptr, 400, true, 0, 1)
 #endif
-    }
-}
 
 namespace eclipse::hacks::Global {
     enum class SafeModeState {
@@ -98,7 +95,7 @@ namespace eclipse::hacks::Global {
             if (!s_trippedLastAttempt && !hasCheats())
                 return;
 
-            eclipseMakeAlert("Cheats Detected", message)->show();
+            ECLIPSE_FL_ALERT("Cheats Detected", message)->show();
         }
 
         void init() override {
@@ -309,13 +306,13 @@ namespace eclipse::hacks::Global {
 
         FLAlertLayer* popup;
         if (s_attemptCheats.empty() ) {
-            popup = eclipseMakeAlert(
+            popup = ECLIPSE_FL_ALERT(
                 "Safe Mode (Eclipse)",
                 "<cr>Progress saving is disabled.</c>\n\n"
                 "<cy>Safe Mode is enabled. Progress will NOT be saved for any attempts until you disable Safe Mode.</c>"
             );
         } else {
-            popup = eclipseMakeAlert(
+            popup = ECLIPSE_FL_ALERT(
                 "Safe Mode (Eclipse)",
                 fmt::format(
                     "<cr>Progress saving is disabled.</c>\n\n"
@@ -364,7 +361,7 @@ namespace eclipse::hacks::Global {
             return false;
         }
 
-        auto popup = eclipseMakeAlert(
+        auto popup = ECLIPSE_FL_ALERT(
             "Auto-Safe Mode (Eclipse)",
             fmt::format(
                 "<cr>Progress saving is disabled.</c>\n\n"

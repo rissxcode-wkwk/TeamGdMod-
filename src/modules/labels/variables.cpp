@@ -676,7 +676,7 @@ namespace eclipse::labels {
             bool saved = false;
 
             if (gameLayer->m_level->m_levelType == GJLevelType::Main) {
-                saved = eclipse::utils::compat::hasSecretCoin(utils::get<GameStatsManager>(), coinKey);
+                saved = ECLIPSE_HAS_SECRET_COIN(utils::get<GameStatsManager>(), coinKey);
             } else {
                 saved = utils::get<GameStatsManager>()->hasUserCoin(coinKey);
             }

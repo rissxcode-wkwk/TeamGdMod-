@@ -1,4 +1,6 @@
 #pragma once
+
+#if defined(__APPLE__)
 #include <Geode/Geode.hpp>
 #include <algorithm>
 #include <string>
@@ -79,3 +81,15 @@ namespace eclipse::utils::compat {
 #endif
     }
 }
+#endif // __APPLE__
+
+// Makro: di Apple memakai pengganti, di platform lain memakai panggilan ASLI (kode identik dengan sebelumnya).
+#if defined(__APPLE__)
+    #define ECLIPSE_SET_ALLOWED_CHARS(node, chars) ::eclipse::utils::compat::setAllowedChars((node), std::string(chars))
+    #define ECLIPSE_HAS_SECRET_COIN(gsm, key) ::eclipse::utils::compat::hasSecretCoin((gsm), (key))
+    #define ECLIPSE_ALIGN_H(menu, pad) ::eclipse::utils::compat::alignHorizontally((menu), (pad))
+#else
+    #define ECLIPSE_SET_ALLOWED_CHARS(node, chars) (node)->setAllowedChars(chars)
+    #define ECLIPSE_HAS_SECRET_COIN(gsm, key) (gsm)->hasSecretCoin(key)
+    #define ECLIPSE_ALIGN_H(menu, pad) (menu)->alignItemsHorizontallyWithPadding(pad)
+#endif
