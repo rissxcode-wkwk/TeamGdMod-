@@ -273,9 +273,9 @@ namespace eclipse::gui {
         m_tabs.emplace_back(std::string(name), false);
 
         // Make sure built-in tabs are sorted in a specific way and come first
-        static constexpr std::array<std::string_view, 10> builtInTabs = {
+        static constexpr std::array<std::string_view, 11> builtInTabs = {
             "tab.global", "tab.level", "tab.bypass", "tab.player", "tab.bot", "tab.creator",
-            "tab.labels", "tab.shortcuts", "tab.keybinds", "tab.interface"
+            "tab.labels", "tab.shortcuts", "tab.keybinds", "tab.interface", "tab.recorder"
         };
 
         std::ranges::sort(m_tabs, [](auto const& a, auto const& b) {

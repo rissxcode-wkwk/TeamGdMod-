@@ -31,3 +31,14 @@ Geometry Dash **2.2091** dan Geode **6.0.0-alpha.1** (semua platform), jadi tida
     kalau ada, kalau tidak langsung ke `m_startPosObject`.
   - NoEndShake.cpp: `m_unkPoint34` hanya disimpan/dipulihkan kalau field-nya ada.
   Perilaku kedua fitur ini belum teruji di game; kalau tidak jalan, perlu nama field baru dari bindings 2.2091.
+- `GJBaseGameLayer::m_allowedButtons` tidak ada di bindings 2.2091 (yang ada `m_queuedButtons`, artinya beda).
+  Diganti helper `eclipse::utils::clearAllowedButtons(this)` yang hanya mengosongkan kalau member-nya ada
+  (SwiftClick.cpp dan Bot.cpp). Kalau tidak ada, SwiftClick praktis tidak melakukan apa-apa; perlu dicek lagi di game.
+
+## Update: fitur ffmpeg (Recorder) DIKEMBALIKAN
+- Folder `src/modules/recorder`, `src/hacks/Recorder`, `src/ffmpeg-api` dan tab Recorder (gui.cpp, tab-menu.cpp) dipulihkan dari source asli.
+- `EXTERNALS eclipse.ffmpeg-api:1.2.0` dihapus dari CMakeLists.txt. Recorder hanya memakai header lokal `src/ffmpeg-api/events.hpp`
+  (komunikasi lewat Geode event), jadi tidak perlu mengunduh mod ffmpeg-api saat build.
+- Dependensi `eclipse.ffmpeg-api` di mod.json tetap opsional. Untuk merekam, pasang mod `eclipse.ffmpeg-api` versi Geode 6
+  (zip terpisah: ffmpeg-api-Geode6.zip, v2.1.0) di game, bersama Eclipse.
+- Semua perbaikan build di atas (orEmpty, find_if, adaptif bindings) tetap berlaku.

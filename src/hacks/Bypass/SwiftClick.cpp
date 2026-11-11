@@ -1,6 +1,7 @@
 #ifdef GEODE_IS_MOBILE
 
 #include <modules/config/config.hpp>
+#include <modules/utils/optional-helpers.hpp>
 #include <modules/bot/bot.hpp>
 #include <modules/gui/gui.hpp>
 #include <modules/gui/components/toggle.hpp>
@@ -50,7 +51,7 @@ namespace eclipse::hacks::Bypass {
         }
 
         void handleButton(bool down, int button, bool isPlayer1) {
-            m_allowedButtons.clear();
+            eclipse::utils::clearAllowedButtons(this);
             GJBaseGameLayer::handleButton(down, button, isPlayer1);
         }
     };

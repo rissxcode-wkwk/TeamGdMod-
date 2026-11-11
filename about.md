@@ -16,6 +16,7 @@ A **next-generation** mod menu for Geometry Dash.
 - StartPos Switcher (with Smart SmartPos!)
 - Fully Customizable Labels
 - Show Trajectory
+- Internal Recorder
 - Replay Bot
 - Keybinds
 - Theme Customizability (you can theme Eclipse Menu however you want!)
@@ -23,6 +24,10 @@ A **next-generation** mod menu for Geometry Dash.
 - Community Translations (check the [translations repository](https://github.com/EclipseMenu/translations) on how to
   contribute)
 - An API for other mods to interact with Eclipse
+
+Note: Internal Recorder requires FFmpeg API mod to be installed and enabled:
+
+<mod:eclipse.ffmpeg-api>
 
 ## Credits
 

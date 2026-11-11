@@ -151,6 +151,7 @@ namespace eclipse::gui::cocos {
             {"tab.shortcuts", "tab_shortcuts.png"_spr},
             {"tab.keybinds", "tab_keybinds.png"_spr},
             {"tab.interface", "tab_interface.png"_spr},
+            {"tab.recorder", "tab_recorder.png"_spr},
             {"BetterInfo", "tab_betterinfo.png"_spr},
         };
 

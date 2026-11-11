@@ -63,6 +63,7 @@
 - StartPos Switcher (with Smart SmartPos!)
 - Fully Customizable Labels
 - Show Trajectory
+- Internal Recorder (requires [FFmpeg API](https://geode-sdk.org/mods/eclipse.ffmpeg-api) mod to be installed)
 - Replay Bot
 - Keybinds
 - Theme Customizability (you can theme Eclipse Menu however you want!)

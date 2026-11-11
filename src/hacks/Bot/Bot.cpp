@@ -500,7 +500,7 @@ namespace eclipse::hacks::Bot {
 
             while ((input = s_bot.poll(progress)) != std::nullopt) {
                 #ifdef GEODE_IS_MOBILE
-                m_allowedButtons.clear();
+                eclipse::utils::clearAllowedButtons(this);
                 #endif
                 this->simulateClick((PlayerButton) input->button, input->down, input->player2);
             }
