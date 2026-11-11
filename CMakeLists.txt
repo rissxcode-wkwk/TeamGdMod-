@@ -75,9 +75,6 @@ elseif (ANDROID)
             endif()
         endforeach()
         list(APPEND STATIC_LIBS -Wl,--end-group android mediandk log z)
-        # Pengaman tambahan: simbol yang didefinisikan di dalam .so di-bind secara lokal,
-        # sehingga relokasi adrp/add dari asm NEON FFmpeg tidak ditolak linker.
-        target_link_options(${PROJECT_NAME} PRIVATE -Wl,-Bsymbolic)
     elseif(FFMPEG_ABI STREQUAL "armeabi-v7a")
         add_definitions(-D__USE_FILE_OFFSET64)
         add_definitions(-DANDROID_PLATFORM=24)
@@ -121,6 +118,15 @@ if (NOT STATIC_LIBS)
     message(FATAL_ERROR "Tidak ada library FFmpeg yang akan di-link (STATIC_LIBS kosong). Platform/ABI tidak terdeteksi.")
 endif()
 target_link_libraries(${PROJECT_NAME} ${STATIC_LIBS})
+
+if (ANDROID)
+    # Simbol FFmpeg yang didefinisikan di dalam .so di-bind secara lokal (non-preemptible),
+    # sehingga relokasi adrp/add dari asm NEON FFmpeg (tx_float_neon.S) tidak ditolak lld.
+    # Dipasang lewat dua jalur supaya pasti masuk ke perintah link.
+    target_link_options(${PROJECT_NAME} PRIVATE -Wl,-Bsymbolic)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Bsymbolic")
+    message(STATUS "FFmpeg: -Wl,-Bsymbolic aktif untuk Android")
+endif()
 
 if (PROJECT_IS_TOP_LEVEL)
     target_compile_definitions(${PROJECT_NAME} PRIVATE FFMPEG_API_EXPORTING)
