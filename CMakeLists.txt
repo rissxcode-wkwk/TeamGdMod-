@@ -28,28 +28,29 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 setup_geode_mod(${PROJECT_NAME})
 
+# Library FFmpeg dibangun oleh scripts/build-ffmpeg-*.sh. Yang di-link hanya library yang benar-benar ada,
+# jadi build tanpa x265/aom/vpx tetap jalan.
+function(ffmpeg_collect_libs DIR PREFIX SUFFIX OUTVAR)
+    set(_libs "")
+    foreach(ffmpeg_lib avformat avcodec avfilter swscale swresample postproc avutil x264 x265 aom vpx openh264)
+        foreach(_name ${PREFIX}${ffmpeg_lib}${SUFFIX} lib${ffmpeg_lib}${SUFFIX})
+            if (EXISTS ${DIR}/${_name})
+                message(STATUS "FFmpeg: link ${_name}")
+                list(APPEND _libs ${DIR}/${_name})
+                break()
+            endif()
+        endforeach()
+    endforeach()
+    set(${OUTVAR} ${_libs} PARENT_SCOPE)
+endfunction()
+
 if (WIN32)
-    set(STATIC_LIBS 
-        ${CMAKE_SOURCE_DIR}/lib/avcodec.lib
-        ${CMAKE_SOURCE_DIR}/lib/avformat.lib
-        ${CMAKE_SOURCE_DIR}/lib/avutil.lib
-        ${CMAKE_SOURCE_DIR}/lib/avfilter.lib
-        ${CMAKE_SOURCE_DIR}/lib/swresample.lib
-        ${CMAKE_SOURCE_DIR}/lib/swscale.lib
-        ${CMAKE_SOURCE_DIR}/lib/libx264.lib
-        ${CMAKE_SOURCE_DIR}/lib/x265-static.lib
-        ${CMAKE_SOURCE_DIR}/lib/aom.lib
-        ${CMAKE_SOURCE_DIR}/lib/vpx.lib
-        ${CMAKE_SOURCE_DIR}/lib/openh264.lib
-        ${CMAKE_SOURCE_DIR}/lib/ws2_32.lib
-        ${CMAKE_SOURCE_DIR}/lib/mfplat.lib
-        ${CMAKE_SOURCE_DIR}/lib/mf.lib
-        ${CMAKE_SOURCE_DIR}/lib/secur32.lib
-        ${CMAKE_SOURCE_DIR}/lib/crypt32.lib
-        ${CMAKE_SOURCE_DIR}/lib/mfuuid.lib
-        ${CMAKE_SOURCE_DIR}/lib/bcrypt.lib
-        ${CMAKE_SOURCE_DIR}/lib/strmiids.lib
-    ) # windows
+    ffmpeg_collect_libs(${CMAKE_SOURCE_DIR}/lib "" ".lib" FFMPEG_FOUND_LIBS)
+    if (NOT FFMPEG_FOUND_LIBS)
+        message(FATAL_ERROR "Library FFmpeg (.lib) tidak ditemukan di ${CMAKE_SOURCE_DIR}/lib. Jalankan scripts/build-ffmpeg-windows.sh dulu.")
+    endif()
+    # Library sistem Windows (dipanggil dengan nama, bukan path file)
+    set(STATIC_LIBS ${FFMPEG_FOUND_LIBS} ws2_32 secur32 crypt32 bcrypt ole32 user32 mfplat mf mfuuid strmiids)
 elseif (ANDROID)
     # ANDROID_ABI belum tentu diset oleh toolchain Geode 6, jadi deteksi dengan beberapa cara.
     set(FFMPEG_ABI "${ANDROID_ABI}")
@@ -59,60 +60,33 @@ elseif (ANDROID)
     if (NOT FFMPEG_ABI AND CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
         set(FFMPEG_ABI "arm64-v8a")
     endif()
+    if (NOT FFMPEG_ABI AND CMAKE_SYSTEM_PROCESSOR MATCHES "armv7|arm")
+        set(FFMPEG_ABI "armeabi-v7a")
+    endif()
     message(STATUS "FFmpeg: ANDROID_ABI='${ANDROID_ABI}', ABI yang dipakai='${FFMPEG_ABI}'")
-    if (FFMPEG_ABI STREQUAL "arm64-v8a")
-        # Library FFmpeg dibangun oleh scripts/build-ffmpeg-android.sh ke lib/arm64-v8a.
-        # Yang dipakai hanya library yang benar-benar ada, jadi build tanpa x265/aom/vpx tetap jalan.
-        set(FFMPEG_LIB_DIR ${CMAKE_SOURCE_DIR}/lib/arm64-v8a)
-        if (NOT EXISTS ${FFMPEG_LIB_DIR}/libavcodec.a)
-            message(FATAL_ERROR "libavcodec.a tidak ditemukan di ${FFMPEG_LIB_DIR}. Jalankan scripts/build-ffmpeg-android.sh dulu.")
+    if (FFMPEG_ABI STREQUAL "arm64-v8a" OR FFMPEG_ABI STREQUAL "armeabi-v7a")
+        if (FFMPEG_ABI STREQUAL "armeabi-v7a")
+            add_definitions(-D__USE_FILE_OFFSET64)
         endif()
-        set(STATIC_LIBS -Wl,--start-group)
-        foreach(ffmpeg_lib avformat avcodec avfilter swscale swresample postproc avutil x264 x265 aom vpx)
-            if (EXISTS ${FFMPEG_LIB_DIR}/lib${ffmpeg_lib}.a)
-                message(STATUS "FFmpeg: link lib${ffmpeg_lib}.a")
-                list(APPEND STATIC_LIBS ${FFMPEG_LIB_DIR}/lib${ffmpeg_lib}.a)
-            endif()
-        endforeach()
-        list(APPEND STATIC_LIBS -Wl,--end-group android mediandk log z)
-    elseif(FFMPEG_ABI STREQUAL "armeabi-v7a")
-        add_definitions(-D__USE_FILE_OFFSET64)
-        add_definitions(-DANDROID_PLATFORM=24)
-        set(STATIC_LIBS
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libavcodec.a
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libavformat.a
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libavutil.a
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libavfilter.a
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libswresample.a
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libswscale.a
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libpostproc.a
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libaom.a
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libvpx.a
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libx264.a
-            ${CMAKE_SOURCE_DIR}/lib/armeabi-v7a/libx265.a
-            android
-            mediandk
-            log
-        ) # android
+        set(FFMPEG_LIB_DIR ${CMAKE_SOURCE_DIR}/lib/${FFMPEG_ABI})
+        if (NOT EXISTS ${FFMPEG_LIB_DIR}/libavcodec.a)
+            message(FATAL_ERROR "libavcodec.a tidak ditemukan di ${FFMPEG_LIB_DIR}. Jalankan ABI=${FFMPEG_ABI} scripts/build-ffmpeg-android.sh dulu.")
+        endif()
+        ffmpeg_collect_libs(${FFMPEG_LIB_DIR} "" ".a" FFMPEG_FOUND_LIBS)
+        set(STATIC_LIBS -Wl,--start-group ${FFMPEG_FOUND_LIBS} -Wl,--end-group android mediandk log z)
     else()
         message(FATAL_ERROR "ABI Android tidak didukung/terdeteksi: '${FFMPEG_ABI}'")
     endif()
 else ()
-    find_package(BZIP2 REQUIRED)
-    set(STATIC_LIBS 
-        "-framework Security"
-        ${CMAKE_SOURCE_DIR}/lib/libx264.a
-        ${CMAKE_SOURCE_DIR}/lib/libavcodec.a
-        ${CMAKE_SOURCE_DIR}/lib/libavformat.a
-        ${CMAKE_SOURCE_DIR}/lib/libavutil.a
-        ${CMAKE_SOURCE_DIR}/lib/libavfilter.a
-        ${CMAKE_SOURCE_DIR}/lib/libpostproc.a
-        ${CMAKE_SOURCE_DIR}/lib/libswresample.a
-        ${CMAKE_SOURCE_DIR}/lib/libswscale.a
-        ${CMAKE_SOURCE_DIR}/lib/liblzma.a   
-        ${BZIP2_LIBRARY}
-        "-lm -lbz2 -lz -liconv -pthread -framework Security -framework VideoToolbox -framework CoreFoundation -framework CoreMedia -framework CoreVideo -framework CoreServices -framework CoreAudio -framework AVFoundation -framework CoreGraphics -framework AudioToolbox -framework Metal -framework CoreImage -framework AppKit"
-    ) # macos
+    # macOS: library universal (arm64 + x86_64) hasil scripts/build-ffmpeg-macos.sh
+    ffmpeg_collect_libs(${CMAKE_SOURCE_DIR}/lib "" ".a" FFMPEG_FOUND_LIBS)
+    if (NOT FFMPEG_FOUND_LIBS)
+        message(FATAL_ERROR "Library FFmpeg (.a) tidak ditemukan di ${CMAKE_SOURCE_DIR}/lib. Jalankan scripts/build-ffmpeg-macos.sh dulu.")
+    endif()
+    set(STATIC_LIBS
+        ${FFMPEG_FOUND_LIBS}
+        "-lm -lz -liconv -pthread -framework Security -framework VideoToolbox -framework CoreFoundation -framework CoreMedia -framework CoreVideo -framework CoreServices -framework CoreAudio -framework AVFoundation -framework CoreGraphics -framework AudioToolbox -framework Metal -framework CoreImage -framework AppKit"
+    )
 endif()
 if (NOT STATIC_LIBS)
     message(FATAL_ERROR "Tidak ada library FFmpeg yang akan di-link (STATIC_LIBS kosong). Platform/ABI tidak terdeteksi.")
