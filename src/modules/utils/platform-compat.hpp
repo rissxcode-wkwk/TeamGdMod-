@@ -59,12 +59,13 @@ namespace eclipse::utils::compat {
     template <typename Node>
     void setAllowedChars(Node* node, std::string const& chars) {
 #if defined(__APPLE__)
+        // else wajib: tanpa else, panggilan asli tetap ikut ter-compile dan menyebabkan undefined symbol di arm64
         if constexpr (requires { node->m_allowedChars = chars; }) {
             node->m_allowedChars = chars;
-            return;
         }
-#endif
+#else
         node->setAllowedChars(chars);
+#endif
     }
 
     /// Pengganti GameStatsManager::hasSecretCoin (tidak ada alamat di macOS).
