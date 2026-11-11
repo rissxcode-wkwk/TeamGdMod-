@@ -18,7 +18,7 @@ namespace eclipse::hacks::Creator {
     REGISTER_HACK(ResetPercentOnSave)
 
     // EditorPauseLayer::saveLevel inline di Windows (2.2091) -> tidak bisa di-hook
-    #ifndef GEODE_IS_WINDOWS
+    #if !defined(GEODE_IS_WINDOWS) && !defined(_WIN32)
     class $modify(ResetPercentEPLHook, EditorPauseLayer) {
         ADD_HOOKS_DELEGATE("creator.resetpercentonsave")
         void saveLevel() {

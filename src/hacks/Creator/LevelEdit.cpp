@@ -48,7 +48,7 @@ namespace eclipse::hacks::Creator {
     // we want to disable it
     #if GEODE_COMP_GD_VERSION > 22070
     // EditorUI::onSettings belum punya alamat di bindings macOS
-    #ifndef GEODE_IS_MACOS
+    #if !defined(GEODE_IS_MACOS) && !defined(__APPLE__)
     class $modify(LevelEditEUIHook, EditorUI) {
         ALL_DELEGATES_AND_SAFE_PRIO("creator.leveledit")
 

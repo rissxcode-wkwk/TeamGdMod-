@@ -423,7 +423,7 @@ class $modify(MPFPlayLayer, PlayLayer) {
             s_memoryTracker.addWatchedRegion((uintptr_t)m_player1 + offsetof(cocos2d::CCNode, m_fRotationX), (uintptr_t)m_player1 + offsetof(cocos2d::CCNode, m_pCamera));
             REGION(m_player1, m_mainLayer, m_rotateObjectsRelated);
             REGION(m_player1, m_rotationSpeed, m_ghostTrail);
-            #ifdef GEODE_IS_WINDOWS
+            #if defined(GEODE_IS_WINDOWS) || defined(_WIN32)
             // m_ringRelatedSet tidak ada di bindings Windows 2.2091, pantau m_speedMultiplier saja
             s_memoryTracker.addWatchedRegion((uintptr_t)m_player1 + offsetof(PlayerObject, m_speedMultiplier), (uintptr_t)m_player1 + offsetof(PlayerObject, m_speedMultiplier) + sizeof(PlayerObject::m_speedMultiplier));
             #else
@@ -437,7 +437,7 @@ class $modify(MPFPlayLayer, PlayLayer) {
             s_memoryTracker.addWatchedRegion((uintptr_t)m_player2 + offsetof(cocos2d::CCNode, m_fRotationX), (uintptr_t)m_player2 + offsetof(cocos2d::CCNode, m_pCamera));
             REGION(m_player2, m_mainLayer, m_rotateObjectsRelated);
             REGION(m_player2, m_rotationSpeed, m_ghostTrail);
-            #ifdef GEODE_IS_WINDOWS
+            #if defined(GEODE_IS_WINDOWS) || defined(_WIN32)
             // m_ringRelatedSet tidak ada di bindings Windows 2.2091, pantau m_speedMultiplier saja
             s_memoryTracker.addWatchedRegion((uintptr_t)m_player2 + offsetof(PlayerObject, m_speedMultiplier), (uintptr_t)m_player2 + offsetof(PlayerObject, m_speedMultiplier) + sizeof(PlayerObject::m_speedMultiplier));
             #else
