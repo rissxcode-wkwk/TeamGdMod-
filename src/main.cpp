@@ -24,6 +24,14 @@ namespace offsets {
 	constexpr uintptr_t pfCurrentTime  = 0; // was 0x1a84d8  (cocos dll)
 }
 
+// GJBaseGameLayer::checkCollisions has no iOS address in the 2.2091 bindings (link error),
+// so on iOS the mid-step collision check is skipped.
+#ifdef GEODE_IS_IOS
+#define CBF_CHECK_COLLISIONS(pl, p, dt) ((void)0)
+#else
+#define CBF_CHECK_COLLISIONS(pl, p, dt) (pl)->checkCollisions((p), (dt), true)
+#endif
+
 constexpr double SMALLEST_FLOAT = std::numeric_limits<float>::min();
 
 constexpr PlayerButtonCommand EMPTY_INPUT = PlayerButtonCommand {
@@ -458,8 +466,8 @@ class $modify(PlayerObject) {
 				PlayerObject::update(substepDelta);
 				if (!step.endStep) {
 					if (firstLoop && ((this->m_yVelocity < 0) ^ this->m_isUpsideDown)) this->m_isOnGround = p1StartedOnGround; // this fixes delayed inputs on platforms moving down for some reason
-					if (!this->m_isOnSlope || this->m_isDart) pl->checkCollisions(this, 0.0f, true); // moving platforms will launch u really high if this is anything other than 0.0, idk why
-					else pl->checkCollisions(this, stepDelta, true); // slopes will launch you really high if the 2nd argument is lower than like 0.01, idk why
+					if (!this->m_isOnSlope || this->m_isDart) CBF_CHECK_COLLISIONS(pl, this, 0.0f); // moving platforms will launch u really high if this is anything other than 0.0, idk why
+					else CBF_CHECK_COLLISIONS(pl, this, stepDelta); // slopes will launch you really high if the 2nd argument is lower than like 0.01, idk why
 					PlayerObject::updateRotation(substepDelta);
 					decomp_resetCollisionLog(this); // necessary for wave
 				}
@@ -470,8 +478,8 @@ class $modify(PlayerObject) {
 				p2->update(substepDelta);
 				if (!step.endStep) {
 					if (firstLoop && ((p2->m_yVelocity < 0) ^ p2->m_isUpsideDown)) p2->m_isOnGround = p2StartedOnGround;
-					if (!p2->m_isOnSlope || p2->m_isDart) pl->checkCollisions(p2, 0.0f, true);
-					else pl->checkCollisions(p2, stepDelta, true);
+					if (!p2->m_isOnSlope || p2->m_isDart) CBF_CHECK_COLLISIONS(pl, p2, 0.0f);
+					else CBF_CHECK_COLLISIONS(pl, p2, stepDelta);
 					p2->updateRotation(substepDelta);
 					decomp_resetCollisionLog(p2);
 				}
