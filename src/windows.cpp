@@ -3,6 +3,17 @@
 #include <cstdint>
 #include <atomic>
 
+// Geode 6 no longer pulls in xinput.h, so define the constants ourselves
+#ifndef XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE
+#define XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE  7849
+#endif
+#ifndef XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE
+#define XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE 8689
+#endif
+#ifndef XINPUT_GAMEPAD_TRIGGER_THRESHOLD
+#define XINPUT_GAMEPAD_TRIGGER_THRESHOLD    30
+#endif
+
 LARGE_INTEGER freq;
 
 constexpr size_t RING_BUFFER_SIZE = 256;
