@@ -48,6 +48,10 @@ namespace eclipse::gui::cocos {
             scrollBlock->setScale(0.3f);
             scrollBlock->setContentSize({365.f, scrollHeight});
             scrollBlock->setZOrder(-100);
+            #if !defined(__APPLE__)
+            // dropdown bisa muncul di dalam popup lain (prioritas -500); naikkan prioritas supaya bisa diklik
+            scrollBlock->setTouchPriority(-510);
+            #endif
             scrollBlock->registerWithTouchDispatcher();
 
             auto scrollBlockButton = CCMenuItemSpriteExtra::create(
@@ -75,6 +79,9 @@ namespace eclipse::gui::cocos {
                 auto menu = cocos2d::CCMenu::create();
                 // menu->registerWithTouchDispatcher();
                 menu->setContentSize({365.f * 0.3f, 80.f * 0.3f});
+                #if !defined(__APPLE__)
+                menu->setTouchPriority(-511);
+                #endif
 
                 auto label = TranslatedLabel::createRaw(component);
                 label->setAnchorPoint({0.5f, 0.5f});
@@ -130,23 +137,6 @@ namespace eclipse::gui::cocos {
             }
             s_activeCombo = this;
 
-            // Daftar pilihan dibuka di dalam popup lain (mis. popup Cheat Indicator). Menu bawaan punya touch
-            // priority -128 sehingga disapu popup (-500) dan item tidak bisa diklik. Naikkan prioritasnya
-            // SETELAH node masuk scene (lihat di bawah, setelah addChild).
-            auto raiseTouchPriority = [this] {
-                #if !defined(__APPLE__) // alamat setHandlerPriority belum tentu ada di bindings macOS
-                if (!m_scrollLayer) return;
-                for (auto child : geode::cocos::CCArrayExt<cocos2d::CCNode*>(m_scrollLayer->m_contentLayer->getChildren())) {
-                    if (auto menu = geode::cast::typeinfo_cast<cocos2d::CCMenu*>(child)) {
-                        menu->setHandlerPriority(-511);
-                    }
-                }
-                if (auto block = geode::cast::typeinfo_cast<cocos2d::CCMenu*>(m_scrollLayer->getChildByType<cocos2d::CCMenu>(0))) {
-                    block->setHandlerPriority(-510);
-                }
-                #endif
-            };
-
             if (globalBottom.y > m_scrollLayer->getContentHeight() + 20.f) {
                 m_scrollLayer->setAnchorPoint({0.5f, 1.f});
                 auto const targetPos = ccp(this->getContentWidth() - 70.f, this->getContentHeight() / 2.f - backgroundBox.getMidY());
@@ -154,7 +144,6 @@ namespace eclipse::gui::cocos {
                     auto const parentPos = parent->convertToNodeSpace(this->convertToWorldSpace(targetPos));
                     parent->addChild(m_scrollLayer, 10);
                     m_scrollLayer->setPosition(parentPos);
-                    raiseTouchPriority();
                 }
             } else {
                 m_scrollLayer->setAnchorPoint({0.5f, 0.f});
@@ -163,7 +152,6 @@ namespace eclipse::gui::cocos {
                     auto const parentPos = parent->convertToNodeSpace(this->convertToWorldSpace(targetPos));
                     parent->addChild(m_scrollLayer, 10);
                     m_scrollLayer->setPosition(parentPos);
-                    raiseTouchPriority();
                 }
             }
         }
