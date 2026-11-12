@@ -1,0 +1,115 @@
+{
+	"geode": "6.0.0-alpha.1",
+	"gd": {
+		"win": "2.2091",
+		"android": "2.2091",
+		"mac": "2.2091",
+		"ios": "2.2091"
+	},
+	"version": "v1.5.1-alpha.1",
+	"id": "syzzi.click_between_frames",
+	"name": "Click Between Frames",
+	"developer": "syzzi",
+	"description": "Allows inputs to register between frames.",
+	"incompatibilities": {
+		"zmx.cbf-lite": ">=1.0.0"
+	},
+	"tags": [
+		"performance",
+		"gameplay",
+		"enhancement"
+	],
+	"settings": {
+		"functionality-category": {
+			"name": "Functionality",
+			"type": "title"
+		},
+		"soft-toggle": {
+			"name": "Disable CBF",
+			"description": "Disable CBF/CoS without needing to restart GD. This option does not disable physics bypass if you have it enabled!",
+			"type": "bool",
+			"default": false
+		},
+		"safe-mode": {
+			"name": "Safe Mode",
+			"description": "Disable progress & stats on rated levels.",
+			"type": "bool",
+			"default": false
+		},
+		"click-on-steps": {
+			"name": "Click on Steps",
+			"description": "Only register inputs with 240TPS precision. Should have identical physics to vanilla.",
+			"type": "bool",
+			"default": false
+		},
+		"performance-category": {
+			"name": "Performance",
+			"type": "title",
+			"platforms": ["win"]
+		},
+		"mouse-fix": {
+			"name": "Reduce Mouse Lag",
+			"description": "Reduce lag when using high polling rate mice.\nExperimental, may break things.",
+			"type": "bool",
+			"default": false,
+			"platforms": ["win"]
+		},
+		"precision-fix": {
+			"name": "Precision Fix",
+			"description": "Improve input precision by preventing framerate desync.\nExperimental, may break things.",
+			"type": "bool",
+			"default": true,
+			"platforms": ["win"]
+		},
+		"pb-category": {
+			"name": "Physics Bypass",
+			"type": "title",
+			"platforms": ["win"]
+		},
+		"physics-bypass": {
+			"name": "Enable Physics Bypass",
+			"description": "Reduces stuttering on some FPS values. Active even if \"Disable CBF\" is checked.\n\nTHIS WILL ALTER PHYSICS AND MAY BREAK SOME LEVELS! DON'T USE THIS IF YOUR LIST/LEADERBOARD BANS PHYSICS BYPASS!",
+			"type": "bool",
+			"default": false,
+			"platforms": ["win"]
+		},
+		"bypass-mode": {
+			"name": "Physics Bypass Mode",
+			"description": "2.2 mode means as few collision checks per frame as possible (with a minimum of 240 checks per second).\n\n2.1 mode means 4 collision checks per frame at 60fps or above",
+			"type": "string",
+			"one-of": ["2.2", "2.1"],
+			"default": "2.2",
+			"platforms": ["win"]
+		},
+		"linux-category": {
+			"name": "Linux",
+			"type": "title",
+			"platforms": ["win"]
+		},
+		"wine-workaround": {
+			"name": "Wine Workaround",
+			"description": "Wine doesn't let you get keyboard input between frames, so this is a workaround. However, it may not work properly on some PCs.\n\nOnly disable if experiencing issues (and don't play with keyboard if you disable it).",
+			"type": "bool",
+			"default": true,
+			"requires-restart": true,
+			"enable-if": "saved:you-must-be-on-linux-to-change-this",
+			"platforms": ["win"]
+		},
+		"right-click": {
+			"name": "Right Click P2",
+			"description": "Use right click for player 2 jump.",
+			"type": "bool",
+			"default": false,
+			"enable-if": "saved:you-must-be-on-linux-to-change-this && wine-workaround",
+			"platforms": ["win"]
+		}
+	},
+	"links": {
+		"source": "https://github.com/theyareonit/Click-Between-Frames"
+	},
+	"resources": {
+		"files": [
+			"resources/linux-input.so"
+		]
+	}
+}
