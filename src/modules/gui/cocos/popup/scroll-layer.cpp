@@ -19,6 +19,7 @@ namespace eclipse::gui::cocos {
             bool value = CCScrollLayerExt::ccTouchBegan(touch, event);
             if (value) {
                 m_touchStart = touch;
+                m_touchMoved = false;
                 auto touchPos = utils::get<cocos2d::CCDirector>()->convertToGL(m_touchStart->getLocationInView());
                 m_touchStartPosition2 = touchPos;
                 m_touchPosition2 = touchPos;
@@ -44,6 +45,16 @@ namespace eclipse::gui::cocos {
         }
     }
     void ScrollLayer::ccTouchEnded(cocos2d::CCTouch *touch, cocos2d::CCEvent *event) {
+        // tap murni (tidak digeser) -> teruskan ke callback jika ada
+        if (m_tapCallback && !m_touchMoved && touch == m_touchStart) {
+            auto world = utils::get<cocos2d::CCDirector>()->convertToGL(touch->getLocationInView());
+            auto local = this->convertToNodeSpace(world);
+            auto size = this->getContentSize();
+            if (local.x >= 0.f && local.y >= 0.f && local.x <= size.width && local.y <= size.height) {
+                auto cb = m_tapCallback;
+                cb(world);
+            }
+        }
         CCScrollLayerExt::ccTouchEnded(touch, event);
         touchFinish(touch);
         if (m_cancellingTouches != false) {

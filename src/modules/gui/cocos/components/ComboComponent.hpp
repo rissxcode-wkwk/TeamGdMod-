@@ -48,10 +48,6 @@ namespace eclipse::gui::cocos {
             scrollBlock->setScale(0.3f);
             scrollBlock->setContentSize({365.f, scrollHeight});
             scrollBlock->setZOrder(-100);
-            #if !defined(__APPLE__)
-            // dropdown bisa muncul di dalam popup lain (prioritas -500); naikkan prioritas supaya bisa diklik
-            scrollBlock->setTouchPriority(-510);
-            #endif
             scrollBlock->registerWithTouchDispatcher();
 
             auto scrollBlockButton = CCMenuItemSpriteExtra::create(
@@ -79,9 +75,6 @@ namespace eclipse::gui::cocos {
                 auto menu = cocos2d::CCMenu::create();
                 // menu->registerWithTouchDispatcher();
                 menu->setContentSize({365.f * 0.3f, 80.f * 0.3f});
-                #if !defined(__APPLE__)
-                menu->setTouchPriority(-511);
-                #endif
 
                 auto label = TranslatedLabel::createRaw(component);
                 label->setAnchorPoint({0.5f, 0.5f});
@@ -107,6 +100,20 @@ namespace eclipse::gui::cocos {
 
             m_scrollLayer->m_contentLayer->updateLayout();
             m_scrollLayer->scrollToTop();
+
+            // Di dalam popup lain, menu item tidak menerima sentuhan (disapu popup). Deteksi tap lewat ScrollLayer.
+            m_scrollLayer->setTapCallback([this](cocos2d::CCPoint const& world) {
+                int idx = 0;
+                for (auto child : geode::cocos::CCArrayExt<cocos2d::CCNode*>(m_scrollLayer->m_contentLayer->getChildren())) {
+                    auto local = child->convertToNodeSpace(world);
+                    auto size = child->getContentSize();
+                    if (local.x >= 0.f && local.y >= 0.f && local.x <= size.width && local.y <= size.height) {
+                        geode::queueInMainThread([self = geode::Ref(this), idx] { self->selectIndex(idx); });
+                        return;
+                    }
+                    ++idx;
+                }
+            });
         }
 
         void updateLabel() const {
@@ -164,7 +171,11 @@ namespace eclipse::gui::cocos {
         }
 
         void selectItem(CCObject* sender) {
-            auto index = sender->getTag();
+            this->selectIndex(sender->getTag());
+        }
+
+        void selectIndex(int index) {
+            if (s_activeCombo != this) return; // sudah dipilih / ditutup (hindari dobel)
             if (index < 0 || index >= m_component->getItems().size()) return;
             m_component->setValue(index);
             m_component->triggerCallback(index);
