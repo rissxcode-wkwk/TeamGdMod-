@@ -52,12 +52,12 @@ public:
     bool initialized() const { return m_initialized; }
 
     std::filesystem::path baseManifestPath() {
-        static std::filesystem::path path = geode::jukebox::fs::saveDir() / "manifest";
+        static std::filesystem::path path = jukebox::fs::saveDir() / "manifest";
         return path;
     }
 
     std::filesystem::path baseNongsPath() {
-        static std::filesystem::path path = geode::jukebox::fs::saveDir() / "nongs";
+        static std::filesystem::path path = jukebox::fs::saveDir() / "nongs";
         return path;
     }
 

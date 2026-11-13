@@ -48,7 +48,7 @@ using Path = std::filesystem::path;
 // ---- std <-> asp bridge (Geode v6 boundary) ----
 
 [[nodiscard]] inline Path toStd(const Path& path) { return path; }
-[[nodiscard]] inline Path toStd(const asp::fs::Path& path) { return path.toStdPath(); }
+[[nodiscard]] inline Path toStd(const asp::fs::Path& path) { return Path(path.native()); }
 
 [[nodiscard]] inline asp::fs::Path toAsp(const Path& path) { return asp::fs::Path::fromStdPath(path); }
 
