@@ -3,7 +3,7 @@
 ![GD Version](https://api.geode-sdk.org/v1/mods/fleym.nongd/status_badge?stat=gd_version)
 ![Geode Version](https://api.geode-sdk.org/v1/mods/fleym.nongd/status_badge?stat=geode_version)
 
-# Jukebox
+# Jukebox-
 
 <img src="./logo.png" alt="Jukebox logo" />
 
