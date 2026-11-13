@@ -1,3 +1,4 @@
+#include <vector>
 #include <jukebox/managers/nong_manager.hpp>
 
 #include <filesystem>
@@ -9,6 +10,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include <Geode/cocos/platform/CCFileUtils.h>
 #include <fmt/format.h>
 #include <Geode/Result.hpp>
 #include <Geode/binding/LevelTools.hpp>

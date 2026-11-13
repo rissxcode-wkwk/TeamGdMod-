@@ -6,6 +6,7 @@
 #include <Geode/cocos/cocoa/CCGeometry.h>
 #include <Geode/cocos/cocoa/CCObject.h>
 #include <Geode/ui/Label.hpp>
+#include <Geode/cocos/platform/CCFileUtils.h>
 #include <Geode/cocos/menu_nodes/CCMenu.h>
 #include <Geode/cocos/sprite_nodes/CCSprite.h>
 #include <fmt/format.h>
@@ -34,6 +35,8 @@
 using namespace geode::prelude;
 using namespace jukebox;
 
+// iOS: binding GD 2.2091 belum punya alamat fungsi ini, jadi hook dinonaktifkan di iOS
+#ifndef GEODE_IS_IOS
 class $modify(JBSongWidget, CustomSongWidget) {
     struct Fields {
         Nongs* nongs = nullptr;
@@ -101,10 +104,11 @@ class $modify(JBSongWidget, CustomSongWidget) {
     }
 
     bool init(SongInfoObject* songInfo, CustomSongDelegate* songDelegate, bool showSongSelect, bool showPlayMusic,
-              bool showDownload, bool isRobtopSong, bool unk, bool isMusicLibrary, int unkInt) {
+              bool showDownload, bool isRobtopSong, bool unk, bool isMusicLibrary, int unkInt, bool unk2,
+              bool unk3) {
         this->adjustSongInfoObject(songInfo);
         if (!CustomSongWidget::init(songInfo, songDelegate, showSongSelect, showPlayMusic, showDownload, isRobtopSong,
-                                    unk, isMusicLibrary, unkInt)) {
+                                    unk, isMusicLibrary, unkInt, unk2, unk3)) {
             return false;
         }
 
@@ -267,8 +271,8 @@ class $modify(JBSongWidget, CustomSongWidget) {
             return;
         }
 
-        const auto resources = jukebox::fs::fromString(CCFileUtils::get()->getWritablePath2()) / "Resources";
-        const auto song = jukebox::fs::fromString(CCFileUtils::get()->getWritablePath());
+        const auto resources = jukebox::fs::fromString(CCFileUtils::sharedFileUtils()->getWritablePath2()) / "Resources";
+        const auto song = jukebox::fs::fromString(CCFileUtils::sharedFileUtils()->getWritablePath());
 
         if (m_songIDLabel && !m_fields->lastMultiAssetValue.empty()) {
             this->onFixMultiAssetSizeFinished(m_fields->lastMultiAssetValue, false);
@@ -641,3 +645,4 @@ class $modify(JBLevelInfoLayer, LevelInfoLayer) {
         return true;
     }
 };
+#endif  // GEODE_IS_IOS

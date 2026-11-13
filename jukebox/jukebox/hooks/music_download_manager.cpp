@@ -1,3 +1,4 @@
+#include <vector>
 #include <jukebox/hooks/music_download_manager.hpp>
 
 #include <optional>
@@ -16,6 +17,8 @@
 
 using namespace jukebox;
 
+// iOS: binding GD 2.2091 belum punya alamat fungsi ini, jadi hook dinonaktifkan di iOS
+#ifndef GEODE_IS_IOS
 std::string JBMusicDownloadManager::pathForSong(int id) {
     NongManager::get().m_currentlyPreparingNong = std::nullopt;
     std::optional<Nongs*> nongs = NongManager::get().getNongs(id);
@@ -75,3 +78,4 @@ SongInfoObject* JBMusicDownloadManager::getSongInfoObject(int id) {
     og->m_artistName = active->metadata()->artist;
     return og;
 }
+#endif  // GEODE_IS_IOS
