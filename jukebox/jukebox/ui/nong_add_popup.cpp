@@ -13,6 +13,7 @@
 #include <Geode/cocos/base_nodes/CCNode.h>
 #include <Geode/cocos/cocoa/CCObject.h>
 #include <Geode/cocos/menu_nodes/CCMenu.h>
+#include <Geode/cocos/platform/CCApplication.h>
 #include <Geode/cocos/sprite_nodes/CCSprite.h>
 #include <fmod_common.h>
 #include <fmod_errors.h>

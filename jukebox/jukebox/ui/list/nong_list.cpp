@@ -237,9 +237,9 @@ void NongList::build() {
             };
 
             bool aVerified =
-                asp::iter::from(verifiedNongs).any([a](auto& i) { return i.get() == a->metadata()->uniqueID; });
+                asp::iter::from(verifiedNongs).any([a](auto& i) { return i == a->metadata()->uniqueID; });
             bool bVerified =
-                asp::iter::from(verifiedNongs).any([b](auto& i) { return i.get() == b->metadata()->uniqueID; });
+                asp::iter::from(verifiedNongs).any([b](auto& i) { return i == b->metadata()->uniqueID; });
 
             // Sort by Verified
             if (aVerified != bVerified) {

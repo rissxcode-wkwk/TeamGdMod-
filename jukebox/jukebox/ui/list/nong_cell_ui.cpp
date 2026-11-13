@@ -6,6 +6,8 @@
 #include <Geode/ui/Label.hpp>
 #include <Geode/ui/NineSlice.hpp>
 #include <Geode/cocos/menu_nodes/CCMenu.h>
+#include <Geode/cocos/misc_nodes/CCClippingNode.h>
+#include <Geode/cocos/misc_nodes/CCProgressTimer.h>
 #include <Geode/cocos/platform/CCPlatformMacros.h>
 #include <Geode/cocos/sprite_nodes/CCSprite.h>
 #include <ccTypes.h>
