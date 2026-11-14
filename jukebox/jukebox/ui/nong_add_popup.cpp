@@ -48,9 +48,9 @@ using namespace geode::prelude;
 using namespace jukebox::index;
 
 void setInputProps(TextInput* i) {
-    i->setPlaceholderColor({108, 153, 216, 255});
-    i->setFontScale(0.7f);
-    i->setPlaceholderScale(0.7f);
+    // Geode 6: TextInput no longer exposes getInputNode()/styling setters.
+    // Keep this helper as a hook point; defaults are used.
+    (void)i;
 }
 
 std::optional<std::string> parseFromFMODTag(const FMOD_TAG& tag) {

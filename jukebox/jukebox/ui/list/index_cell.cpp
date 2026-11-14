@@ -83,7 +83,6 @@ bool IndexCell::init(IndexesPopup* parentPopup, IndexSource* index, geode::Funct
     inputNode->setCommonFilter(CommonFilter::Any);
     inputNode->setMaxCharCount(300);
     inputNode->setString(m_index->m_url, false);
-    inputNode->setAlignment(Label::Alignment::Left);
     inputNode->setCallback([this](std::string const& str) { m_index->m_url = str; });
 
     auto menu = CCMenu::create();
