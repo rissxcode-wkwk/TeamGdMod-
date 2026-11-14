@@ -1,3 +1,4 @@
+#include <jukebox/utils/platform.hpp>
 #include <Geode/binding/FMODAudioEngine.hpp>
 #include <Geode/modify/FMODAudioEngine.hpp>  // IWYU pragma: keep
 
@@ -6,7 +7,7 @@
 using namespace jukebox;
 
 // iOS: binding GD 2.2091 belum punya alamat fungsi ini, jadi hook dinonaktifkan di iOS
-#ifndef GEODE_IS_IOS
+#ifndef JB_IS_IOS
 class $modify(FMODAudioEngine) {
     void queueStartMusic(std::string audioFilename, float p1, float p2, float p3,
                          bool p4, int ms, int p6, int p7, int p8, int p9,
@@ -40,4 +41,4 @@ class $modify(FMODAudioEngine) {
         }
     }
 };
-#endif  // GEODE_IS_IOS
+#endif  // JB_IS_IOS

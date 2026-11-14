@@ -4,16 +4,23 @@
 #include <string>
 
 #include <Geode/Geode.hpp>
+#include <jukebox/utils/platform.hpp>
 #include <Geode/binding/LevelTools.hpp>
 #include <Geode/binding/MusicDownloadManager.hpp>
 #include <Geode/binding/SongInfoObject.hpp>
 
 // Wrapper agar iOS (bindings GD 2.2091 belum punya alamat beberapa fungsi)
 // tidak menghasilkan "undefined symbol" saat linking.
+#ifdef JB_IS_IOS
+#pragma message("jukebox gd_compat: iOS shim ACTIVE")
+#else
+#pragma message("jukebox gd_compat: native GD calls")
+#endif
+
 namespace jukebox::gd {
 
 inline std::string pathForSong(int id) {
-#ifdef GEODE_IS_IOS
+#ifdef JB_IS_IOS
     std::string base = std::string(cocos2d::CCFileUtils::sharedFileUtils()->getWritablePath2());
     return (std::filesystem::path(base) / (std::to_string(id) + ".mp3")).string();
 #else
@@ -22,7 +29,7 @@ inline std::string pathForSong(int id) {
 }
 
 inline SongInfoObject* getSongInfoObject(int id) {
-#ifdef GEODE_IS_IOS
+#ifdef JB_IS_IOS
     (void)id;
     return nullptr;
 #else
@@ -31,7 +38,7 @@ inline SongInfoObject* getSongInfoObject(int id) {
 }
 
 inline void getSongInfo(int id, bool refresh) {
-#ifdef GEODE_IS_IOS
+#ifdef JB_IS_IOS
     (void)id;
     (void)refresh;
 #else
@@ -40,7 +47,7 @@ inline void getSongInfo(int id, bool refresh) {
 }
 
 inline std::string getAudioFileName(int id) {
-#ifdef GEODE_IS_IOS
+#ifdef JB_IS_IOS
     (void)id;
     return "";
 #else

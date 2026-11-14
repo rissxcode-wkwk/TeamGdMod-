@@ -1,3 +1,4 @@
+#include <jukebox/utils/platform.hpp>
 #include <Geode/binding/LevelSelectLayer.hpp>
 #include <Geode/binding/LevelTools.hpp>
 #include <Geode/binding/MenuLayer.hpp>
@@ -14,7 +15,7 @@ using namespace jukebox;
 bool g_disableTitleOverride = false;
 
 // iOS: binding GD 2.2091 belum punya alamat fungsi ini, jadi hook dinonaktifkan di iOS
-#ifndef GEODE_IS_IOS
+#ifndef JB_IS_IOS
 class $modify(LevelTools) {
     // Inlined in 2.206, commented for now
     // static SongInfoObject* getSongObject(int id) {
@@ -44,7 +45,7 @@ class $modify(LevelTools) {
         return LevelTools::getAudioTitle(id);
     }
 };
-#endif  // GEODE_IS_IOS
+#endif  // JB_IS_IOS
 
 class $modify(MenuLayer) {
     // Fix for Overcharged Main Menu
@@ -58,7 +59,7 @@ class $modify(MenuLayer) {
 };
 
 // iOS: binding GD 2.2091 belum punya alamat fungsi ini, jadi hook dinonaktifkan di iOS
-#ifndef GEODE_IS_IOS
+#ifndef JB_IS_IOS
 class $modify(LevelSelectLayer) {
     bool init(int p0) {
         g_disableTitleOverride = true;
@@ -67,4 +68,4 @@ class $modify(LevelSelectLayer) {
         return ret;
     }
 };
-#endif  // GEODE_IS_IOS
+#endif  // JB_IS_IOS

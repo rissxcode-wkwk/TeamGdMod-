@@ -1,3 +1,4 @@
+#include <jukebox/utils/platform.hpp>
 #include <Geode/Result.hpp>
 #include <filesystem>
 #include <optional>
@@ -36,7 +37,7 @@ using namespace geode::prelude;
 using namespace jukebox;
 
 // iOS: binding GD 2.2091 belum punya alamat fungsi ini, jadi hook dinonaktifkan di iOS
-#ifndef GEODE_IS_IOS
+#ifndef JB_IS_IOS
 class $modify(JBSongWidget, CustomSongWidget) {
     struct Fields {
         Nongs* nongs = nullptr;
@@ -645,4 +646,4 @@ class $modify(JBLevelInfoLayer, LevelInfoLayer) {
         return true;
     }
 };
-#endif  // GEODE_IS_IOS
+#endif  // JB_IS_IOS

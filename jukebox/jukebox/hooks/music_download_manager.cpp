@@ -1,3 +1,4 @@
+#include <jukebox/utils/platform.hpp>
 #include <vector>
 #include <jukebox/hooks/music_download_manager.hpp>
 
@@ -17,8 +18,22 @@
 
 using namespace jukebox;
 
+#ifdef JB_IS_MACOS
+// Bindings macOS GD 2.2091 tidak mengekspor typeinfo MusicDownloadManager, tetapi
+// Modify<> (FieldIntermediate::self) mereferensikannya saat link. Fields tidak
+// dipakai (self() tidak pernah dipanggil), jadi cukup sediakan simbol placeholder.
+asm(".globl __ZTI20MusicDownloadManager\n"
+    ".section __DATA,__const\n"
+    ".p2align 3\n"
+    "__ZTI20MusicDownloadManager:\n"
+    ".quad 0\n"
+    ".quad 0\n"
+    ".quad 0\n"
+    ".text\n");
+#endif
+
 // iOS: binding GD 2.2091 belum punya alamat fungsi ini, jadi hook dinonaktifkan di iOS
-#ifndef GEODE_IS_IOS
+#ifndef JB_IS_IOS
 // Global flag instead of Modify Fields (Fields needs typeinfo for MusicDownloadManager, missing on macOS)
 static bool s_overrideSongInfo = false;
 
@@ -81,4 +96,4 @@ SongInfoObject* JBMusicDownloadManager::getSongInfoObject(int id) {
     og->m_artistName = active->metadata()->artist;
     return og;
 }
-#endif  // GEODE_IS_IOS
+#endif  // JB_IS_IOS
