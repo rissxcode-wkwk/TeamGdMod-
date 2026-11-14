@@ -81,3 +81,12 @@ Geometry Dash **2.2091** dan Geode **6.0.0-alpha.1** (semua platform), jadi tida
   untuk ctor/dtor. `manager.cpp` tidak memakainya, include dilewati di iOS. Untuk `gd-imgui-cocos/hooks.cpp` (library
   luar) ditambah shim `src/Geode/modify/CCKeyboardDispatcher.hpp` yang mematikan hook ctor/dtor khusus iOS.
 - Belum dikompilasi di sini. Kalau iOS masih gagal, kirim lognya.
+
+## iOS: fungsi tanpa alamat di bindings (14 Nov 2026, v13)
+- Setelah v12, hanya iOS yang gagal: `PlayerObject::pushButton/releaseButton/toggleDartMode/runBallRotation/switchedToMode/
+  animatePlatformerJump/playSpawnEffect/...` tidak punya alamat iOS di bindings 2.2091 (static_assert "does not have an
+  available address"). Platform lain sudah lulus.
+- Perbaikan: shim `src/Geode/modify/<Kelas>.hpp` untuk semua kelas yang di-hook proyek (57 file, dibuat otomatis). Di iOS
+  mereka mematikan static_assert itu, jadi hook untuk fungsi tanpa alamat dilewati. Platform lain tidak terpengaruh.
+- Dampak: di iOS, hack yang mengait fungsi tanpa alamat (Shipcopter, BallRotation, NoPlatformerJumpSquish, NoRespawnFlash,
+  NoWaveTrailBehind, MuteLevelAudioOnDeath, dll) tidak aktif sampai bindings iOS dilengkapi. Belum dikompilasi di sini.
