@@ -10,6 +10,7 @@
 #include <fmt/format.h>
 #include <Geode/Result.hpp>
 #include <Geode/binding/MusicDownloadManager.hpp>
+#include <jukebox/utils/gd_compat.hpp>
 #include <Geode/binding/SongInfoObject.hpp>
 #include <Geode/loader/Log.hpp>
 #include <Geode/utils/general.hpp>
@@ -82,12 +83,12 @@ void LocalSong::setPath(std::filesystem::path p) { m_impl->setPath(std::move(p))
 
 LocalSong LocalSong::createUnknown(const int songID) {
     return LocalSong{SongMetadata{songID, random_string(16), "Unknown", ""},
-                     jukebox::fs::fromString(MusicDownloadManager::sharedState()->pathForSong(songID))};
+                     jukebox::fs::fromString(jukebox::gd::pathForSong(songID))};
 }
 
 LocalSong LocalSong::fromSongObject(const SongInfoObject* obj) {
     return LocalSong{SongMetadata{obj->m_songID, random_string(16), obj->m_songName, obj->m_artistName},
-                     jukebox::fs::fromString(MusicDownloadManager::sharedState()->pathForSong(obj->m_songID))};
+                     jukebox::fs::fromString(jukebox::gd::pathForSong(obj->m_songID))};
 }
 
 class YTSong::Impl {

@@ -15,6 +15,7 @@
 #include <Geode/Result.hpp>
 #include <Geode/binding/LevelTools.hpp>
 #include <Geode/binding/MusicDownloadManager.hpp>
+#include <jukebox/utils/gd_compat.hpp>
 #include <Geode/binding/SongInfoObject.hpp>
 #include <Geode/loader/Log.hpp>
 #include <Geode/utils/file.hpp>
@@ -86,7 +87,7 @@ Result<Nongs*> NongManager::initSongID(SongInfoObject* obj, int id, bool robtop)
     }
 
     if (obj && robtop) {
-        std::string filename = LevelTools::getAudioFileName(id);
+        std::string filename = jukebox::gd::getAudioFileName(id);
         std::filesystem::path gdDir = jukebox::fs::fromString(CCFileUtils::sharedFileUtils()->getWritablePath2());
         std::unique_ptr<Nongs> nongs = std::make_unique<Nongs>(Nongs{
             adjusted, LocalSong{SongMetadata{adjusted, jukebox::random_string(16), obj->m_songName, obj->m_artistName},
@@ -101,12 +102,12 @@ Result<Nongs*> NongManager::initSongID(SongInfoObject* obj, int id, bool robtop)
 
     if (!obj) {
         // See if we already have it stored in the savefile
-        obj = MusicDownloadManager::sharedState()->getSongInfoObject(id);
+        obj = jukebox::gd::getSongInfoObject(id);
     }
 
     if (!obj) {
         // Try fetch song info from servers
-        MusicDownloadManager::sharedState()->getSongInfo(id, true);
+        jukebox::gd::getSongInfo(id, true);
         std::unique_ptr<Nongs> nongs = std::make_unique<Nongs>(Nongs{id, LocalSong::createUnknown(id)});
 
         Nongs* n = nongs.get();
@@ -119,7 +120,7 @@ Result<Nongs*> NongManager::initSongID(SongInfoObject* obj, int id, bool robtop)
     // Finally, if obj exists just insert normally
     std::unique_ptr<Nongs> nongs = std::make_unique<Nongs>(Nongs{
         adjusted, LocalSong{SongMetadata{adjusted, jukebox::random_string(16), obj->m_songName, obj->m_artistName},
-                            jukebox::fs::fromString(MusicDownloadManager::sharedState()->pathForSong(id))}});
+                            jukebox::fs::fromString(jukebox::gd::pathForSong(id))}});
 
     Nongs* n = nongs.get();
     m_manifest.m_nongs.insert({adjusted, std::move(nongs)});
@@ -368,7 +369,7 @@ arc::Future<std::string> NongManager::getMultiAssetSizes(std::string songs, std:
         auto nongs = result.value();
         if (nongs->isDefaultActive()) {
             auto songObj = co_await async::waitForMainThread(
-                [id]() { return MusicDownloadManager::sharedState()->getSongInfoObject(id); });
+                [id]() { return jukebox::gd::getSongInfoObject(id); });
             if (songObj && songObj.value() && songObj.value()->m_fileSize > 0.f) {
                 double filesizeMB = songObj.value()->m_fileSize;
                 sum += static_cast<uintmax_t>(filesizeMB * 1000000.f);
@@ -405,7 +406,7 @@ arc::Future<std::string> NongManager::getMultiAssetSizes(std::string songs, std:
 
 void NongManager::refetchDefault(const int songID) {
     MusicDownloadManager::sharedState()->clearSong(songID);
-    MusicDownloadManager::sharedState()->getSongInfo(songID, true);
+    jukebox::gd::getSongInfo(songID, true);
 }
 
 Result<> NongManager::addNongs(Nongs&& nongs) {

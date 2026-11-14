@@ -12,10 +12,6 @@
 #ifndef GEODE_IS_IOS
 struct JBMusicDownloadManager
     : geode::Modify<JBMusicDownloadManager, MusicDownloadManager> {
-    struct Fields {
-        bool overrideSongInfo = false;
-    };
-    
     std::string pathForSong(int id);
     void onGetSongInfoCompleted(std::string p1, std::string p2);
     SongInfoObject* getSongInfoObject(int id);

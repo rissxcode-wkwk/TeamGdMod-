@@ -19,6 +19,9 @@ using namespace jukebox;
 
 // iOS: binding GD 2.2091 belum punya alamat fungsi ini, jadi hook dinonaktifkan di iOS
 #ifndef GEODE_IS_IOS
+// Global flag instead of Modify Fields (Fields needs typeinfo for MusicDownloadManager, missing on macOS)
+static bool s_overrideSongInfo = false;
+
 std::string JBMusicDownloadManager::pathForSong(int id) {
     NongManager::get().m_currentlyPreparingNong = std::nullopt;
     std::optional<Nongs*> nongs = NongManager::get().getNongs(id);
@@ -36,7 +39,7 @@ std::string JBMusicDownloadManager::pathForSong(int id) {
 }
 
 void JBMusicDownloadManager::onGetSongInfoCompleted(std::string p1, std::string p2) {
-    m_fields->overrideSongInfo = true;
+    s_overrideSongInfo = true;
     MusicDownloadManager::onGetSongInfoCompleted(p1, p2);
     geode::Result<int> songIDRes = geode::utils::numFromString<int>(p2);
     if (songIDRes.isErr()) {
@@ -46,7 +49,7 @@ void JBMusicDownloadManager::onGetSongInfoCompleted(std::string p1, std::string 
     int songID = songIDRes.unwrap();
 
     SongInfoObject* obj = this->getSongInfoObject(songID);
-    m_fields->overrideSongInfo = false;
+    s_overrideSongInfo = false;
 
     if (obj == nullptr) {
         return;
@@ -61,7 +64,7 @@ SongInfoObject* JBMusicDownloadManager::getSongInfoObject(int id) {
         return og;
     }
 
-    if (m_fields->overrideSongInfo) {
+    if (s_overrideSongInfo) {
         return og;
     }
 

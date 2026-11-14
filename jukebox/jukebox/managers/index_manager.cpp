@@ -12,6 +12,7 @@
 #include <fmt/format.h>
 #include <Geode/Result.hpp>
 #include <Geode/binding/MusicDownloadManager.hpp>
+#include <jukebox/utils/gd_compat.hpp>
 #include <Geode/loader/Event.hpp>
 #include <Geode/loader/Log.hpp>
 #include <Geode/loader/Mod.hpp>
@@ -360,7 +361,7 @@ Result<> IndexManager::downloadSong(int gdSongID, const std::string_view uniqueI
     Nongs* nongs = nullptr;
 
     if (!NongManager::get().hasSongID(gdSongID)) {
-        SongInfoObject* obj = MusicDownloadManager::sharedState()->getSongInfoObject(gdSongID);
+        SongInfoObject* obj = jukebox::gd::getSongInfoObject(gdSongID);
 
         GEODE_UNWRAP_INTO(
             nongs, NongManager::get().initSongID(obj, gdSongID, false).mapErr([gdSongID](const std::string& err) {
