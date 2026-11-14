@@ -81,6 +81,8 @@ void IndexesPopup::createList() {
     }
 
     m_list = ScrollLayer::create({size.width - s_padding * 2, size.height - s_padding * 2 - 4.f});
+    m_list->setAnchorPoint({0.f, 0.f});
+    m_list->ignoreAnchorPointForPosition(false);
     m_list->setPosition({s_padding, s_padding + 2.f});
 
     for (int i = 0; i < m_indexes.size(); i++) {

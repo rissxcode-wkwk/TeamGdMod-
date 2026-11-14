@@ -15,15 +15,9 @@ using namespace geode::prelude;
 namespace jukebox::download {
 
 arc::Future<Result<ByteVector>> startHostedDownload(const std::string_view url) {
-    int timeout = Mod::get()->getSettingValue<int>("download-timeout");
-
-    if (timeout < 30) {
-        timeout = 30;
-    }
-
+    // NOTE: WebRequest::timeout(asp::Duration) tidak ada di loader Geode yang terpasang (dlopen: cannot locate symbol), jadi tidak dipakai.
     const web::WebResponse response =
         co_await web::WebRequest()
-            .timeout(asp::Duration::fromSecs(timeout))
             .onProgress([url = std::string(url)](const web::WebProgress& progress) {
                 const float actual = progress.downloadProgress().value_or(0.0f);
 

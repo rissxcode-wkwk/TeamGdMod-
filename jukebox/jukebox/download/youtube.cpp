@@ -53,14 +53,8 @@ Result<std::string> getUrlFromMetadataPayload(web::WebResponse r) {
 }
 
 web::WebFuture getMetadata(const std::string& id) {
-    int timeout = Mod::get()->getSettingValue<int>("download-timeout");
-
-    if (timeout < 30) {
-        timeout = 30;
-    }
-
+    // NOTE: WebRequest::timeout(asp::Duration) tidak ada di loader Geode yang terpasang (dlopen: cannot locate symbol), jadi tidak dipakai.
     return web::WebRequest()
-        .timeout(asp::Duration::fromSecs(timeout))
         .bodyJSON(matjson::makeObject(
             {{"url", fmt::format("https://www.youtube.com/watch?v={}", id)},
              {"aFormat", "mp3"},

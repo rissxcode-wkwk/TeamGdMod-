@@ -271,9 +271,8 @@ Future<Result<>> IndexManager::fetchIndexes() {
 }
 
 Future<Result<std::optional<matjson::Value>>> IndexManager::fetchIndex(const IndexSource& index, bool forceFresh) {
-    int timeout = Mod::get()->getSettingValue<int>("request-timeout");
-
-    web::WebRequest request = web::WebRequest().timeout(asp::Duration::fromSecs(timeout));
+    // NOTE: WebRequest::timeout(asp::Duration) tidak ada di loader Geode yang terpasang (dlopen: cannot locate symbol), jadi tidak dipakai.
+    web::WebRequest request = web::WebRequest();
 
     if (!forceFresh) {
         if (auto etag = this->etagForIndex(index.m_url)) {
