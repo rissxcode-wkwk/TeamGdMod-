@@ -1,4 +1,4 @@
-name: Build Eclipse (Windows, macOS, Android 32/64)
+name: Build Eclipse (Windows, macOS, iOS, Android 32/64)
 
 on:
   workflow_dispatch:
@@ -24,6 +24,10 @@ jobs:
 
         - name: macOS
           os: macos-latest
+
+        - name: iOS
+          os: macos-latest
+          target: iOS
 
         - name: Android32
           os: ubuntu-latest
@@ -93,7 +97,7 @@ jobs:
             Build terbaru mod untuk commit ${{ github.sha }} (${{ github.event.head_commit.message }}).
 
             Target: Geometry Dash 2.2091 + Geode 6.0.0-alpha.1.
-            Platform: Windows, macOS, Android 32-bit, Android 64-bit.
+            Platform: Windows, macOS, iOS, Android 32-bit, Android 64-bit.
           files: |
             ${{ github.workspace }}/bin/*.geode
             ${{ github.workspace }}/bin/*.pdb
