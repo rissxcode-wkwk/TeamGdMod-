@@ -68,3 +68,16 @@ Geometry Dash **2.2091** dan Geode **6.0.0-alpha.1** (semua platform), jadi tida
 - Perbaikan: `ColorPopup` dihapus; color picker langsung memakai `geode::ColorPickPopup::create(...)` (tanpa subclass).
 - `CocosRenderer::m_extraPopups` kini `Ref<CCNode>` dan popup yang sudah ditutup dibersihkan saat `registerModal`,
   karena popup warna tidak lagi unregister sendiri lewat destruktor. Belum dikompilasi di sini.
+
+## Workflow: iOS ditambahkan (14 Nov 2026)
+- `build-all.yml` kini membuild Windows, macOS, iOS, Android32, Android64. Job iOS memakai `target: iOS` di `macos-latest`.
+- Belum pernah dikompilasi untuk iOS di sini; kalau gagal, kirim lognya.
+
+## Perbaikan build semua platform (14 Nov 2026, v12)
+- `ColorPickPopup::create(color, isRGBA)` kini protected di Geode 6 (error di Android32/64, Windows, macOS, iOS).
+  `color-picker.cpp` memakai struct pembuka akses `ColorPickPopupAccess` (turunan, tidak pernah diinstansiasi, jadi
+  tidak ada vtable baru dan masalah simbol `textChanged` tidak kembali).
+- iOS: header modify `CCKeyboardDispatcher` gagal ("expected expression") karena bindings tidak punya alamat iOS
+  untuk ctor/dtor. `manager.cpp` tidak memakainya, include dilewati di iOS. Untuk `gd-imgui-cocos/hooks.cpp` (library
+  luar) ditambah shim `src/Geode/modify/CCKeyboardDispatcher.hpp` yang mematikan hook ctor/dtor khusus iOS.
+- Belum dikompilasi di sini. Kalau iOS masih gagal, kirim lognya.

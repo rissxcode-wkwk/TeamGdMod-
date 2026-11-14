@@ -13,7 +13,7 @@
 
 #ifdef GEODE_IS_WINDOWS
 #include <Geode/modify/CCEGLView.hpp>
-#else
+#elif !defined(GEODE_IS_IOS)
 #include <Geode/modify/CCKeyboardDispatcher.hpp>
 #endif
 

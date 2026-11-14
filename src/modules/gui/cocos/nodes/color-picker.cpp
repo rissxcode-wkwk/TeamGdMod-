@@ -1,6 +1,17 @@
 #include "color-picker.hpp"
 
 namespace eclipse::gui::cocos {
+    namespace {
+        // Geode 6: ColorPickPopup::create(color, isRGBA) menjadi protected.
+        // Struct ini hanya membuka akses ke fungsi static itu. Tidak pernah diinstansiasi,
+        // jadi tidak ada vtable baru (menghindari masalah simbol textChanged di perangkat).
+        struct ColorPickPopupAccess : geode::ColorPickPopup {
+            static geode::ColorPickPopup* make(cocos2d::ccColor4B const& color, bool isRGBA) {
+                return geode::ColorPickPopup::create(color, isRGBA);
+            }
+        };
+    }
+
     bool ColorPicker::init(Color const& original, bool useAlpha, Function<void(Color)> callback) {
         m_useAlpha = useAlpha;
         m_callback = std::move(callback);
@@ -22,9 +33,9 @@ namespace eclipse::gui::cocos {
 
     void ColorPicker::onClicked(CCObject*) {
         if (m_useAlpha) {
-            m_popup = geode::ColorPickPopup::create(static_cast<cocos2d::ccColor4B>(m_color), true);
+            m_popup = ColorPickPopupAccess::make(static_cast<cocos2d::ccColor4B>(m_color), true);
         } else {
-            m_popup = geode::ColorPickPopup::create(geode::cocos::to4B(m_color.toCCColor3B()), true);
+            m_popup = ColorPickPopupAccess::make(geode::cocos::to4B(m_color.toCCColor3B()), true);
         }
 
         m_popup->setCallback([self = geode::WeakRef(this)](cocos2d::ccColor4B const& color) {
