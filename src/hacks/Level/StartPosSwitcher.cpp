@@ -105,9 +105,11 @@ namespace eclipse::hacks::Level {
                 applyStartPosObject(playLayer, startPos);
                 playLayer->m_isTestMode = index >= 0;
 
+                #ifndef GEODE_IS_IOS // resetLevelFromStart tidak punya alamat iOS
                 if (playLayer->m_isPracticeMode)
                     playLayer->resetLevelFromStart();
                 else
+                #endif
                     playLayer->resetLevel();
 
                 playLayer->startMusic();

@@ -342,7 +342,11 @@ namespace eclipse::labels {
     };
 
     inline int getStatFromDictionary(cocos2d::CCDictionary* dict, std::string const& key) {
+        #ifdef GEODE_IS_IOS
+        auto const str = eclipse::utils::compat::dictString(dict, key);
+        #else
         auto& str = dict->valueForKey(key)->m_sString;
+        #endif
         if (str.empty()) return 0;
         if (auto res = geode::utils::numFromString<int>(str)) {
             return res.unwrap();
@@ -507,7 +511,11 @@ namespace eclipse::labels {
         static int s_lastTotalOrbs = 0;
         if (levelID == s_lastLevelID) return s_lastTotalOrbs;
         s_lastLevelID = levelID;
+        #ifdef GEODE_IS_IOS
+        s_lastTotalOrbs = 0; // getBaseCurrencyForLevel tidak punya alamat iOS di bindings
+        #else
         s_lastTotalOrbs = utils::get<GameStatsManager>()->getBaseCurrencyForLevel(level);
+        #endif
         return s_lastTotalOrbs;
     }
 
@@ -530,7 +538,11 @@ namespace eclipse::labels {
             currencyScores = gsm->m_timelyCurrencyScores;
         }
 
+        #ifdef GEODE_IS_IOS
+        auto const str = eclipse::utils::compat::dictString(currencyScores, fmt::to_string(dailyId));
+        #else
         auto& str = currencyScores->valueForKey(fmt::to_string(dailyId))->m_sString;
+        #endif
         if (str.empty()) return 0;
         if (auto res = geode::utils::numFromString<int>(str)) {
             auto resValue = res.unwrap();

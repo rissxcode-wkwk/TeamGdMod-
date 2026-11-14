@@ -29,6 +29,7 @@ namespace eclipse::hacks::Player {
         void destroyPlayer(PlayerObject* player, GameObject* object) override {
             PlayLayer::destroyPlayer(player, object);
 
+            #ifndef GEODE_IS_IOS // delayedResetLevel tidak punya alamat iOS
             auto delay = config::get<double>("player.respawndelay", 1.f);
             if (auto* respawnSequence = this->getActionByTag(0x10)) {
                 // Recreate the sequence with the new delay
@@ -41,6 +42,7 @@ namespace eclipse::hacks::Player {
                 newSequence->setTag(0x10);
                 this->runAction(newSequence);
             }
+            #endif
         }
     };
 }

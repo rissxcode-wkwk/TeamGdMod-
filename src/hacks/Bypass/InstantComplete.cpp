@@ -24,9 +24,11 @@ namespace eclipse::hacks::Bypass {
         void onEnterTransitionDidFinish() {
             PlayLayer::onEnterTransitionDidFinish();
 
+            #ifndef GEODE_IS_IOS // playEndAnimationToPos tidak punya alamat iOS
             if (this->m_isPlatformer)
                 this->playPlatformerEndAnimationToPos({.0f, 105.f}, true);
             else this->playEndAnimationToPos({2.f, 2.f});
+            #endif
         }
 
         void levelComplete() {

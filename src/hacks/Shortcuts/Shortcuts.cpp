@@ -82,6 +82,7 @@ namespace eclipse::hacks::Shortcuts {
                     if (!yes) return;
                     auto gsm = utils::get<GameStatsManager>();
                     auto glm = utils::get<GameLevelManager>();
+                    #ifndef GEODE_IS_IOS // hasCompletedLevel/hasPendingUserCoin/removeObjectForKey(string): tidak ada alamat iOS
                     // if level had been completed, ensure that their stars are also removed if the said level was rated
                     if (level->m_normalPercent >= 100 && gsm->hasCompletedLevel(level)) {
                         int levelid = level->m_levelID.value();
@@ -123,6 +124,8 @@ namespace eclipse::hacks::Shortcuts {
 
                     }
 
+                    #endif
+
                     // Clear progress
                     level->m_practicePercent = 0;
                     level->m_normalPercent = 0;
@@ -158,8 +161,10 @@ namespace eclipse::hacks::Shortcuts {
 
         static void placeCheckpoint() {
             if (auto* pl = utils::get<PlayLayer>()) {
+                #ifndef GEODE_IS_IOS // markCheckpoint tidak punya alamat iOS
                 if (pl->m_isPracticeMode)
                     pl->markCheckpoint();
+                #endif
             }
         }
 
@@ -236,6 +241,10 @@ namespace eclipse::hacks::Shortcuts {
         }
 
         static int getSecretCoinsRange(int min, int max) {
+            #ifdef GEODE_IS_IOS
+            (void)min; (void)max;
+            return 0; // hasCompletedMainLevel tidak punya alamat iOS
+            #else
             auto glm = utils::get<GameLevelManager>();
             auto gsm = utils::get<GameStatsManager>();
             int secretCoins = 0;
@@ -250,8 +259,12 @@ namespace eclipse::hacks::Shortcuts {
                 }
             }
             return secretCoins;
+            #endif
         }
         static void recountSecretCoins() {
+            #ifdef GEODE_IS_IOS
+            return Popup::create(i18n::get_("common.error"), "Not available on iOS yet");
+            #else
             auto am = AchievementManager::sharedState();
             auto glm = utils::get<GameLevelManager>();
             auto gsm = utils::get<GameStatsManager>();
@@ -302,6 +315,7 @@ namespace eclipse::hacks::Shortcuts {
                     gsm->setStat("8", newSecretCoins);
                 }
             );
+            #endif
         }
 
         static void showLevelPassword() {

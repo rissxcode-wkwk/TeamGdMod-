@@ -90,3 +90,11 @@ Geometry Dash **2.2091** dan Geode **6.0.0-alpha.1** (semua platform), jadi tida
   mereka mematikan static_assert itu, jadi hook untuk fungsi tanpa alamat dilewati. Platform lain tidak terpengaruh.
 - Dampak: di iOS, hack yang mengait fungsi tanpa alamat (Shipcopter, BallRotation, NoPlatformerJumpSquish, NoRespawnFlash,
   NoWaveTrailBehind, MuteLevelAudioOnDeath, dll) tidak aktif sampai bindings iOS dilengkapi. Belum dikompilasi di sini.
+
+## iOS: simbol tidak ketemu saat link (14 Nov 2026, v14)
+- Link iOS gagal karena kode memanggil fungsi yang tidak punya alamat iOS di bindings (bukan hook, jadi shim tidak membantu).
+- Dilewati/diganti di iOS (`GEODE_IS_IOS`): GameStatsManager::{hasCompletedLevel,hasPendingUserCoin,hasCompletedMainLevel,
+  getCompletedMapPacks,getBaseCurrencyForLevel}, CCDictionary::{valueForKey,removeObjectForKey}(string), PlayLayer::{markCheckpoint,
+  delayedResetLevel,resetLevelFromStart,playEndAnimationToPos,playPlatformerEndAnimationToPos}, Slider::getThumb.
+- BELUM terselesaikan: `CCMenuItemSpriteExtra::init/ctor` dan `typeinfo for GJBaseGameLayer` (perlu alamat dari bindings).
+- Belum dikompilasi di sini.

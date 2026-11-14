@@ -84,6 +84,24 @@ namespace eclipse::utils::compat {
 }
 #endif // __APPLE__
 
+// iOS: CCDictionary::valueForKey(std::string const&) tidak punya alamat di bindings iOS.
+// Baca langsung lewat iterasi hash (inline, tanpa memanggil fungsi game).
+#if defined(GEODE_IS_IOS)
+namespace eclipse::utils::compat {
+    inline std::string dictString(cocos2d::CCDictionary* dict, std::string const& key) {
+        if (!dict) return {};
+        cocos2d::CCDictElement* el = nullptr;
+        CCDICT_FOREACH(dict, el) {
+            if (key == el->getStrKey()) {
+                if (auto* str = static_cast<cocos2d::CCString*>(el->getObject())) return str->m_sString;
+                break;
+            }
+        }
+        return {};
+    }
+}
+#endif
+
 // Makro: di Apple memakai pengganti, di platform lain memakai panggilan ASLI (kode identik dengan sebelumnya).
 #if defined(__APPLE__)
     #define ECLIPSE_SET_ALLOWED_CHARS(node, chars) ::eclipse::utils::compat::setAllowedChars((node), std::string(chars))

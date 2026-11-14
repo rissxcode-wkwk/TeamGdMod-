@@ -8,6 +8,12 @@
 #include <Geode/modify/GJScaleControl.hpp>
 #include <Geode/modify/SliderTouchLogic.hpp>
 
+#ifdef GEODE_IS_IOS
+    #define ECLIPSE_SLIDER_THUMB(s) ((s)->m_touchLogic->m_thumb) // Slider::getThumb tidak punya alamat iOS
+#else
+    #define ECLIPSE_SLIDER_THUMB(s) ((s)->getThumb())
+#endif
+
 namespace eclipse::hacks::Creator {
     // TODO: bypass certain sliders in editor
     class $hack(SliderLimit) {
@@ -78,10 +84,10 @@ namespace eclipse::hacks::Creator {
             };
 
             if (slider && slider->m_touchLogic->m_activateThumb) {
-                slider->getThumb()->setPositionX(this->convertToNodeSpace(touch->getLocation()).x);
+                ECLIPSE_SLIDER_THUMB(slider)->setPositionX(this->convertToNodeSpace(touch->getLocation()).x);
                 slider->updateBar();
 
-                auto const thumbValue = slider->getThumb()->getValue();
+                auto const thumbValue = ECLIPSE_SLIDER_THUMB(slider)->getValue();
                 auto const scaleValue = m_lowerBound + thumbValue * (m_upperBound - m_lowerBound);
                 auto const roundedValue = std::round(scaleValue * 100.f) / 100.f;
                 auto xValue = roundedValue;
@@ -102,7 +108,7 @@ namespace eclipse::hacks::Creator {
                 m_changedValueY = yValue;
                 std::invoke(labelFunc, this, roundedValue);
                 #if !defined(__APPLE__) // GJScaleControl::sliderChanged tidak punya alamat di macOS
-                this->sliderChanged(slider->getThumb());
+                this->sliderChanged(ECLIPSE_SLIDER_THUMB(slider));
                 #endif
 
                 if (m_delegate) {

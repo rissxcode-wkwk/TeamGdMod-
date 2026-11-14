@@ -32,7 +32,9 @@ namespace eclipse::hacks::Level {
             if(!pl) return;
 
             pl->m_tryPlaceCheckpoint = false;
+            #ifndef GEODE_IS_IOS // markCheckpoint tidak punya alamat iOS
             pl->markCheckpoint();
+            #endif
         }
     };
 }

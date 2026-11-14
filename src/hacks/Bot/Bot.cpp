@@ -351,12 +351,14 @@ namespace eclipse::hacks::Bot {
             }
         }
 
+        #ifndef GEODE_IS_IOS // markCheckpoint tidak punya alamat iOS
         CheckpointObject* markCheckpoint() {
             if (s_bot.getState() == bot::State::RECORD && (m_player1->m_isDead || m_player2->m_isDead))
                 return nullptr;
 
             return PlayLayer::markCheckpoint();
         }
+        #endif
 
         void loadFromCheckpoint(CheckpointObject* checkpoint) {
             PlayLayer* playLayer = utils::get<PlayLayer>();
