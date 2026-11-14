@@ -1,98 +1,43 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.21.0)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
-    set(IOS TRUE)
-    set(CMAKE_OSX_ARCHITECTURES "arm64")
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0")
-    add_definitions(-DGLES_SILENCE_DEPRECATION)
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
+  set(CMAKE_OSX_ARCHITECTURES "arm64")
 else()
-    set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+  set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
 endif()
+
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
-project(EclipseMenu VERSION 1.0.0 LANGUAGES CXX)
+project(jukebox VERSION 3.8.1)
 
-# Sources
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
-
-# Configure for GitHub Actions builds
-if (DEFINED ENV{GITHUB_ACTIONS})
-  # Enable LTO for smaller binaries
-  set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE GITHUB_ACTIONS)
-  message(STATUS "GitHub Actions build detected")
-  set(ECLIPSE_DISABLE_INCREMENTAL_LINK ON)
-  set(ECLIPSE_ENABLE_UNITY_BUILD ON)
-endif()
-
-if (ECLIPSE_ENABLE_UNITY_BUILD)
-  message(STATUS "Enabling unity build")
-  set_target_properties(
-    ${PROJECT_NAME} PROPERTIES
-    UNITY_BUILD ON
-    UNITY_BUILD_UNIQUE_ID "GEODE_UNITY_NS_ID"
-  )
-endif()
-
-# Make sure we can include headers from src
-target_include_directories(${PROJECT_NAME} PRIVATE src include)
-
-# Get the latest abbreviated commit hash of the working branch
-execute_process(
-    COMMAND git log -1 --format=%h
-    WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-    OUTPUT_VARIABLE GIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
+file(GLOB SOURCES
+    jukebox/jukebox/ui/*.cpp
+    jukebox/jukebox/ui/list/*.cpp
+    jukebox/jukebox/managers/*.cpp
+    jukebox/jukebox/hooks/*.cpp
+    jukebox/jukebox/events/*.cpp
+    jukebox/jukebox/download/*.cpp
+    jukebox/jukebox/utils/*.cpp
+    jukebox/jukebox/compat/*.cpp
+    jukebox/jukebox/nong/*.cpp
+    jukebox/jukebox/*.cpp
 )
-target_compile_definitions(${PROJECT_NAME} PRIVATE GIT_HASH="${GIT_HASH}")
 
-# Windows specific settings
-if (WIN32)
-  # Disable annoying warnings
-  target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
+target_include_directories(${PROJECT_NAME} PUBLIC jukebox)
 
-  # Export all symbols for better debugging
-  # UPD: this bloats the binary size, so it's disabled for now
-  # (also it doesn't work for every crashlog anyways)
-  # set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 
-  # Disable incremental linking if requested
-  if (DEFINED ECLIPSE_DISABLE_INCREMENTAL_LINK)
-    message(STATUS "Disabling incremental linking")
-    if (MSVC)
-      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /INCREMENTAL:NO")
-      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /INCREMENTAL:NO")
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-incremental:no")
-      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-incremental:no")
-    endif()
-  endif()
-endif()
-
-# Debug macro
-if (NOT DEFINED ENV{GITHUB_ACTIONS})
-  target_compile_definitions(
-    ${PROJECT_NAME} PRIVATE
-      $<$<CONFIG:Debug>:ECLIPSE_DEBUG_BUILD>
-      $<$<CONFIG:RelWithDebInfo>:ECLIPSE_DEBUG_BUILD>
-  )
-endif()
-
-# Add Geode
-if (NOT DEFINED ENV{GEODE_SDK})
+if(NOT DEFINED ENV{GEODE_SDK})
   message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
 else()
   message(STATUS "Found Geode: $ENV{GEODE_SDK}")
 endif()
-add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
-# Libraries
-include(${CMAKE_SOURCE_DIR}/cmake/IncludeLibs.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/Translations.cmake)
-target_link_libraries(${PROJECT_NAME} third_party)
+add_subdirectory($ENV{GEODE_SDK} $ENV{GEODE_SDK}/build)
 
-# Setup Geode
+target_link_libraries(${PROJECT_NAME} geode-sdk)
 setup_geode_mod(${PROJECT_NAME})

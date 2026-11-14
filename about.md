@@ -1,70 +1,39 @@
-# Eclipse Menu
+# Jukebox
 
-A **next-generation** mod menu for Geometry Dash.
+Jukebox is a song manager for Geometry Dash made with the goal of simplifying the process of swapping in-game songs with any NONGs.
 
-## How to use
+## What is a NONG, anyway?
 
-1. On PC, press `TAB` to open and close the mod menu. For mobile, you should see a ball, click on that to open or close
-   the menu!
-2. Set or toggle any hack / mod you want to use.
-3. For any questions or general support, join our [Support Discord Server](https://discord.gg/NnpwFRDMND)!
-4. Have fun using our mod!
+NONG stands for **Not On NewGrounds**. Basically, it means any song that is not available in-game that was replaced manually through external means.
 
-## Features
+NONGs have always been a hassle to manage, because some level creators use popular song IDs and replace them with a NONG. So you have to swap those song files around quite a bit if you play a level with the Newgrounds song and a level with a NONG song.
 
-- 100+ hacks
-- StartPos Switcher (with Smart SmartPos!)
-- Fully Customizable Labels
-- Show Trajectory
-- Internal Recorder
-- Replay Bot
-- Keybinds
-- Theme Customizability (you can theme Eclipse Menu however you want!)
-- Crossplatform support (Windows, macOS, Android, iOS)
-- Community Translations (check the [translations repository](https://github.com/EclipseMenu/translations) on how to
-  contribute)
-- An API for other mods to interact with Eclipse
+## Start your jukebox
 
-Note: Internal Recorder requires FFmpeg API mod to be installed and enabled:
+Jukebox makes the process of managing your songs a breeze. You can download your NONGs using your method of choice. My recommendations are: [Cobalt](https://cobalt.tools/) and [yt-dlp](https://github.com/yt-dlp/yt-dlp), a CLI application. After getting your MP3 file, you can enter a song and author name, for easier management.
 
-<mod:eclipse.ffmpeg-api>
+> Note that Jukebox copies imported songs in the storage location designated by Geode. You can open this folder from in-game.
+
+Alternatively, you can download songs **in-game** from configurable sources, known as indexes. Jukebox provides the **Song File Hub** index as a base, which is a database of NONGs made specifically for Geometry Dash. Ideally, you should be able to get most of the songs you need from here :)
+
+> You can add your own indexes if you want, more documentation on this will be provided soon!
+
+## So, how do I begin?
+
+You can open up the Jukebox menu from any level page. Just click on the disc icon at the bottom of the screen, and the song management screen will open. From here, you can add, remove, download and swap songs.
+
+## Reporting bugs
+
+You can report bugs on the [Song File Hub Discord server](https://discord.gg/maSgd4zpEF)
 
 ## Credits
 
-This mod menu would not be possible without the developers from other mod menus teaming up together!
+- The Geode team, for creating such an amazing toolkit
+- Flafy, for creating Auto Nong and afterwards becoming a co-developer
+- The nice people over at Song File Hub for managing the biggest NONG database in GD and allowing me to use it
+- hiimjasmine, for porting the mod to MacOS
+- undefined06855, for helping me with parsing song metadata using FMOD
 
-- [ninXout](https://github.com/ninXout) ([Crystal Client](https://github.com/ninXout/Crystal-Client))
-- [prevter](https://github.com/Prevter) ([OpenHack](https://github.com/Prevter/OpenHack))
-- [maxnut](https://github.com/maxnut) ([GD Mega Overlay](https://github.com/maxnut/GDMegaOverlay))
-- [Firee](https://github.com/FireMario211) ([Prism Menu](https://github.com/FireMario211/Prism-Menu))
-- [SpaghettDev](https://github.com/SpaghettDev)
+## Licensing
 
-Additionally, thank you to our testers, contributors, and supporters for improving and helping make Eclipse Menu
-possible!
-
-- [Tallen](https://tallensuired.carrd.co/) - Tester, First Donor, and awesome person!
-- [hiimjasmine00](https://github.com/hiimjasmine00) - Contributor
-- [RayDeeUx](https://github.com/RayDeeUx) - Contributor
-- [iAndyHD3](https://github.com/iAndyHD3) - Contributor
-- [Tech](https://github.com/TechStudent11) - Contributor
-- [Uproxide](https://github.com/Uproxide) - Contributor
-- [slideglide](https://github.com/slideglide) - Contributor
-- [alk](https://github.com/altalk23) - Contributor
-- [Beat](https://github.com/BeatACVR) - Contributor
-- [alex](https://www.youtube.com/channel/UC4SWcPASJplMrIT6YI8QcSw) - Tester
-- [itsmeatomic](https://youtube.com/@itsmeatomic) - Tester
-- [jettjames](https://x.com/JettJamez) - Tester
-- [doki](https://www.youtube.com/@dokitachi) - Tester
-- [Prometheus](https://github.com/Prometheus-03) - Tester
-- [Catto](https://github.com/CattoDev/GatoBot/) - ShaderLayer fix for renderer
-- [arvFlash](https://github.com/arvFlash) - Catppuccin Macchiato theme
-
-## License
-
-**Eclipse Menu** is created under the **[Eclipse Public License v2.0](https://choosealicense.com/licenses/epl-2.0/)**,
-read more by clicking on the highlighted name.
-
-## Other notes
-
-Send any suggestions or report any issues to the **Github Repository** or our **Discord Server**. We hope you enjoy
-using this mod!
+This mod is licensed under **MIT**, so poke around, everything is free as in speech.

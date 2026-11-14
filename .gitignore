@@ -39,36 +39,26 @@
 *.tmPreferences.cache
 *.stTheme.cache
 
-# Ignore build folders
-**/build
-# Ignore platform specific build folders
-build-*/
-
 # Workspace files are user-specific
 *.sublime-workspace
 
+# I need to find a way to automatically remove this
+Source/Geode/pkg/uber-apk-signer.jar
+
+# Ignore build folders
+**/build-win
+**/build
+
 # ILY vscode
 **/.vscode
-.idea/
 
-# clangd
-.cache/
+build-android.bat
 
-# Visual Studio
-.vs/
-
-# other
-build.sh
+# compile_commands.json
 compile_commands.json
-compile_commands.json.*
-build-android.sh
-bindings/
-website/
-bindingsbefore/
-resources/translations/*
-build/
-bindings/
-bindingsbefore/
 
-# CLion
-/cmake-*/
+# clangd cache
+.cache/clangd
+
+# Jetbrains
+.idea
