@@ -55,14 +55,20 @@ namespace eclipse::hacks::Global {
         #ifdef GEODE_IS_IOS
             if (geode::Loader::get()->isPatchless()) {
                 using namespace assembler::arm64;
+                #if GEODE_COMP_GD_VERSION == 22081
                 g_expectedTicksPtr = std::bit_cast<TicksType*>(geode::base::get() + g_jitlessSpace);
-                static_assert(GEODE_COMP_GD_VERSION == 22081, "TPS Bypass: JIT-less patch is only supported for GD 2.2081");
                 #define PATCH_ADDR 0x1fe724
                 GEODE_MOD_STATIC_PATCH(PATCH_ADDR, Builder()
                     .adrp(Register::x9, g_jitlessSpace - ((PATCH_ADDR >> 12) << 12))
                     .ldr(FloatRegister::s0, Register::x9, 0x8)
                     .pad_nops(40)
                     .build_array<40>());
+                #else
+                // Alamat patch JIT-less hanya diketahui untuk GD 2.2081. Untuk versi lain
+                // (mis. 2.2091) TPS Bypass dimatikan di mode JIT-less supaya tidak salah patch.
+                geode::log::warn("TPS Bypass: JIT-less patch belum tersedia untuk GD {}, dinonaktifkan", GEODE_GD_VERSION_STRING);
+                return forceDisable();
+                #endif
             } else {
                 // we can do normal patches with JIT
         #endif
