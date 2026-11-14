@@ -41,11 +41,22 @@ using namespace geode::prelude;
 
 namespace jukebox {
 
+namespace {
+// Taruh ScrollLayer di tengah parent dengan posisi eksplisit (anchor 0,0 = pojok kiri-bawah).
+// Sengaja tidak pakai AnchorLayout supaya hasilnya tidak bergantung pada perubahan semantik di Geode 6.
+void centerList(cocos2d::CCNode* list, const cocos2d::CCSize& parentSize, float yOffset = 0.0f) {
+    const cocos2d::CCSize listSize = list->getContentSize();
+    list->setPosition({(parentSize.width - listSize.width) / 2.0f, (parentSize.height - listSize.height) / 2.0f + yOffset});
+}
+}  // namespace
+
 bool NongList::init(std::vector<int> songIds, const CCSize& size, const std::optional<int> levelID,
                     geode::Function<void(std::optional<int>)> onListTypeChange) {
     if (!CCNode::init()) {
         return false;
     }
+
+    geode::log::info("NongList build marker: v3-contentlayer-fix");
 
     this->addEventListener(event::IndexesLoaded(), [&]() { return this->onIndexesLoaded(); });
 
@@ -109,7 +120,17 @@ bool NongList::init(std::vector<int> songIds, const CCSize& size, const std::opt
                                           ->setGap(s_padding / 2));
     m_list->setID("list");
 
-    this->addChildAtPosition(m_list, Anchor::Center, -m_list->getScaledContentSize() / 2);
+    // Geode 6: content layer di dalam ScrollLayer bisa memakai anchor tengah, sehingga seluruh isi list
+    // bergeser -lebar/2, -tinggi/2. Paksa pojok kiri-bawah supaya scrollToTop() dan layout kolom benar.
+    m_list->m_contentLayer->setAnchorPoint({0.0f, 0.0f});
+    m_list->m_contentLayer->ignoreAnchorPointForPosition(false);
+    m_list->m_contentLayer->setPosition({0.0f, 0.0f});
+
+    // Posisi eksplisit (pojok kiri-bawah), sama seperti pola di IndexesPopup yang sudah benar
+    m_list->setAnchorPoint({0.0f, 0.0f});
+    m_list->ignoreAnchorPointForPosition(false);
+    this->addChild(m_list);
+    centerList(m_list, size);
 
     m_onListTypeChange(m_currentSong);
 
@@ -148,7 +169,7 @@ void NongList::build() {
 
         m_searchInput->setVisible(false);
         m_list->setContentSize({m_list->getContentSize().width, this->getContentSize().height - s_padding});
-        m_list->updateAnchoredPosition(Anchor::Center, -m_list->getScaledContentSize() / 2);
+        centerList(m_list, this->getContentSize());
 
         for (int id : m_songIds) {
             std::optional<Nongs*> nongs = NongManager::get().getNongs(id);
@@ -168,8 +189,7 @@ void NongList::build() {
         m_searchInput->setVisible(true);
         float listHeight = this->getContentSize().height - s_padding - s_searchBarHeight;
         m_list->setContentSize({m_list->getContentSize().width, listHeight});
-        m_list->updateAnchoredPosition(Anchor::Center,
-                                       CCPoint{0.0f, -(s_searchBarHeight / 2)} - m_list->getScaledContentSize() / 2);
+        centerList(m_list, this->getContentSize(), -(s_searchBarHeight / 2));
 
         int id = m_currentSong.value();
 
