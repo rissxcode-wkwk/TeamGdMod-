@@ -40,6 +40,101 @@ endif()
 # Make sure we can include headers from src
 target_include_directories(${PROJECT_NAME} PRIVATE src include)
 
+# --- iOS: bindings 2.2091 belum punya alamat iOS untuk sebagian fungsi/ctor/dtor ---
+# Header modify bawaan gagal ("does not have an available address" / "expected expression").
+# Untuk iOS dibuat shim `Geode/modify/<Kelas>.hpp` (di folder build) yang mematikan pengecekan itu lalu
+# memanggil header asli lewat #include_next. Hook untuk fungsi tanpa alamat dilewati di iOS.
+if (IOS OR "${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR "${GEODE_TARGET_PLATFORM}" STREQUAL "iOS")
+  set(ECLIPSE_IOS_SHIM_DIR "${CMAKE_CURRENT_BINARY_DIR}/ios-shims")
+  set(ECLIPSE_IOS_SHIM_CLASSES
+    CCCircleWave
+    CCDelayTime
+    CCDirector
+    CCDrawNode
+    CCEGLView
+    CCEGLViewProtocol
+    CCKeyboardDispatcher
+    CCLayerColor
+    CCLightFlash
+    CCMotionStreak
+    CCParticleSystem
+    CCParticleSystemQuad
+    CCScene
+    CCScheduler
+    CCTextInputNode
+    CCTouchDispatcher
+    CCTransitionFade
+    CheckpointObject
+    CommentCell
+    CreatorLayer
+    CustomListView
+    EditLevelLayer
+    EditorPauseLayer
+    EditorUI
+    EffectGameObject
+    EndLevelLayer
+    EnhancedGameObject
+    FMODAudioEngine
+    GJBaseGameLayer
+    GJScaleControl
+    GameLevelManager
+    GameManager
+    GameObject
+    GameStatsManager
+    GameToolbox
+    HardStreak
+    LevelCell
+    LevelEditorLayer
+    LevelInfoLayer
+    LevelPage
+    LevelSettingsObject
+    LevelTools
+    MenuGameLayer
+    MenuLayer
+    MoreSearchLayer
+    OBB2D
+    OptionsLayer
+    PauseLayer
+    PlayLayer
+    PlayerObject
+    RetryLevelLayer
+    RewardUnlockLayer
+    SecretLayer2
+    ShaderLayer
+    SliderTouchLogic
+    SongSelectNode
+    UILayer
+  )
+  set(ECLIPSE_IOS_SHIM_TEMPLATE [=[
+#pragma once
+#include <Geode/platform/platform.hpp>
+#if defined(GEODE_IS_IOS)
+    #include <Geode/modify/Modify.hpp>
+    #pragma push_macro("GEODE_APPLY_MODIFY_FOR_FUNCTION_ERROR_DEFINED")
+    #pragma push_macro("GEODE_APPLY_MODIFY_FOR_CONSTRUCTOR")
+    #pragma push_macro("GEODE_APPLY_MODIFY_FOR_DESTRUCTOR")
+    #undef GEODE_APPLY_MODIFY_FOR_FUNCTION_ERROR_DEFINED
+    #undef GEODE_APPLY_MODIFY_FOR_CONSTRUCTOR
+    #undef GEODE_APPLY_MODIFY_FOR_DESTRUCTOR
+    #define GEODE_APPLY_MODIFY_FOR_FUNCTION_ERROR_DEFINED(...)
+    #define GEODE_APPLY_MODIFY_FOR_CONSTRUCTOR(...)
+    #define GEODE_APPLY_MODIFY_FOR_DESTRUCTOR(...)
+#endif
+#include_next <Geode/modify/@CLASS@.hpp>
+#if defined(GEODE_IS_IOS)
+    #pragma pop_macro("GEODE_APPLY_MODIFY_FOR_FUNCTION_ERROR_DEFINED")
+    #pragma pop_macro("GEODE_APPLY_MODIFY_FOR_CONSTRUCTOR")
+    #pragma pop_macro("GEODE_APPLY_MODIFY_FOR_DESTRUCTOR")
+#endif
+]=])
+  foreach(ECLIPSE_CLASS IN LISTS ECLIPSE_IOS_SHIM_CLASSES)
+    string(REPLACE "@CLASS@" "${ECLIPSE_CLASS}" ECLIPSE_SHIM_CONTENT "${ECLIPSE_IOS_SHIM_TEMPLATE}")
+    file(WRITE "${ECLIPSE_IOS_SHIM_DIR}/Geode/modify/${ECLIPSE_CLASS}.hpp" "${ECLIPSE_SHIM_CONTENT}")
+  endforeach()
+  target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${ECLIPSE_IOS_SHIM_DIR}")
+  message(STATUS "iOS: shim header modify dibuat di ${ECLIPSE_IOS_SHIM_DIR}")
+endif()
+
 # Get the latest abbreviated commit hash of the working branch
 execute_process(
     COMMAND git log -1 --format=%h
