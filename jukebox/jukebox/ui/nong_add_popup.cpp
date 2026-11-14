@@ -48,9 +48,9 @@ using namespace geode::prelude;
 using namespace jukebox::index;
 
 void setInputProps(TextInput* i) {
-    i->getInputNode()->setLabelPlaceholderColor({108, 153, 216});
-    i->getInputNode()->setMaxLabelScale(0.7f);
-    i->getInputNode()->setLabelPlaceholderScale(0.7f);
+    i->setPlaceholderColor({108, 153, 216, 255});
+    i->setFontScale(0.7f);
+    i->setPlaceholderScale(0.7f);
 }
 
 std::optional<std::string> parseFromFMODTag(const FMOD_TAG& tag) {
@@ -482,7 +482,7 @@ void NongAddPopup::setSongType(SongType type, bool memorizePrevious) {
             m_specialInput->setString("");
             m_localSongMenu->setVisible(true);
             m_specialInfoNode->updateLayout();
-            m_specialInput->getInputNode()->getTextLabel()->setString("Select a file");
+            m_specialInput->setPlaceholder("Select a file");
             if (!m_memoizedLocalInput.empty()) {
                 m_specialInput->setString(m_memoizedLocalInput);
             }
@@ -492,7 +492,7 @@ void NongAddPopup::setSongType(SongType type, bool memorizePrevious) {
             m_specialInput->setString("");
             m_localSongMenu->setVisible(false);
             m_specialInfoNode->updateLayout();
-            m_specialInput->getInputNode()->getTextLabel()->setString("Enter a song URL");
+            m_specialInput->setPlaceholder("Enter a song URL");
             if (!m_memoizedHostedInput.empty()) {
                 m_specialInput->setString(m_memoizedHostedInput);
             }
