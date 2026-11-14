@@ -1,109 +1,81 @@
 {
-  "geode": "6.0.0-alpha.1",
-  "version": "3.8.1",
-  "id": "fleym.nongd",
-  "name": "Jukebox",
-  "gd": {
-    "win": "2.2091",
-    "mac": "2.2091",
-    "ios": "2.2091",
-    "android": "2.2091"
-  },
-  "developers": [
-    "Fleym",
-    "Flafy"
-  ],
-  "description": "A simple song manager for Geometry Dash",
-  "repository": "https://github.com/Fleeym/jukebox",
-  "links": {
-    "community": "https://discord.gg/maSgd4zpEF",
-    "source": "https://github.com/Fleeym/jukebox"
-  },
-  "issues": {
-    "info": "For any issues regarding this mod, send me a message on my discord: 'fleeym', or open an issue on the project's GitHub. If you can, please give the level or song ID that you are having problems with.",
-    "url": "https://github.com/Fleeym/jukebox/issues"
-  },
-  "tags": [
-    "music",
-    "online",
-    "utility",
-    "interface"
-  ],
-  "settings": {
-    "downloads": {
-      "name": "Downloads",
-      "type": "title"
-    },
-    "indexes": {
-      "name": "Indexes",
-      "description": "An index is a JSON file that tells Jukebox where to fetch song data from. The default indexes that are provided fetch data from Song File Hub. The system is extensible, so you can add your own indexes!",
-      "type": "custom:indexes",
-      "default": [
-        {
-          "url": "https://raw.githubusercontent.com/FlafyDev/auto-nong-indexes/v2/auto-nong-index.min.json",
-          "enabled": true,
-          "userAdded": false
-        },
-        {
-          "url": "https://raw.githubusercontent.com/FlafyDev/auto-nong-indexes/v2/sfh-index.min.json",
-          "enabled": true,
-          "userAdded": false
-        }
-      ]
-    },
-    "request-timeout": {
-      "name": "Request timeout (s)",
-      "description": "How many seconds to wait for non-download web requests to finish until cancelling",
-      "type": "int",
-      "default": 60,
-      "min": 30
-    },
-    "download-timeout": {
-      "name": "Download timeout (s)",
-      "description": "How many seconds to wait when downloading a song until the download cancels",
-      "type": "int",
-      "default": 60,
-      "min": 30
-    },
-    "clear-cache": {
-      "type": "button",
-      "buttons": {
-        "clear-index-cache": "Clear index cache"
-      }
-    },
-    "visual-title": {
-      "name": "Visual",
-      "type": "title"
-    },
-    "old-label-display": {
-      "name": "Old popup flow",
-      "type": "bool",
-      "description": "Enables the old way to open the nong popup, by clicking on the song label",
-      "default": false
-    },
-    "fix-empty-size": {
-      "name": "Fix 0.0B",
-      "type": "bool",
-      "description": "Fixes levels with multiple songs (and sfx) showing 0.0B size.",
-      "default": true
-    },
-    "experimental-title": {
-      "name": "Experimental",
-      "type": "title",
-      "description": "Settings that may improve your life, or crash your game. Have fun! :)"
-    },
-    "autocomplete-metadata": {
-      "name": "Autocomplete metadata (unavailable)",
-      "type": "bool",
-      "description": "(TEMPORARILY UNAVAILABLE) Try to autocomplete song info from metadata when adding. Causes a tiny bit of lag after picking a song file. Doesn't play nice with UTF-8, at the moment",
-      "default": false
-    }
-  },
-  "resources": {
-    "spritesheets": {
-      "JukeboxSheet": [
-        "resources/*.png"
-      ]
-    }
-  }
+	"geode": "6.0.0-alpha.1",
+	"gd": {
+		"win": "2.2091",
+		"mac": "2.2091",
+		"android": "2.2091",
+		"ios": "2.2091"
+	},
+	"version": "v1.9.4",
+	"id": "eclipse.eclipse-menu",
+	"name": "Eclipse",
+	"links": {
+		"homepage": "https://eclipse.menu",
+		"source": "https://github.com/EclipseMenu/EclipseMenu",
+		"community": "https://discord.gg/NnpwFRDMND"
+	},
+	"api": { "include": [ "include/*.hpp" ] },
+	"tags": ["cheat", "gameplay", "utility", "customization", "interface"],
+	"developers": ["Eclipse Team", "ninXout", "prevter", "maxnu", "Firee", "SpaghettDev"],
+	"description": "A next-generation mod menu for Geometry Dash.",
+	"early-load": true,
+	"resources": {
+		"files": [
+			"resources/Blur/*.glsl",
+			"resources/Fonts/*.ttf",
+			"resources/Licenses/*.txt",
+			"resources/Themes/*.json",
+			"resources/translations/*.json",
+			"resources/BitmapFonts/font_default*"
+		],
+		"sprites": [
+			"resources/ECLIPSE-android.png"
+		],
+		"spritesheets": {
+			"emojis": [ "resources/Emojis/*.png" ],
+			"UISheet": [ "resources/UISheet/*.png" ]
+		}
+	},
+	"dependencies": {
+		"eclipse.ffmpeg-api": {
+			"version": ">=1.2.0",
+			"required": false
+		},
+		"dankmeme.globed2": {
+			"version": ">=2.1.4",
+			"required": false
+		}
+	},
+	"settings": {
+		"legacy-render": {
+			"name": "Use Legacy rendering",
+			"description": "Disables some newer OpenGL features, which can solve some rendering issues on older hardware (at the cost of performance).",
+			"type": "bool",
+			"default": false
+		},
+		"reset-theme": {
+			"type": "custom:custom-btn",
+			"name": "Reset theme?",
+			"description": "Reset the theme to the default one.",
+			"default": "Reset"
+		},
+		"menu-keybind": {
+			"type": "custom:keybind",
+			"name": "Menu Keybind",
+			"description": "The keybind to open the Eclipse menu.",
+			"platforms": ["win", "mac"]
+		},
+		"menu-style": {
+			"name": "Menu Style",
+			"description": "Choose the style of the Eclipse menu.",
+			"type": "string",
+			"one-of": ["ImGui", "Cocos"],
+			"default": {
+				"win": "ImGui",
+				"mac": "ImGui",
+				"android": "Cocos",
+				"ios": "Cocos"
+			}
+		}
+	}
 }

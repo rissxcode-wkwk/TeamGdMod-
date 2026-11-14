@@ -1,691 +1,402 @@
-# Changelog
-
-All notable changes to this mod will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-
-## [3.8.1] - 2026-11-13
-
-### Changed
-
-- Support Geode v6.0.0-alpha.1 and Geometry Dash 2.2091 on Windows, macOS, iOS and Android
-- Jukebox now requires Geode v6 and no longer loads on Geode v5 / GD 2.2081
-- Replace `gd::string` with `std::string` in hooks (removed in Geode v6)
-- Convert paths at the Geode API boundary (`asp::fs::Path`), keep `std::filesystem::path` internally
-- Paths are now always read and written as UTF-8
-- Raise Geode minimum to 6.0.0-alpha.1
-
-### Fixed
-
-- Fix `std::filesystem` usage that broke against the new Geode filesystem API
-- Fix file extension handling being dependent on the leading dot (`asp::fs::Path::extension()` has no dot)
-
-## [3.8.0] - 2026-09-26
-
-### Added
-
-- Saved manifest now stores filenames, making it easier to port Jukebox data across systems
-- Skip index downloading if there's no new version available
-- Load indexes from local cache if fetching them fails as a failsafe
-- Add "Clear caches" button in the settings
-
-### Changed
-
-- Internal code cleanup
-- Improve index loading UX in the NONG popup
-- Use "Keep a Changelog" format for the changelog
-- Reduce mod filesize (filesize is the same after Geode loads it, but the initial download is smaller)
-
-## [3.7.1] - 2026-09-04
-
-### Added
-
-- Configurable timeout for non-download web requests
-- Log some FMOD related issues in the console
-
-### Changed
-
-- Update `about.md` Discord invite link
-- Temporarily disable autocomplete metadata, as it is quite broken
-
-### Fixed
-
-- Fix 'You selected a directory' bug
-
-## [3.7.0] - 2026-09-04
-
-### Added
-
-- Simple NONG search (thanks to @MalikHw for the implementation)
-
-### Changed
-
-- Small refactor (thanks to @slideglide)
-  - Migrate to Geode components for text, backgrounds and disk I/O
-  - Optimize string operations
-  - Optimize data saving
-  - Other smaller optimizations
-  - Performance impact should be negligible, but Geode's components are easier
-    to use
-- Bump Geode to v5.10.1
-
-### Fixed
-
-- Fix back button in the NONG list being placed wherever it vibed that day
-
-## [3.6.2] - 2026-04-05
-
-### Fixed
-
-- Fix index songs not loading on newly initialized song IDs
-
-## [3.6.1] - 2026-04-02
-
-### Changed
-
-- Try to print more useful information on internal cURL errors
-- Optimize index caching a little
-
-## [3.6.0] - 2026-03-06
-
-### Added
-
-- Support for most song formats (except .opus, which sadly isn't usable by GD)
-
-### Changed
-
-- Optimize 0.0B fix a lot
-- Optimize autocomplete metadata parsing
-- Bump Geode to v5.3.0
-
-### Fixed
-
-- Fix a crash that sometimes happened when loading a custom level screen
-
-## [3.5.1] - 2026-03-02
-
-### Fixed
-
-- Fix featured song effect positioning
-
-## [3.5.0] - 2026-02-23
-
-### Changed
-
-- Port to Geometry Dash 2.2081 and Geode v5.0.0
-- Optimizations to song downloads and metadata fetching
-- Optimizations to memory operations
-- Updated Song File Hub discord link
-
-### Fixed
-
-- Fix outdated tutorial
-- Fix NONG list lines dissapearing after state update
-- Fix "Delete all NONGs" button not updating UI properly
-- Fix editor touch issues
-
-## [3.4.0] - 2025-06-28
-
-### Added
-
-- "Paste" button in `NongAddPopup` for mobile platforms
-- Support for patchless (JIT-less) platforms
-
-### Fixed
-
-- Fix macOS file picker (thanks calum12345)
-- Fix downloaded songs not being set as active if the NONG popup was closed before the download was finished
-
-## [3.3.0] - 2025-06-22
-
-### Added
-
-- Implement a "verified" song system, helping with finding which NONG is needed for a certain level
-- Log a warning when default indexes provided by Jukebox are disabled
-
-### Changed
-
-- Use the more performant `SimpleAxisLayout` for the interface
-- Rewrite index JSON storage
-
-### Fixed
-
-- Fix `NongAddPopup` not checking file extension as lowercase
-- Fix path not being set when editing a NONG
-
-## [3.2.1] - 2025-05-03
-
-### Added
-
-- Experimental iOS support!
-
-## [3.2.0] - 2025-04-20
-
-### Added
-
-- Configurable request timeout for downloads
-
-### Changed
-
-- Improve 0.0B fix, taken out of Experimental settings
-
-### Removed
-
-- Remove usage of a custom label for the song ID / size label
-
-### Fixed
-
-- Remove all usage of std::stoi, fixing some crashes in the process
-- Fix undownloaded songs not being marked as downloaded when switching to a NONG
-
-## [3.1.1] - 2025-03-22
-
-### Changed
-
-- Do some internal refactoring of the mod, shouldn't break anything
-- Bump to Geode v4.3.1
-
-### Removed
-
-- Remove the api key from mod.json as the mod doesn't expose an api anymore
-
-### Fixed
-
-- Fix a crash that can happen when Show Audio Assets by Taswert is enabled
-- Fix Overcharged Main Menu showing NONG names for main levels
-
-## [3.1.0] - 2025-01-26
-
-### Added
-
-- Better error for failed downloads with status code 502
-- Add MIT License to the mod
-
-### Changed
-
-- Remove original Discord server button and replace it with Song File Hub
-- Make newly downloaded songs automatically set as active
-- Bump to Geode v4.2.0
-
-## [3.0.3] - 2025-01-06
-
-### Changed
-
-- Simplify default song fixing - less bugs!
-- Rewrite index loading - optimizations and bug fixes
-- Let `matjson` handle json file reading completely
-
-### Fixed
-
-- Fix a typo in the mod settings
-- Fix 2 rare crashes caused by pointer shennanigans
-- Fix an incompatibility with Improved Song Browser by alphalaneous
-
-## [3.0.2] - 2024-12-20
-
-### Changed
-
-- Bump Geode to v4.1.1
-
-### Fixed
-
-- Fix file paths not being read correctly when adding NONGs manually
-- Fix a crash that sometimes happened when loading levels with official songs
-- Fix a crash related to having Windows in a different language than English
-- Fix a misstype in the "song refetched" popup
-- Fix local song editing not actually editing a path
-- Fix IndexManager loading the wrong indexes for hosted
-- Fix a typo in the mod settings
-- Fix manually added hosted songs not downloading
-- Fix UI not being updated correctly when changing NONGs on official songs
-
-## [3.0.1] - 2024-11-19
-
-### Fixed
-
-- Fix index songs not appearing on first launch when migrating from v2
-
-## [3.0.0] - 2024-11-19
-
-### Added
-
-- Support for Geometry Dash 2.2074
-- Song File Hub support back!
-- Merge features with Auto Nong (the index system) - thanks to Flafy for helping merge the mods and agreeing to help develop the mod
-- MacOS support - thanks to hiimjustin for porting the mod
-
-### Changed
-
-- Small tweaks to the NONG list UI
-- Small UX improvements to the NONG list - the list doesn't scroll to the top for any action
-- Change the way songs are stored internally, old data will migrate over
-- Lots of miscellaneous fixes and improvements
-
-## [2.11.0] - 2024-06-30
-
-### Added
-
-- Metadata parsing for autocompletion of song info (experimental)
-- "song offset" option for importing nongs (thanks Flafy)
-
-### Changed
-
-- Small visual improvements to the app song popup
-- Bump to Geode `v3.1.1`
-
-### Fixed
-
-- Fix "Level name" doing absolutely nothing in the add popup
-
-## [2.10.1] - 2024-06-20
-
-### Removed
-
-- Remove debug logs
-
-### Fixed
-
-- Fix visual bugs
-
-## [2.10.0] - 2024-06-15
-
-### Added
-
-- 2.206 support
-
-### Changed
-
-- Redesign the NONG UI
-- Bump to Geode v3.0.0-beta.1
-- Whatever other migrations were needed in the process
-
-### Fixed
-
-- Make a fix for non-ascii user dirs on Windows
-- Fix crash on editor settings (thanks Flafy)
-- Fix delete song for default songs (thanks Flafy)
-- Fix deleting songs not actually working (thanks Flafy)
-
-## [2.9.0] - 2024-05-31
-
-### Added
-
-- `jukebox::getActiveNong`, `jukebox::deleteNong` and `jukebox::getDefaultNong` to the API (thanks Flaafy!)
-- A `Ref` `CustomSongWidget` param in `jukebox::setActiveNong` for updating the UI (thanks Flaafy!)
-
-### Changed
-
-- Bump Geode version to v2.0.0-beta.27
-
-## [2.8.0] - 2024-05-18
-
-### Added
-
-- Support for main level songs
-
-## [2.7.1] - 2024-04-11
-
-### Fixed
-
-- Fix bugs
-
-## [2.7.0] - 2024-04-09
-
-### Added
-
-- Song ID label to the multiple song list of the nong menu
-
-### Fixed
-
-- Fix a bug that made the nong menu inaccessible on levels with multiple songs, out of which one was invalid (not found on NG) - go play Golden Hope 8)
-
-## [2.6.0] - 2024-04-04
-
-### Added
-
-- Expose a minimal API for interacting with NONG data (Thanks to [Flafy](https://github.com/FlafyDev))
-
-## [2.5.2] - 2024-02-29
-
-### Fixed
-
-- Fix dailies and weeklies setting their song name to "Unknown"
-
-## [2.5.1] - 2024-02-25
-
-### Fixed
-
-- Fix fixDefault running for every single CustomSongWidget instance
-
-## [2.5.0] - 2024-02-24
-
-### Added
-
-- Button for joining the Discord server
-
-### Changed
-
-- Make file IO error messages more descriptive
-
-### Fixed
-
-- Fix the download slider being made invisible
-
-## [2.4.0] - 2024-02-07
-
-### Added
-
-- Backup invalid JSONs
-
-### Fixed
-
-- Fix a bug that caused defaultValid to be undefined when writing to JSON
-- Fix crashing if JSON is invalid
-
-## [2.3.0] - 2024-02-06
-
-### Changed
-
-- Redesign NongDropdownLayer and NongAddPopup, using the new initAnchored
-- Use more layouts in the UI
-
-### Fixed
-
-- Fix a bug that made the download bar visible after fixing the default song
-
-## [2.2.5] - 2024-02-05
-
-### Added
-
-- A way to refetch default song info if it somehow is broken
-
-### Fixed
-
-- Prevent CustomSongWidget update after adding a new song
-- Bugfixes
-
-## [2.2.4] - 2024-02-05
-
-### Fixed
-
-- Try and fix crash on startup from invalid JSON
-
-## [2.2.3] - 2024-02-04
-
-Cocos2dx reference release.
-
-### Changed
-
-- Write JSON on DataSaved
-- Move initial JSON read to on_mod(Loaded)
-
-### Removed
-
-- Remove permission check for Android
-
-### Fixed
-
-- Fix NongAddPopup filters
-- Fix random letter generator sometimes getting \0 as a character
-
-## [2.2.2] - 2024-02-04
-
-### Changed
-
-- Actually bump mod.json version
-
-## [2.2.1] - 2024-02-04
-
-### Added
-
-- Copy the song ID to the clipboard when opening Song File Hub
-- A label with the chosen file path in the add popup
-- Ask for permissions on Android before trying to pick a song
-
-### Fixed
-
-- Fixed the "Unknown" bug
-- Try and fix songs that have been broken by said "Unknown" bug
-
-## [2.2.0] - 2024-01-29
-
-### Removed
-
-- Removed Song File Hub integration
-
-## [2.1.5] - 2024-01-27
-
-### Changed
-
-- Reenable manual song add on Android
-
-## [2.1.4] - 2024-01-26
-
-### Changed
-
-- Temporarily disable manual song add on Android
-
-### Fixed
-
-- Fix touch priority issues in the song list
-
-## [2.1.3] - 2024-01-24
-
-### Fixed
-
-- Fix buttons not working in the song list
-
-## [2.1.2] - 2024-01-24
-
-### Fixed
-
-- Fix crashes on Android
-- Fix manual song add on Android
-
-## [2.1.1] - 2024-01-23
-
-### Added
-
-- Android support (experimental)
-
-### Fixed
-
-- Fix the Robtop Music Library being... a little weird
-- Fix the random Error text that would appear in the song widget sometimes
-- 0.0B fix now accounts for songs that are included with the game (GD/Resources/songs folder)
-- Fix some editor song select issues
-
-## [2.1.0] - 2024-01-22
-
-### Changed
-
-- Store level name separate from song name (and display it in the song list)
-- Store song data as minified json
-
-### Fixed
-
-- Correctly disable nongs for levels that have robtop levels
-- Fix a crash that happened when entering a level with an invalid song id
-- Fix 0.0B on multi asset levels (experimental)
-
-## [2.0.1] - 2024-01-22
-
-### Fixed
-
-- Fix a crash that happens when entering a level with song info data not fetched
-
-## [2.0.0] - 2024-01-22
-
-Rebranding! This release is only available on Windows, next one should be available on Android too. (Sorry android fellas)
-
-### Added
-
-- 2.2 support
-- Support for levels with multiple songs (experimental)
-
-### Changed
-
-- Optimizations and bug fixes
-
-## [1.2.3] - 2023-11-02
-
-### Fixed
-
-- Fix crash when adding a NONG manually for the first time
-
-## [1.2.2] - 2023-10-23
-
-### Fixed
-
-- Fix crashes on Android
-
-## [1.2.1] - 2023-10-23
-
-### Changed
-
-- Increased the Z Layer for the NONG popup
-
-## [1.2.0] - 2023-10-19
-
-### Changed
-
-- Replace old popup with a layer that fits the game more
-- Recompile for Android NDK r26b
-
-## [1.1.1] - 2023-10-12
-
-### Added
-
-- Experimental Android support
-
-## [1.1.0] - 2023-10-04
-
-### Added
-
-- A setting that prevents mashup downloading from Song File Hub
-- A "Remove All" button to the NONG list
-- Created a manifest system to track JSON structure updates
-- A button that opens the settings page in the nong popup
-
-### Changed
-
-- Changed the song size label to show N/A instead of 0.00MB for songs that are missing their file
-- Copy locally added nongs to the mod storage instead of using the file provided by the user
-
-### Fixed
-
-- Fixed aspect ratio issues in the popups
-
-## [1.0.6] - 2023-09-08
-
-### Fixed
-
-- Fixed a bug that prevented saving songs to disk if the Song File Hub name contained Unicode characters
-
-## [1.0.4] - 2023-09-07
-
-### Changed
-
-- Switched to using the new API for Song File Hub
-- Gave the add song popup some elasticity
-
-## [1.0.3] - 2023-06-30
-
-### Removed
-
-- Removed all filters for the song file picker so that MacOS can actually use it.
-
-## [1.0.2] - 2023-04-12
-
-### Added
-
-- A small indicator to the song label to hint that you can click it
-
-### Changed
-
-- Disable NONGd for levels that use Robtop level songs
-- Update json impl to match the new json library version API
-
-### Fixed
-
-- Fixed a crash that occured by pressing ESC while downloading a NONG
-- Fixed text inputs for Geode v1.0.0-beta.14
-
-## [1.0.1] - 2023-04-09
-
-### Added
-
-- Mod can now build on MacOS
-
-## [1.0.0] - 2023-04-09
-
-### Added
-
-- Implement async file downloads
-
-### Changed
-
-- Only download one song at a time instead of downloading all of them
-- Reduce calls to updateSongObject
-
-### Fixed
-
-- Fix some crashes
-- Fix size label showing 0.00mb for undownloaded newgrounds songs
-
-## [1.0.0-beta.3] - 2023-04-05
-
-### Changed
-
-- Update the Custom Song Widget on every nong update
-- Use layouts for list cells
-
-### Fixed
-
-- Fix the invalid SFH download popup being positioned weirdly
-- Try to fix unicode not being parsed correctly
-- Fix nongd folder not being created properly on some occasions
-
-## [1.0.0-beta.1] - 2023-04-05
-
-### Added
-
-- Initial version
-
-[3.8.0]: https://github.com/Fleeym/jukebox/compare/v3.7.1...v3.8.0
-[3.7.1]: https://github.com/Fleeym/jukebox/compare/v3.7.0...v3.7.1
-[3.7.0]: https://github.com/Fleeym/jukebox/compare/v3.6.2...v3.7.0
-[3.6.2]: https://github.com/Fleeym/jukebox/compare/v3.6.1...v3.6.2
-[3.6.1]: https://github.com/Fleeym/jukebox/compare/v3.6.0...v3.6.1
-[3.6.0]: https://github.com/Fleeym/jukebox/compare/v3.5.1...v3.6.0
-[3.5.1]: https://github.com/Fleeym/jukebox/compare/v3.5.0...v3.5.1
-[3.5.0]: https://github.com/Fleeym/jukebox/compare/v3.4.0...v3.5.0
-[3.4.0]: https://github.com/Fleeym/jukebox/compare/v3.3.0...v3.4.0
-[3.3.0]: https://github.com/Fleeym/jukebox/compare/v3.2.1...v3.3.0
-[3.2.1]: https://github.com/Fleeym/jukebox/compare/v3.2.0...v3.2.1
-[3.2.0]: https://github.com/Fleeym/jukebox/compare/v3.1.1...v3.2.0
-[3.1.1]: https://github.com/Fleeym/jukebox/compare/v3.1.0...v3.1.1
-[3.1.0]: https://github.com/Fleeym/jukebox/compare/v3.0.3...v3.1.0
-[3.0.3]: https://github.com/Fleeym/jukebox/compare/v3.0.2...v3.0.3
-[3.0.2]: https://github.com/Fleeym/jukebox/compare/v3.0.1...v3.0.2
-[3.0.1]: https://github.com/Fleeym/jukebox/compare/v3.0.0...v3.0.1
-[3.0.0]: https://github.com/Fleeym/jukebox/compare/v2.11.0...v3.0.0
-[2.11.0]: https://github.com/Fleeym/jukebox/compare/v2.10.1...v2.11.0
-[2.10.1]: https://github.com/Fleeym/jukebox/compare/v2.10.0...v2.10.1
-[2.10.0]: https://github.com/Fleeym/jukebox/compare/v2.9.0...v2.10.0
-[2.9.0]: https://github.com/Fleeym/jukebox/compare/v2.8.0...v2.9.0
-[2.8.0]: https://github.com/Fleeym/jukebox/compare/v2.7.1...v2.8.0
-[2.7.1]: https://github.com/Fleeym/jukebox/compare/v2.7.0...v2.7.1
-[2.7.0]: https://github.com/Fleeym/jukebox/compare/v2.6.0...v2.7.0
-[2.6.0]: https://github.com/Fleeym/jukebox/compare/v2.5.2...v2.6.0
-[2.5.2]: https://github.com/Fleeym/jukebox/compare/v2.5.1...v2.5.2
-[2.5.1]: https://github.com/Fleeym/jukebox/compare/v2.5.0...v2.5.1
-[2.5.0]: https://github.com/Fleeym/jukebox/compare/v2.4.0...v2.5.0
-[2.4.0]: https://github.com/Fleeym/jukebox/compare/v2.3.0...v2.4.0
-[2.3.0]: https://github.com/Fleeym/jukebox/compare/v2.2.5...v2.3.0
-[2.2.5]: https://github.com/Fleeym/jukebox/compare/v2.2.4...v2.2.5
-[2.2.4]: https://github.com/Fleeym/jukebox/compare/v2.2.3...v2.2.4
-[2.2.3]: https://github.com/Fleeym/jukebox/compare/v2.2.2...v2.2.3
-[2.2.2]: https://github.com/Fleeym/jukebox/compare/v2.2.1...v2.2.2
-[2.2.1]: https://github.com/Fleeym/jukebox/compare/v2.2.0...v2.2.1
-[2.2.0]: https://github.com/Fleeym/jukebox/releases/tag/v2.2.0
+# Eclipse Menu
+
+## v1.9.4
+**Fixes**:
+* <cg>Fixed</c> an incompatibility with <cl>Deltarune Textboxes</c> that caused crashes on level launch
+* <cg>Fixed</c> replay search bar not being <cl>case-insensitive</c>
+* <cg>Re-added</c> `globed.playersOnLevel` variable
+
+## v1.9.3
+**Fixes**:
+* <cg>Fixed</c> <co>Swift Click</c> not working in bot replay mode
+* <cg>Fixed</c> a pause related bug in <co>Replay Bot</c>
+* <cg>Fixed</c> a two player mode bug in <co>Replay Bot</c>
+* <cg>Fixed</c> replay saving bug if macro contains multiple actions in the same frame
+* <cg>Re-enabled</c> <cy>Globed</c> label variables (player count is currently unavailable and requires a Globed update)
+* <cr>Removed</c> ability to bind keys to <cl>Left Mouse Button</c> due to having more issues than benefits
+* <cg>Fixed</c> text in the <co>Auto Safe Mode</c> warning popup not being centered
+* <cg>Fixed</c> <co>Auto Safe Mode</c> warning popup showing on "Coming Soon" and "The Tower" pages
+* <cg>Fixed</c> a crash that happens with <cl>Cocos UI</c> if you press any button and close button at the same time
+
+## v1.9.2
+**Fixes**:
+* <cg>Fixed</c> multiple keybinds regressions
+
+## v1.9.1
+**Fixes**:
+* <cg>Fixed</c> physics breaks on levels with dynamic objects
+* <cg>Fixed</c> graphical glitches happening in <cl>ImGui</c> mode for some users
+
+## v1.9.0
+**Additions**:
+* Added <cg>Clipsy</c> - AI companion/chatbot
+* Added <cg>Swift Click</c> on mobile (by @slideglide)
+* Added <cg>28 new emojis</c> for labels
+* Added <cg>VSync</c> and <cg>FPS Bypass</c> toggles on <cl>macOS</c> (requires SDL Mod to be installed)
+
+**Fixes**:
+* <cg>Fixed</c> scroll layer incompatibility with <co>Better Touch Prio</c> mod (#356 by @km7dev)
+* <cg>Fixed</c> <co>Auto Song Download</c> not working
+* <cg>Fixed</c> several issues with <co>Slider Bypass</c> in editor (#361 by @alk)
+* <cg>Improved</c> precision of <co>Noclip Accuracy</c> (uses double-precision floating point now)
+* <cg>Fixed</c> readonly editor getting bypassed even without <co>Level Edit</c> enabled
+* <cg>Fixed</c> arrows keys typing 'a' in textboxes with <cl>ImGui</c> UI mode
+* <cg>Fixed</c> clipboard not working with <cl>ImGui</c> UI mode
+* <cg>Fixed</c> autoclicker and frame stepper on mobile (forces swift click when using them)
+
+## v1.8.3
+**Fixes**:
+* <cg>Fixed</c> <co>Replay Bot</c> accuracy after 2.208 changes
+* <cg>Fixed</c> <co>Practice Fix</c> not properly saving auto-checkpoints
+* <cg>Fixed</c> some <cl>Memory-based</c> <co>Practice Fix</c> crashes
+* <cg>Fixed</c> <co>Default Song Bypass</c> not saving the song choice
+* <cg>Fixed</c> label file picker crashes on Android
+* <cg>Fixed</c> <co>Wave Trail On Death</c> not working on <cl>macOS</c>
+
+## v1.8.2
+**Fixes**:
+* <cg>Fixed</c> <co>Solid Wave Trail</c> not working sometimes
+* <cg>Fixed</c> percentage calculation to match 2.208 changes
+
+## v1.8.1
+**Fixes**:
+* <cg>Fixed</c> an invisible crash on game close
+* <cg>Fixed</c> not being able to bind keys to any toggles
+* <cg>Fixed</c> <co>Click Teleport</c> not triggering on mouse click
+* <cg>Fixed</c> incompatibility with pre-2.208 replays
+* Temporarily made <co>Memory-based</c> Practice Fix not the default option
+* Auto disable <cl>Click Between Steps</c> when recording a replay
+
+## v1.8.0
+This update adds **<cg>Geometry Dash v2.2081</c>** support
+
+**Additions**:
+* Added <cg>Wave Trail On Death</c>
+* Added <cg>Persist Trail</c>
+* Added <cg>Composite Keybinds</c> (e.g. Ctrl + Key) for shortcuts
+* Added <cg>Click On Steps</c> and <cg>Click Between Steps</c> toggles
+* Added <cg>Show Spam Comments</c> (#314 by @Beat)
+* Added <cg>Search Auto Focus</c> toggle and disabled it by default
+* Added a warning popup on level enter when <co>Auto Safe Mode</c> or <co>Safe Mode</c> are active
+* Added <cg>Open Replays</c> button (#302 by @slideglide)
+* <co>FPS Bypass</c> and <co>Vertical Sync</c> now mutually disable each other
+* <co>Replay Bot</c> can now playback in editor
+* <co>Random Seed</c> is now supported on all platforms and has more options
+* <co>Stop Triggers on Death</c> can be toggled for platformer mode
+* <co>Hitbox Trail</c> now shows CBS ticks
+* Optimized <co>Hitbox Trail</c> memory usage
+* Increased max length of <co>Hitbox Trails</c>
+* Increased max TPS value
+
+**Fixes**:
+* <cg>Fixed</c> a <co>Replay Bot</c> input check that could cause recording issues
+* <cg>Fixed</c> replay picker showing `.DS_Store` files on macOS (#292 by @XblazeGMD)
+* <cg>Fixed</c> multiple issues with <co>Discord RPC</c> not showing status
+* <cg>Fixed</c> <co>Path Unlocker</c> also unlocking other items (#306 by @km7dev)
+* <cg>Fixed</c> <co>Auto Song Download</c> not downloading songs for daily/weekly levels
+* <cg>Fixed</c> <co>Auto Song Download</c> crash with the Newgrounds TOS popup (#317 by @RayDeeUx)
+* <co>Stop Triggers on Death</c> is now considered a cheat in platformer mode
+
+## v1.7.0
+**Additions**:
+* Added <cg>No Music Fade Out</c> (#273 by @Beat)
+* Added toggle for <cg>Horizontal Centering</c> in <co>Tabbed Layout</c>
+* <co>Layout Mode</c> can now change level colors
+
+**Fixes**:
+* <cg>Fixed</c> <co>Ball Rotation</c> triggering when switching to Cube and Robot
+* <cg>Fixed</c> <co>Level Edit</c> showing the "read-only" warning (cosmetic change)
+* <cg>Fixed</c> <co>Pause During Complete</c> registering level completion if you restart the level
+* <cg>Fixed</c> <co>Pause During Complete</c> not enabling the pause button on mobile
+* <cg>Fixed</c> <co>Layout Mode</c> breaking levels in Editor
+* <cg>Fixed</c> <co>Layout Mode</c> cheat indicator logic
+* <cg>Fixed</c> <co>No Trail</c>/<co>Always Show Trail</c> not updating while in-game
+* <cg>Fixed</c> `config::setInternal` method in <co>Eclipse API</c>
+
+## v1.6.0
+**Additions**:
+* Added responsive press animation for <co>Floating Button</c>
+* Added <cg>Wave Trail Pulse</c> toggle to <co>Custom Wave Trail</c>
+* Added <cg>Vertical Sync</c> toggle (#268 by @slideglide)
+* Added <cg>Memory-based</c> option for <co>Practice Fix</c>
+* Added new label variables: `playerXVelocity`, `playerYVelocity`, `player2XVelocity`, `player2YVelocity`
+* Tabbed layout is now horizontally centered 
+
+**Fixes**:
+* <cg>Fixed</c> <co>Floating Button</c> ignoring <cl>Show in Editor</c> setting
+* <cg>Fixed</c> <co>Floating Button</c> going offscreen when changing resolution
+* <cg>Fixed</c> a race condition with <co>StartPos Switcher</c> causing crashes while level is loading
+* <cg>Fixed</c> <co>Show Hitboxes</c> classifying speed portals as triggers
+* <cg>Fixed</c> <co>Speedhack</c> compatibility with <co>CBF Physics Bypass</c>
+* <cg>Improved</c> <co>Show Hitboxes</c> behavior parity with vanilla hitboxes in editor
+* <co>Replay Bot</c> accuracy improvements
+* Various <co>Shipcopter</c> improvements and fixes
+* Massive refactoring of codebase that improves performance and load times
+
+## v1.5.0
+**Additions**:
+* Added <cg>Freeze Best Run</c> for <co>Safe Mode</c>
+* Added <cg>Show Graphics Settings</c> shortcut
+* Added <cg>Shipcopter</c> (#248 by @Beat)
+* Added <cg>No End Shake</c> (#247 by @slideglide)
+* Added toggle to switch between <cg>ImGui</c> and <cg>Cocos</c> UI modes in mod settings
+* Made <cg>Open DevTools</c> shortcut available on all platforms
+
+**Fixes**:
+* <cg>Fixed</c> <co>Checkpoint Delay</c> not being applied when starting recording mid-attempt
+* <cg>Fixed</c> <co>Bot</c> reporting an error when creating a macro with missing directory
+* <cg>Fixed</c> <co>Discord RPC</c> not connecting for some users
+* <cg>Improved</c> support for <cl>DevTools</c> mouse cursor
+* <cr>Removed</c> <co>Comment History Bypass</c> due to server-side patch
+* Small performance improvements in <co>Show Hitboxes</c>
+
+## v1.4.0
+**Additions**:
+* Added <cg>Physics Bypass</c> for <cy>JIT-less</c> iOS
+* Added <cg>No Wave Trail Behind</c>
+* Added <cg>Show Level Password</c> shortcut
+* Added <cy>Globed</c> label variables: `globed.enabled`, `globed.isConnected`, `globed.ping`, `globed.tps`, `globed.playersOnline`, `globed.playersOnLevel`
+* <co>Discord RPC</c> now supports <cy>Wine</c> (only Wine Staging 10.2+ is supported for now)
+* Added <cy>API</c> for loading macros
+* <cy>Menu Arrows</c> now change colors based on the current theme (on <cl>mobile</c> UI)
+
+**Fixes**:
+* <cg>Fixed</c> a bunch of issues related to <cl>Windows</c> paths and added more error handling
+* <cg>Fixed</c> random startup crashes on <cl>Android</c> due to <co>Physics Bypass</c> patching
+* <cg>Fixed</c> a few issues with <co>Practice Fix</c> (hopefully)
+* <cg>Fixed</c> <co>Solid Wave Trail</c> compatibility with other mods and made it toggleable at any time
+* <cg>Fixed</c> problems with <co>Discord RPC</c> not updating status properly
+* <cg>Fixed</c> <co>Uncomplete Level</c> corrupting editor levels
+
+## v1.3.2
+**Fixes**:
+* <cg>Fixed</c> rotated danger hitboxes being incorrect
+* <cg>Fixed</c> hitboxes not updating when toggled if game is paused
+* <cg>Fixed</c> <co>Practice Fix</c> locking attempts count 
+
+## v1.3.1
+**Fixes**:
+* <cg>Fixed</c> cheat indicator not showing when <co>Show Hitboxes</c> was enabled
+* <cg>Fixed</c> a regression in <co>Show Hitboxes</c> that caused duplicate hitboxes and occasional crashes
+* <cg>Fixed</c> a crash in Discord RPC when button fields were left empty
+* <cg>Fixed</c> ghost label bug when text becomes empty
+
+## v1.3.0
+**Additions**:
+* <cg>JIT-less</c> support for <cl>iOS</c> (Physics Bypass is not supported on JIT-less due to technical limitations)
+* Added <cg>two new themes</c> <cg>Gruvbox</c> (thanks fleeym) and <cg>OpenHack</c>
+* Removed no longer required dependencies to reduce mod size
+* Added <cg>DPI Scaling</c> setting to toggle scaling UI with screen resolution
+* Added delay setting for <co>StartPos Switcher</c>
+* <cy>New</c> label variable: `levelRating`
+* Added ability to <cg>change menu keybind</c> from Geode mod settings
+
+**Fixes**:
+* <cg>Improved</c> <co>Physics Bypass</c> performance and accuracy
+* Reworked <co>Show Hitboxes</c>, fixing bugs and improving performance
+* <cg>Fixed</c> <co>Accurate Percentage</c> rounding to nearest, instead of down
+* <co>P1/P2 Jump Keybinds</c> can no longer be bound to default jump keys to prevent issues
+* <cg>Improved</c> replay bot recording accuracy
+* <cg>Fixed</c> crash that could happen with <co>Only Show Death Object</c>
+* <cg>Fixed</c> crash with <co>Legacy Trail</c> after changing resolution
+* <cg>Fixed</c> menu popping up for few frames on launch
+* <cg>Fixed</c> crash when using <co>Ghost Trail</c> hacks with editors
+* <cg>Fixed</c> <co>Solid Wave Trail</c> incompatibility with some mods
+* <cg>Fixed</c> camera related issues with <co>StartPos Switcher</c> (#205 by @UserIsntAvailable)
+* <cg>Fixed</c> inverted Delete/Backspace keys on <cl>macOS</c>
+
+## v1.2.2
+**Additions**:
+* Added <cg>Click Between Frames</c> toggle for <co>all platforms</c> (If you have the CBF mod installed)
+
+**Fixes**:
+* <cg>Fixed</c> <co>Hitbox Trails</c> not clearing in Editor
+* <cg>Disabled</c> <co>Always Show Coins</c> on Mac OS to prevent crashing
+* <cg>Fixed</c> <co>Startpos Switcher</c> crashing on Mac OS
+* <cg>Fixed</c> menu sometimes going unstable for Windows & Mac OS
+* <cg>Fixed</c> bronze coins not being removed when uncompleting a level
+
+## v1.2.1
+**Fixes**:
+* <cg>Fixed</c> Mac OS crashing on startup
+* <cg>Fixed</c> duals not working with <co>Trail Outline</c>
+* <cg>Fixed</c> certain settings not showing up on Android
+
+## v1.2.0
+**Additions**:
+* <cg>iOS</c> support. All platforms are now supported!
+* Added <cg>Layout Mode</c>
+* Added <cg>Trail Outline</c> to allow your wave trail to have an outline! Customizable too!
+* Added <cg>Only Show Death Object</c>, for seeing which object you exactly died to!
+* Added <cg>Force Ghost Trail</c>
+* Added the <cg>Ball Variance</c> setting for <cg>Ball Rotation Bug</c>
+* Added settings for <cg>Legacy Pulse</c>
+* Added settings for <cg>Trail Cutting</c>
+* <co>Force Platformer</c> is now considered a <cr>cheat</c>
+
+**Fixes**:
+* <cg>Improved</c> Mac OS keybinds
+* <cg>Fixed</c> <co>Internal Recorder</c> crashes on iMac
+* <cg>Fixed</c> ball rotation issues on Mac OS
+* <cg>Fixed</c> label presets causing issues
+
+## v1.1.1
+**Additions**:
+* Added <cg>Recount Secret Coins</c> for restoring any lost secret coins from Uncomplete Level.
+
+**Fixes**:
+* <cg>Fixed</c> uncomplete level from <cr>removing secret coins</c> rather than user coins if a rated level contains it.
+
+## v1.1.0
+**Additions**:
+* Added <cg>Confirm Hacks</c> (Confirm Practice, Restart, etc.) (#140)
+* Added <cg>Show Taps</c>
+* Added <cg>Reset BG & SFX Volume</c> shortcuts
+* Added <cg>Quick Chests</c>
+* Added <cg>Ball Rotation Bug</c>
+* Added <cg>Ignore Inputs</c> for <co>Bot</c>
+* <co>Bot</c> now uses <cg>GDR2</c> format (improved file size and read/write speed)
+* <co>Noclip</c> will trigger safe mode only if you die (allows 100% accuracy runs)
+
+**Fixes**:
+* <cg>Fixed</c> a crash on <cl>Android</c> with <co>color picker popups</c>
+* <cg>Fixed</c> translation issues with <co>Accurate Percentage</c>
+* <cg>Fixed</c> issues related to changing <co>texture quality</c> or switching <co>fullscreen</c> mode
+* <cg>Optimized</c> few things with <co>Physics Bypass</c>
+* <cg>Fixed</c> a rare crash with <co>Physics Bypass</c> if you die in editor with second player
+* <cg>Fixed</c> translations getting duplicated in the settings
+* <cg>Fixed</c> crashes with <co>Practice Fix</c> on <cl>Android</c>
+* <cg>Fixed</c> <co>Shortcuts</c> tab alignment issues on <cl>Android</c>
+* <cg>Fixed</c> <co>Labels</c> not showing up in <co>Editor</c>
+* Rebinding keys to mouse click on <cl>Android</c> no longer works
+
+## v1.0.0
+**Additions**:
+* <cg>Android</c> support featuring <cl>custom made UI</c> for mobile devices
+* <cg>Labels</c> revamp:
+  * <cg>Emojis support</c>
+  * <cg>Added</c> keybind support for <co>Labels</c>
+  * <cg>Events</c> to customize colors/fonts/etc. based on certain conditions
+  * <cg>Added</c> **a lot** of new RIFT variables and functions
+  * <cg>Added</c> font alignment options
+  * <cg>Added</c> absolute positioning for labels
+  * <cg>Added</c> Import/Export options for labels, so you can share them with others.
+  * <cg>Added</c> "Only Cheating" option for cheat indicator, which will hide the indicator if no cheats are active
+* <cg>Internal Recorder</c> revamp:
+  * <co>FFmpeg API</c> is not a requirement to run Eclipse anymore (you still need it to use the recorder)
+  * <cg>Improved performance</c> during recording
+  * <cg>Implemented</c> "one-pass" audio rendering (no need to play the level twice to record audio)
+  * <cg>Added</c> "Hide Preview" option to not render the game twice during recording
+* <cg>Added</c> Translations (check the [translations repository](https://github.com/EclipseMenu/translations) on how to contribute)
+* <cg>Added</c> search bar for hacks
+* <cg>Added</c> customization settings for menu open/close animations (tabbed layout)
+* Added <cg>Catppuccin Macchiato</c> theme as one of the default ones (thanks to [arvFlash](https://github.com/arvFlash))
+* Added <cg>No Level Kick</c>
+* Added <cg>Checkpoint Delay</c>
+* Added <cg>All Passable</c>
+* Added <cg>Unlock Paths</c>
+* Added <cg>Physics Bypass</c> for <cl>macOS</c>
+* Added <cg>Custom Modules API</c> for other mods to use Eclipse's cheat indicator system
+
+**Fixes:**
+* <cg>Fixed</c> a crash in editor when using <co>Physics Bypass</c>
+* <cg>Fixed</c> percentage calculation with <co>Physics Bypass</c>
+* <cg>Fixed</c> slowed down animations with <co>Physics Bypass</c>
+* <cg>Fixed</c> <co>"Formatted Timer"</c> in <co>Accurate Percentage</c> not accounting for checkpoints.
+* <cg>Fixed</c> a memory leak with <co>Show Trajectory</c>
+* <cg>Fixed</c> "Show Labels" toggle not realigning labels when switched
+* Greatly <cg>improved performance</c> of Labels
+* <cg>Fixed</c> a random crash on <cb>ARM macOS</c> when entering any level
+* <cg>Fixed</c> some <co>Practice Fix</c> crashes
+* <cg>Fixed</c> <co>Audio Speed</c>/<co>Sync with Speedhack</c> not working sometimes
+* <cg>Optimized</c> <co>Show Trajectory</c> a bit
+* <cg>Fixed</c> a crash that could happen when using <co>Blur</c>
+* <cg>Fixed</c> <co>Click Between Frames</c> toggle resetting on game launch
+* <cg>Resolved</c> some issues with <co>replays</c> when using <co>Physics Bypass</c> (some old macros might stop working due to this)
+* General performance improvements
+
+## v1.0.0-beta.4
+**<cg>Geometry Dash v2.2074</c> support**  
+No Android support yet, but we're working on it!
+
+**Fixes:**
+* <cg>Fixed</c> radio buttons keybinds always setting the first option
+* <cg>Fixed</c> random crash with combo boxes
+* <cg>Fixed</c> some <co>Slider Limit</c> issues
+* <cg>Fixed</c> shader related issues with <co>Internal Recorder</c>
+* <cg>Fixed</c> rare crash when having an invalid UI renderer mode set
+* <cg>Fixed</c> few issues with <co>Instant Complete</c> (#60)
+* <cg>Fixed</c> issues with <co>Mute Level Audio On Death</c> (#60)
+* <cg>Fixed</c> keyboard shortcuts (Ctrl+C, Ctrl+V, etc.) not working in the UI
+* <cg>Fixed</c> keybind deletion crash
+* <cg>Fixed</c> random crashes with <co>All Modes in Platformer</c>, <co>Practice Coins</c> and <co>Show Trajectory</c>
+* <cg>Fixed</c> <co>Frame Stepper</c> bugging out with <co>Speedhack</c>
+* <cg>Fixed</c> an issue with slashes in level name when saving a render
+* <co>StartPos Switcher</c> keybinds now trigger instantly
+* <co>Practice Music Sync</c> now auto-toggles the option in settings
+* Replay does not trigger <co>Auto Safe Mode</c> unless you have a loaded macro
+* Added some mod descriptions (#19, #70)
+
+**Additions**:
+* <cy>New</c> Internal Recorder backend (crossplatform support, no need to install ffmpeg)
+* Added <cg>No Trail</c>
+* Added <cg>Always Show Trail</c>
+* Added <cg>Discord RPC</c>
+* Added <cg>Show In Editor</c> option to <co>Show Hitboxes</c>
+* Replaced <co>TPS Bypass</c> with <cg>Physics Bypass</c>
+* Added <co>Place Checkpoint</c> and <co>Remove Checkpoint</c> shortcuts
+* Added custom keybinds for <co>P1/P2 jump</c>
+* Added <cg>Endscreen Cheat Indicator</c>
+* <co>Auto Safe Mode</c> now stores your attempt state (whether any cheats were active at any time)
+* <cg>Click Between Frames</c> toggle if you have the mod installed
+* <cy>New</c> label variables: 
+`isDualMode`, `cubeIcon`, `shipIcon`, `ballIcon`, `ufoIcon`, `waveIcon`, 
+`robotIcon`, `spiderIcon`, `swingIcon`, `gamemode`, `playerIcon`, `levelDescription`, 
+`frameReal`, `tps`, `runStart`
+* <cy>Updated</c> <co>RIFT</c> scripting with more features:
+    * Added <cg>cfg</c> function to get values from settings
+    * Improved overall performance and stability
+    * Fixed some expressions not working as expected
+    * Added <cg>int</c>, <cg>float</c> and <cg>str</c> functions, to convert variable types
+    * Added <cg>duration</c> function to convert seconds into a formatted time string
+    * Added <cg>$</c> operator to evaluate sub-expressions
+* Added <cg>Eclipse API</c> for developers to interact with the mod (BetterInfo users might notice a new tab :D)
+
+## v1.0.0-beta.3
+**Fixes:**
+* <cg>Fixed</c> <co>Pause Countdown</c> taking 2.5 seconds instead of 3 seconds
+* <cg>Fixed</c> <co>Noclip Deaths</c> not working properly
+* <cg>Fixed</c> <co>Respawn Delay</c> not being able to added as a keybind
+* Moved <co>Copy Bypass</c> and <co>Verify Bypass</c> to the Creator tab
+* Fixed several issues with label parser
+
+**Additions**:
+* Added <cg>0% Practice Completion</c>
+* Added <cg>No Mirror</c>
+* Added <cg>Instant Mirror</c>
+* Added <cg>No Object Glow</c>
+* Added <cg>Level Uncomplete Shortcut</c>
+* Labels can now be reordered
+* Macros can now be deleted in the menu itself
+
+## v1.0.0-beta.2
+**Fixes:**
+* <cg>Fixed</c> <co>Force Platformer</c> not working in online levels
+* <cg>Fixed</c> the invisible interface tab when using the panel layout
+* <cg>Fixed</c> the immediate change of font size
+* <cg>Fixed</c> the awkward left window size in Sidebar layout
+* <cg>Fixed</c> <co>Smart Startpos</c> on <cb>macOS</c>
+* <cg>Fixed</c> crash if theme file was corrupted
+
+**Additions**:
+* Added <cg>Solid Wave Trail</c>
+* Added <cg>Custom Wave Trail</c>
+* Added <cg>Stop Triggers on Death</c>
+* Added <cg>Noclip Death Limit</c> and <cg>Noclip Accuracy Limit</c>
+* Keybinds will now not activate if you are typing in a GD text box
+* Added a hint message for adding a new keybind
+* Automatically disable <cr>Click Between Frames</cr> when botting
+* Added <cg>new variables</c> for labels: `framestepper`, `monthName`, `lastDeath`
+
+## v1.0.0-beta.1
+* Initial Release!
